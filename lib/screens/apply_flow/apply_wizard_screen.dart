@@ -86,12 +86,31 @@ class _ApplyWizardScreenState extends State<ApplyWizardScreen> {
       ),
       body: Column(
         children: [
-          // Step progress bar
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / 5,
-            backgroundColor: AppColors.borderLight,
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF97316)),
-            minHeight: 6,
+          // Animated Step Progress Bar
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            tween: Tween<double>(begin: 0, end: (_currentStep + 1) / 5),
+            builder: (context, progressValue, child) {
+              return TweenAnimationBuilder<Color?>(
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeInOut,
+                tween: ColorTween(
+                  begin: const Color(0xFFF97316),
+                  end: _currentStep == 4
+                      ? AppColors.successGreen
+                      : const Color(0xFFF97316),
+                ),
+                builder: (context, colorValue, child) {
+                  return LinearProgressIndicator(
+                    value: progressValue,
+                    backgroundColor: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    valueColor: AlwaysStoppedAnimation<Color>(colorValue ?? const Color(0xFFF97316)),
+                    minHeight: 6,
+                  );
+                },
+              );
+            },
           ),
           Expanded(
             child: IndexedStack(

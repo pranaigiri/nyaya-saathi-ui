@@ -35,6 +35,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Target asset destinations
 ASSET_LOGO = os.path.join(PROJECT_ROOT, "assets", "images", "app_logo.png")
 ASSET_LOGO_ALT = os.path.join(PROJECT_ROOT, "assets", "images", "logo.png")
+ASSET_SPLASH_LOGO = os.path.join(PROJECT_ROOT, "assets", "images", "splash_logo.png")
 
 def create_circular_logo(source_path, target_path, size=(512, 512)):
     """Create a high-resolution circular masked logo PNG."""
@@ -54,6 +55,28 @@ def create_circular_logo(source_path, target_path, size=(512, 512)):
     rel_path = os.path.relpath(target_path, PROJECT_ROOT)
     print(f"  [OK] Created circular logo: {rel_path} ({size[0]}x{size[1]})")
 
+def create_splash_logo(source_path, target_path, canvas_size=(512, 512), logo_size=(320, 320)):
+    """Create a padded transparent logo PNG suitable for Android 12+ native splash screen."""
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    with Image.open(source_path) as img:
+        img = img.convert("RGBA")
+        fitted = ImageOps.fit(img, logo_size, Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+
+        mask = Image.new("L", logo_size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, logo_size[0], logo_size[1]), fill=255)
+
+        logo_masked = Image.new("RGBA", logo_size, (0, 0, 0, 0))
+        logo_masked.paste(fitted, (0, 0), mask=mask)
+
+        canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        offset = ((canvas_size[0] - logo_size[0]) // 2, (canvas_size[1] - logo_size[1]) // 2)
+        canvas.paste(logo_masked, offset, logo_masked)
+        canvas.save(target_path, "PNG")
+
+    rel_path = os.path.relpath(target_path, PROJECT_ROOT)
+    print(f"  [OK] Created padded splash logo: {rel_path} ({canvas_size[0]}x{canvas_size[1]}, icon {logo_size[0]}x{logo_size[1]})")
+
 def update_logo(source_path):
     if not os.path.exists(source_path):
         print(f"Error: Source image not found at '{source_path}'")
@@ -69,6 +92,7 @@ def update_logo(source_path):
         print("1. Generating circular Flutter asset images...")
         create_circular_logo(source_path, ASSET_LOGO, (512, 512))
         create_circular_logo(source_path, ASSET_LOGO_ALT, (512, 512))
+        create_splash_logo(source_path, ASSET_SPLASH_LOGO, (512, 512), (320, 320))
 
         # 2. Run flutter_launcher_icons
         print("\n2. Running 'dart run flutter_launcher_icons'...")

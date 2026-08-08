@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../providers/draft_provider.dart';
+import '../../../widgets/draft_resumption_card.dart';
 import '../../../widgets/stat_card.dart';
 import '../../apply_flow/apply_wizard_screen.dart';
 import '../tracking_screen.dart';
@@ -45,48 +46,7 @@ class HomeTab extends StatelessWidget {
 
           // Resume Draft Banner if present
           if (draftProvider.draft != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.accentGold.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.edit_document, color: AppColors.accentGold, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.tr("draft_found_title"),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        Text(
-                          "Step ${(draftProvider.draft?.stepIndex ?? 0) + 1} of 5 saved locally",
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentGold,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    ),
-                    child: const Text("Resume", style: TextStyle(fontSize: 13, color: Colors.white)),
-                  )
-                ],
-              ),
-            ),
+            const DraftResumptionCard(showDiscardButton: true),
             const SizedBox(height: 24),
           ],
 

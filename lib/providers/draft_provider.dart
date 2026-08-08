@@ -51,6 +51,18 @@ class DraftProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clearDraft() async {
+    _isLoading = true;
+    notifyListeners();
+
+    await HiveDraftService.clearDraft();
+    _draft = null;
+    _requiredDocuments = [];
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<void> updateCategory(int catId, String code, String name) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
     _draft!.categoryId = catId;

@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../providers/draft_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/draft_resumption_card.dart';
 import '../apply_flow/apply_wizard_screen.dart';
 import 'tracking_screen.dart';
 import '../auth/login_screen.dart';
@@ -83,63 +84,7 @@ class UnauthHomeScreen extends StatelessWidget {
 
               // Draft Resumption Banner (if draft exists on device)
               if (draftProvider.draft != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentGold.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.4)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.edit_document, color: AppColors.accentGold),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              context.tr("draft_found_title"),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        context.tr("draft_found_body"),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.accentGold,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: Text(context.tr("resume")),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          TextButton(
-                            onPressed: () => draftProvider.startNewDraft(),
-                            child: Text(
-                              context.tr("discard"),
-                              style: const TextStyle(color: AppColors.dangerRed),
-                            ),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
-                ),
+                const DraftResumptionCard(showDiscardButton: true),
                 const SizedBox(height: 24),
               ],
 
