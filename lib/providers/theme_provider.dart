@@ -23,14 +23,22 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> loadPreferences() async {
     final themeStr = await HiveDraftService.getTheme();
-    if (themeStr == 'light') _themeMode = ThemeMode.light;
-    else if (themeStr == 'dark') _themeMode = ThemeMode.dark;
-    else _themeMode = ThemeMode.system;
+    if (themeStr == 'light') {
+      _themeMode = ThemeMode.light;
+    } else if (themeStr == 'dark') {
+      _themeMode = ThemeMode.dark;
+    } else {
+      _themeMode = ThemeMode.system;
+    }
 
     final fontStr = await HiveDraftService.getFontScale();
-    if (fontStr == 'small') _fontScale = AppFontScale.small;
-    else if (fontStr == 'large') _fontScale = AppFontScale.large;
-    else _fontScale = AppFontScale.medium;
+    if (fontStr == 'small') {
+      _fontScale = AppFontScale.small;
+    } else if (fontStr == 'large') {
+      _fontScale = AppFontScale.large;
+    } else {
+      _fontScale = AppFontScale.medium;
+    }
 
     notifyListeners();
   }

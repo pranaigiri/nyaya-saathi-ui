@@ -34,7 +34,6 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Target asset destinations
 ASSET_LOGO = os.path.join(PROJECT_ROOT, "assets", "images", "app_logo.png")
-ASSET_LOGO_ALT = os.path.join(PROJECT_ROOT, "assets", "images", "logo.png")
 ASSET_SPLASH_LOGO = os.path.join(PROJECT_ROOT, "assets", "images", "splash_logo.png")
 
 def create_circular_logo(source_path, target_path, size=(512, 512)):
@@ -91,7 +90,6 @@ def update_logo(source_path):
         # 1. Prepare circular Flutter asset images
         print("1. Generating circular Flutter asset images...")
         create_circular_logo(source_path, ASSET_LOGO, (512, 512))
-        create_circular_logo(source_path, ASSET_LOGO_ALT, (512, 512))
         create_splash_logo(source_path, ASSET_SPLASH_LOGO, (512, 512), (320, 320))
 
         # 2. Run flutter_launcher_icons

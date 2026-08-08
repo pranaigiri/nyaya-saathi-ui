@@ -106,14 +106,10 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                 ],
               ),
             ),
-            Radio<String>(
-              value: code,
-              groupValue: _selectedLang,
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedLang = val);
-              },
-              activeColor: AppColors.primaryBlue,
-            )
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: isSelected ? AppColors.primaryBlue : Colors.grey.shade400,
+            ),
           ],
         ),
       ),

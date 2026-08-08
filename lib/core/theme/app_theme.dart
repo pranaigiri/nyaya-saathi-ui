@@ -27,7 +27,6 @@ class AppTheme {
         primary: AppColors.primaryBlue,
         secondary: AppColors.accentGold,
         surface: AppColors.lightSurface,
-        background: AppColors.lightBg,
         error: AppColors.dangerRed,
       ),
       textTheme: GoogleFonts.interTextTheme(
@@ -91,7 +90,6 @@ class AppTheme {
         primary: AppColors.primaryBlue,
         secondary: AppColors.accentGold,
         surface: AppColors.darkSurface,
-        background: AppColors.darkBg,
         error: AppColors.dangerRed,
       ),
       textTheme: GoogleFonts.interTextTheme(
