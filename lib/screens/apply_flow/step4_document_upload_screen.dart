@@ -26,8 +26,11 @@ class Step4DocumentUploadScreen extends StatelessWidget {
 
     final canProceed = isIdentityComplete && (nonIdMandatoryUploaded >= nonIdMandatoryDocs.length);
 
+    final mq = MediaQuery.of(context);
+    final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
+
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
       children: [
         const FittedBox(
           fit: BoxFit.scaleDown,

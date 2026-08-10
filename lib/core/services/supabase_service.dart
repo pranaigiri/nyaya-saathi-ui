@@ -53,7 +53,6 @@ class SupabaseService {
         submittedAt: DateTime.now().subtract(const Duration(days: 12)).toIso8601String(),
         applicantDetails: ApplicationApplicantDetails(
           applicationId: 101,
-          appliedFor: "self",
           fullName: "Pema Lepcha",
           gender: "Male",
           dateOfBirth: "1988-05-14",
@@ -80,7 +79,6 @@ class SupabaseService {
         submittedAt: DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
         applicantDetails: ApplicationApplicantDetails(
           applicationId: 102,
-          appliedFor: "self",
           fullName: "Passang Lhamu",
           gender: "Female",
           dateOfBirth: "1994-09-22",
@@ -305,8 +303,6 @@ class SupabaseService {
       currentStatus: 'SUBMITTED',
       submittedAt: DateTime.now().toIso8601String(),
       applicantDetails: ApplicationApplicantDetails(
-        appliedFor: draft.appliedFor,
-        relationRemark: draft.relationRemark,
         fullName: draft.fullName,
         gender: draft.gender,
         dateOfBirth: draft.dob,
@@ -315,10 +311,6 @@ class SupabaseService {
         email: draft.email,
         phoneNumber: draft.phone,
       ),
-      witnesses: [
-        if (draft.witness1Name.isNotEmpty) ApplicationWitness(witnessName: draft.witness1Name, relationToApplicant: draft.witness1Relation),
-        if (draft.witness2Name.isNotEmpty) ApplicationWitness(witnessName: draft.witness2Name, relationToApplicant: draft.witness2Relation),
-      ],
     );
 
     _mockApplications.insert(0, newApp);

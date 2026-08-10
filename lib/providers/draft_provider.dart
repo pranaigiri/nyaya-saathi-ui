@@ -79,8 +79,6 @@ class DraftProvider extends ChangeNotifier {
   }
 
   Future<void> updateApplicantDetails({
-    required String appliedFor,
-    String? relationRemark,
     required String fullName,
     required String gender,
     String? dob,
@@ -88,15 +86,9 @@ class DraftProvider extends ChangeNotifier {
     required int districtId,
     required String districtName,
     required String email,
-    required String phone,
-    required String witness1Name,
-    required String witness1Relation,
-    required String witness2Name,
-    required String witness2Relation,
+    required String phone
   }) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
-    _draft!.appliedFor = appliedFor;
-    _draft!.relationRemark = relationRemark;
     _draft!.fullName = fullName;
     _draft!.gender = gender;
     _draft!.dob = dob;
@@ -105,10 +97,6 @@ class DraftProvider extends ChangeNotifier {
     _draft!.districtName = districtName;
     _draft!.email = email;
     _draft!.phone = phone;
-    _draft!.witness1Name = witness1Name;
-    _draft!.witness1Relation = witness1Relation;
-    _draft!.witness2Name = witness2Name;
-    _draft!.witness2Relation = witness2Relation;
 
     await saveDraft();
   }

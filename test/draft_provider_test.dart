@@ -27,16 +27,10 @@ void main() {
       final draft = DraftApplicationModel(
         draftUuid: 'test-uuid-123',
         fullName: 'Passang Lhamu',
-        appliedFor: 'other',
-        relationRemark: 'my mother',
         villageTown: 'Namchi',
         districtId: 2,
         districtName: 'Namchi (South Sikkim)',
         phone: '9876543210',
-        witness1Name: 'Karmu Lepcha',
-        witness1Relation: 'Neighbor',
-        witness2Name: 'Sonam Bhutia',
-        witness2Relation: 'Friend',
       );
 
       final json = draft.toJson();
@@ -44,9 +38,6 @@ void main() {
 
       expect(restored.draftUuid, equals('test-uuid-123'));
       expect(restored.fullName, equals('Passang Lhamu'));
-      expect(restored.appliedFor, equals('other'));
-      expect(restored.relationRemark, equals('my mother'));
-      expect(restored.witness1Name, equals('Karmu Lepcha'));
     });
 
     test('Tracking lookup without OTP using Application Number and DOB/phone', () async {

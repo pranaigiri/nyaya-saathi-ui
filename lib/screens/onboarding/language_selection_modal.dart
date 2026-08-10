@@ -43,14 +43,14 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
               code: 'en',
               title: "English",
               subtitle: "Default language",
-              flag: "🇬🇧",
+              flag: "🇮🇳",
             ),
             const SizedBox(height: 10),
             _buildLangTile(
               code: 'ne',
               title: "नेपाली (Nepali)",
               subtitle: "सिक्किम राज्य कानूनी सहायता",
-              flag: "🇳🇵",
+              flag: "🇮🇳",
             ),
             const SizedBox(height: 24),
             SizedBox(

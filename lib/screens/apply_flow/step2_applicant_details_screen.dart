@@ -17,8 +17,6 @@ class Step2ApplicantDetailsScreen extends StatefulWidget {
 class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String _appliedFor = 'self';
-  final _relationRemarkController = TextEditingController();
   final _fullNameController = TextEditingController();
   String _gender = 'Male';
   final _dobController = TextEditingController();
@@ -27,11 +25,6 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
   String _districtName = 'Gangtok (East Sikkim)';
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-
-  final _w1NameController = TextEditingController();
-  final _w1RelController = TextEditingController();
-  final _w2NameController = TextEditingController();
-  final _w2RelController = TextEditingController();
 
   final List<Map<String, dynamic>> _districts = [
     {'id': 1, 'name': 'Gangtok (East Sikkim)'},
@@ -49,8 +42,6 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
     if (draft != null) {
-      _appliedFor = draft.appliedFor;
-      _relationRemarkController.text = draft.relationRemark ?? '';
       _fullNameController.text = draft.fullName;
       _gender = draft.gender;
       _dobController.text = draft.dob ?? '';
@@ -59,11 +50,6 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
       _districtName = draft.districtName;
       _emailController.text = draft.email.isNotEmpty ? draft.email : (auth.userPhoneOrEmail.contains('@') ? auth.userPhoneOrEmail : '');
       _phoneController.text = draft.phone.isNotEmpty ? draft.phone : (!auth.userPhoneOrEmail.contains('@') ? auth.userPhoneOrEmail : '');
-
-      _w1NameController.text = draft.witness1Name;
-      _w1RelController.text = draft.witness1Relation;
-      _w2NameController.text = draft.witness2Name;
-      _w2RelController.text = draft.witness2Relation;
     }
   }
 
@@ -104,8 +90,6 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
     if (!_formKey.currentState!.validate()) return;
 
     Provider.of<DraftProvider>(context, listen: false).updateApplicantDetails(
-      appliedFor: _appliedFor,
-      relationRemark: _appliedFor == 'other' ? _relationRemarkController.text : null,
       fullName: _fullNameController.text,
       gender: _gender,
       dob: _dobController.text.isNotEmpty ? _dobController.text : null,
@@ -114,10 +98,6 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
       districtName: _districtName,
       email: _emailController.text,
       phone: _phoneController.text,
-      witness1Name: _w1NameController.text,
-      witness1Relation: _w1RelController.text,
-      witness2Name: _w2NameController.text,
-      witness2Relation: _w2RelController.text,
     );
 
     widget.onNext();
@@ -125,56 +105,22 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
 
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
+
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
         children: [
           const FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text("Step 2: Applicant & Witness Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text("Step 2: Applicant Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 4),
-          const Text("Specify whether you are applying for yourself or on behalf of another person.", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
+          const Text("Fill in your personal details accurately.", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
           const SizedBox(height: 20),
-
-          // Applying For Toggle
-          const Text("Applying For *", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ChoiceChip(
-                  label: const FittedBox(fit: BoxFit.scaleDown, child: Text("Self (Myself)")),
-                  selected: _appliedFor == 'self',
-                  onSelected: (selected) => setState(() => _appliedFor = 'self'),
-                  selectedColor: AppColors.primaryBlue.withValues(alpha: 0.2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ChoiceChip(
-                  label: const FittedBox(fit: BoxFit.scaleDown, child: Text("Other Person")),
-                  selected: _appliedFor == 'other',
-                  onSelected: (selected) => setState(() => _appliedFor = 'other'),
-                  selectedColor: AppColors.primaryBlue.withValues(alpha: 0.2),
-                ),
-              ),
-            ],
-          ),
-          if (_appliedFor == 'other') ...[
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _relationRemarkController,
-              decoration: const InputDecoration(
-                labelText: "Relationship to Applicant *",
-                hintText: "e.g. My Mother, Minor Son, Disabled Brother",
-              ),
-              validator: (v) => _appliedFor == 'other' && (v == null || v.trim().isEmpty) ? "Relation remark required when applying for other" : null,
-            ),
-          ],
-          const SizedBox(height: 16),
 
           // Personal Details
           TextFormField(
@@ -262,52 +208,6 @@ class _Step2ApplicantDetailsScreenState extends State<Step2ApplicantDetailsScree
             ),
           ),
           const SizedBox(height: 24),
-
-          // 2 Witness Inputs
-          const Text("Witness Information (2 Witnesses Required)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.accentGold)),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _w1NameController,
-                  decoration: const InputDecoration(labelText: "Witness 1 Name *"),
-                  validator: (v) => v == null || v.trim().isEmpty ? "Witness 1 name" : null,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  controller: _w1RelController,
-                  decoration: const InputDecoration(labelText: "Relation *"),
-                  validator: (v) => v == null || v.trim().isEmpty ? "Witness 1 relation" : null,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _w2NameController,
-                  decoration: const InputDecoration(labelText: "Witness 2 Name *"),
-                  validator: (v) => v == null || v.trim().isEmpty ? "Witness 2 name" : null,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  controller: _w2RelController,
-                  decoration: const InputDecoration(labelText: "Relation *"),
-                  validator: (v) => v == null || v.trim().isEmpty ? "Witness 2 relation" : null,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
 
           SizedBox(
             height: 52,

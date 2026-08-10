@@ -200,14 +200,14 @@ CREATE TABLE IF NOT EXISTS public.application_applicant_details (
   created_at timestamp with time zone DEFAULT now()
 );
 
--- Witnesses (2 per application)
-CREATE TABLE IF NOT EXISTS public.application_witness (
-  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  application_id bigint NOT NULL REFERENCES public.legal_aid_application(application_id) ON DELETE CASCADE,
-  witness_name text NOT NULL,
-  relation_to_applicant text NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
-);
+-- Witnesses (2 per application) -- REMOVED FROM APP
+-- CREATE TABLE IF NOT EXISTS public.application_witness (
+--   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--   application_id bigint NOT NULL REFERENCES public.legal_aid_application(application_id) ON DELETE CASCADE,
+--   witness_name text NOT NULL,
+--   relation_to_applicant text NOT NULL,
+--   created_at timestamp with time zone DEFAULT now()
+-- );
 
 -- Authority form templates (Form A/B/C/D)
 CREATE TABLE IF NOT EXISTS public.form_template_master (

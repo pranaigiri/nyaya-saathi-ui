@@ -91,7 +91,6 @@ class ApplicationDetailScreen extends StatelessWidget {
               context,
               title: "1. APPLICANT DETAILS",
               children: [
-                _buildRow("Applied For", applicant?.appliedFor == 'self' ? 'Self' : 'Other (${applicant?.relationRemark ?? ''})'),
                 _buildRow("Full Name", applicant?.fullName ?? 'N/A'),
                 _buildRow("Gender", applicant?.gender ?? 'N/A'),
                 _buildRow("Date of Birth", applicant?.dateOfBirth ?? 'N/A'),

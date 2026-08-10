@@ -6,8 +6,6 @@ class DraftApplicationModel {
   String? categoryName;
   
   // Applicant details
-  String appliedFor; // 'self' | 'other'
-  String? relationRemark;
   String fullName;
   String gender;
   String? dob;
@@ -16,12 +14,6 @@ class DraftApplicationModel {
   String districtName;
   String email;
   String phone;
-
-  // Witnesses
-  String witness1Name;
-  String witness1Relation;
-  String witness2Name;
-  String witness2Relation;
 
   // Case details
   int? caseTypeId;
@@ -39,8 +31,6 @@ class DraftApplicationModel {
     this.categoryId,
     this.categoryCode,
     this.categoryName,
-    this.appliedFor = 'self',
-    this.relationRemark,
     this.fullName = '',
     this.gender = 'Male',
     this.dob,
@@ -49,10 +39,6 @@ class DraftApplicationModel {
     this.districtName = 'Gangtok (East Sikkim)',
     this.email = '',
     this.phone = '',
-    this.witness1Name = '',
-    this.witness1Relation = '',
-    this.witness2Name = '',
-    this.witness2Relation = '',
     this.caseTypeId,
     this.caseTypeCode,
     this.caseTypeName,
@@ -67,8 +53,6 @@ class DraftApplicationModel {
     'categoryId': categoryId,
     'categoryCode': categoryCode,
     'categoryName': categoryName,
-    'appliedFor': appliedFor,
-    'relationRemark': relationRemark,
     'fullName': fullName,
     'gender': gender,
     'dob': dob,
@@ -77,10 +61,6 @@ class DraftApplicationModel {
     'districtName': districtName,
     'email': email,
     'phone': phone,
-    'witness1Name': witness1Name,
-    'witness1Relation': witness1Relation,
-    'witness2Name': witness2Name,
-    'witness2Relation': witness2Relation,
     'caseTypeId': caseTypeId,
     'caseTypeCode': caseTypeCode,
     'caseTypeName': caseTypeName,
@@ -96,8 +76,6 @@ class DraftApplicationModel {
       categoryId: json['categoryId'],
       categoryCode: json['categoryCode'],
       categoryName: json['categoryName'],
-      appliedFor: json['appliedFor'] ?? 'self',
-      relationRemark: json['relationRemark'],
       fullName: json['fullName'] ?? '',
       gender: json['gender'] ?? 'Male',
       dob: json['dob'],
@@ -106,10 +84,6 @@ class DraftApplicationModel {
       districtName: json['districtName'] ?? 'Gangtok (East Sikkim)',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
-      witness1Name: json['witness1Name'] ?? '',
-      witness1Relation: json['witness1Relation'] ?? '',
-      witness2Name: json['witness2Name'] ?? '',
-      witness2Relation: json['witness2Relation'] ?? '',
       caseTypeId: json['caseTypeId'],
       caseTypeCode: json['caseTypeCode'],
       caseTypeName: json['caseTypeName'],

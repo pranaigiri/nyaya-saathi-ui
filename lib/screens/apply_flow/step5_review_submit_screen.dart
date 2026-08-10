@@ -115,8 +115,11 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
       return const Center(child: Text("No draft application data found"));
     }
 
+    final mq = MediaQuery.of(context);
+    final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
+
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
       children: [
         const FittedBox(
           fit: BoxFit.scaleDown,
@@ -161,10 +164,8 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
               const Divider(height: 20),
               _buildRow("Category", draft.categoryName ?? 'General'),
               _buildRow("Applicant Name", draft.fullName),
-              _buildRow("Applying For", draft.appliedFor == 'self' ? 'Self' : 'Other (${draft.relationRemark ?? ''})'),
               _buildRow("Case Type", draft.caseTypeName ?? 'N/A'),
               _buildRow("District", draft.districtName),
-              _buildRow("Witnesses", "${draft.witness1Name}, ${draft.witness2Name}"),
               _buildRow("Uploaded Docs", "${draft.documentStoragePaths.length} documents uploaded"),
             ],
           ),

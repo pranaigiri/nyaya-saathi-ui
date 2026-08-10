@@ -35,7 +35,6 @@ class PdfGeneratorService {
               // Section 1: Application & Category
               _buildSectionTitle("1. ELIGIBILITY & CATEGORY"),
               _buildRow("Category Selected:", draft.categoryName ?? 'General'),
-              _buildRow("Applying For:", draft.appliedFor == 'self' ? 'Self' : 'Other (${draft.relationRemark ?? ''})'),
               pw.SizedBox(height: 10),
 
               // Section 2: Personal Details
@@ -56,13 +55,7 @@ class PdfGeneratorService {
               if (draft.reliefSought.isNotEmpty) _buildRow("Relief Sought:", draft.reliefSought),
               pw.SizedBox(height: 10),
 
-              // Section 4: Witnesses
-              _buildSectionTitle("4. WITNESSES"),
-              _buildRow("Witness 1:", "${draft.witness1Name} (${draft.witness1Relation})"),
-              _buildRow("Witness 2:", "${draft.witness2Name} (${draft.witness2Relation})"),
-              pw.SizedBox(height: 10),
-
-              // Section 5: Documents Attached
+              // Section 4: Documents Attached
               _buildSectionTitle("5. ATTACHED DOCUMENTS"),
               ...draft.documentStoragePaths.keys.map((code) => pw.Bullet(text: "Verified Document Upload: $code")),
               pw.SizedBox(height: 20),

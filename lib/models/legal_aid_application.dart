@@ -15,7 +15,6 @@ class LegalAidApplication {
   final String currentStatus;
   final String submittedAt;
   final ApplicationApplicantDetails? applicantDetails;
-  final List<ApplicationWitness>? witnesses;
   final List<String>? documentUrls;
   final String? assignedAdvocateName;
 
@@ -34,7 +33,6 @@ class LegalAidApplication {
     required this.currentStatus,
     required this.submittedAt,
     this.applicantDetails,
-    this.witnesses,
     this.documentUrls,
     this.assignedAdvocateName,
   });

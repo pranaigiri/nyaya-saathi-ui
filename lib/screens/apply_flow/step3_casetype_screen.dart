@@ -66,10 +66,13 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
               ct.caseTypeCode.toLowerCase().contains(q);
         }).toList();
 
+        final mq = MediaQuery.of(context);
+        final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
+
         return Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
             children: [
               const FittedBox(
                 fit: BoxFit.scaleDown,
