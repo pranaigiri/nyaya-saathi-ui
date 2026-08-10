@@ -43,10 +43,15 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.gavel_rounded, color: AppColors.primaryBlue, size: 20),
+                  child: const Icon(
+                    Icons.gavel_rounded,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,12 +59,19 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
                 children: [
                   Text(
                     context.tr("app_title"),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Text(
                     "by Sikkim State Legal Services Authority",
-                    style: TextStyle(fontSize: 10, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondaryLight,
+                      fontWeight: FontWeight.w500,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -87,7 +99,10 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: AppColors.textSecondaryLight,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.dashboard_outlined),

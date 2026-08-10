@@ -20,32 +20,42 @@ class SlsaInfoModal extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Stack(
               children: [
-                Row(
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => _dismiss(context),
+                  ),
+                ),
+                Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryBlue,
-                        shape: BoxShape.circle,
+                    const SizedBox(height: 8),
+                    ClipOval(
+                      child: Image.asset(
+                        'assets/images/sikkim_slsa_logo.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
                       ),
-                      child: const Icon(Icons.account_balance_rounded, color: Colors.white, size: 20),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(height: 12),
                     Text(
-                      isNepali ? "सिक्किम राज्य कानूनी सहायता" : "Sikkim SLSA & Legal Aid",
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                      isNepali
+                          ? "सिक्किम राज्य कानूनी सहायता"
+                          : "Sikkim State Legal Services Authority",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.grey),
-                  onPressed: () => _dismiss(context),
-                )
               ],
             ),
             const SizedBox(height: 12),
@@ -59,23 +69,33 @@ class SlsaInfoModal extends StatelessWidget {
                 isNepali
                     ? "सिक्किम राज्य कानूनी सेवा प्राधिकरण (SLSA) ले हरेक योग्य नागरिकलाई निःशुल्क र निष्पक्ष कानूनी सहायता प्रदान गर्दछ।"
                     : "Sikkim State Legal Services Authority (SLSA) provides free and competent legal services to eligible citizens across all 6 districts.",
-                style: const TextStyle(fontSize: 13, color: AppColors.primaryBlue, height: 1.4),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primaryBlue,
+                  height: 1.4,
+                ),
               ),
             ),
             const SizedBox(height: 16),
             _buildFeatureBullet(
               icon: Icons.check_circle_outline,
-              text: isNepali ? "निःशुल्क अधिवक्ता तथा कानूनी सल्लाह" : "100% Free advocate representation & consultation",
+              text: isNepali
+                  ? "निःशुल्क अधिवक्ता तथा कानूनी सल्लाह"
+                  : "100% Free advocate representation & consultation",
             ),
             const SizedBox(height: 8),
             _buildFeatureBullet(
               icon: Icons.fact_check_outlined,
-              text: isNepali ? "आवेदन ट्र्याकिङ बिना लगइन" : "Instant application tracking without forced account creation",
+              text: isNepali
+                  ? "आवेदन ट्र्याकिङ बिना लगइन"
+                  : "Instant application tracking without forced account creation",
             ),
             const SizedBox(height: 8),
             _buildFeatureBullet(
               icon: Icons.edit_note_rounded,
-              text: isNepali ? "तपाईंको उपकरणमा ड्राफ्ट स्वतः बचत हुन्छ" : "Resume incomplete applications anytime on your device",
+              text: isNepali
+                  ? "तपाईंको उपकरणमा ड्राफ्ट स्वतः बचत हुन्छ"
+                  : "Resume incomplete applications anytime on your device",
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -85,11 +105,16 @@ class SlsaInfoModal extends StatelessWidget {
                 onPressed: () => _dismiss(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(
                   isNepali ? "सुरु गर्नुहोस्" : "Get Started",
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -108,9 +133,12 @@ class SlsaInfoModal extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 13, color: AppColors.textPrimaryLight),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textPrimaryLight,
+            ),
           ),
-        )
+        ),
       ],
     );
   }

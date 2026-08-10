@@ -10,24 +10,16 @@ import '../../providers/auth_provider.dart';
 //  Gender option model
 // ─────────────────────────────────────────────────────────
 class _GenderOption {
-  const _GenderOption({
-    required this.value,
-    required this.label,
-    required this.icon,
-  });
+  const _GenderOption({required this.value, required this.label, this.icon});
   final String value;
   final String label;
-  final IconData icon;
+  final IconData? icon;
 }
 
 const List<_GenderOption> _genderOptions = [
   _GenderOption(value: 'Male', label: 'Male', icon: Icons.male_rounded),
   _GenderOption(value: 'Female', label: 'Female', icon: Icons.female_rounded),
-  _GenderOption(
-    value: 'Other',
-    label: 'Other',
-    icon: Icons.transgender_rounded,
-  ),
+  _GenderOption(value: 'Other', label: 'Other'),
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -636,7 +628,7 @@ class _Step2ApplicantDetailsScreenState
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<int>(
-              value: _districtId,
+              initialValue: _districtId,
               decoration: const InputDecoration(
                 hintText: 'Select district',
                 prefixIcon: Icon(Icons.map_outlined),
@@ -779,31 +771,35 @@ class _GenderPill extends StatelessWidget {
     final borderColor = isActive ? AppColors.primaryBlue : inactiveBorder;
     final foregroundColor = isActive ? AppColors.primaryBlue : inactiveText;
 
+    final buttonStyle = OutlinedButton.styleFrom(
+      foregroundColor: foregroundColor,
+      backgroundColor: isActive
+          ? AppColors.primaryBlue.withValues(alpha: 0.08)
+          : activeBg,
+      side: BorderSide(color: borderColor, width: isActive ? 2.0 : 1.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+    );
+
+    final label = Text(
+      option.label,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+      ),
+    );
+
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(option.icon, size: 17),
-        label: Text(
-          option.label,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: foregroundColor,
-          backgroundColor: isActive
-              ? AppColors.primaryBlue.withValues(alpha: 0.08)
-              : activeBg,
-          side: BorderSide(color: borderColor, width: isActive ? 2.0 : 1.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-        ),
-      ),
+      child: option.icon != null
+          ? OutlinedButton.icon(
+              onPressed: onTap,
+              icon: Icon(option.icon, size: 17),
+              label: label,
+              style: buttonStyle,
+            )
+          : OutlinedButton(onPressed: onTap, style: buttonStyle, child: label),
     );
   }
 }

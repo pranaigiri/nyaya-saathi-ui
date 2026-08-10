@@ -148,6 +148,12 @@ class DraftProvider extends ChangeNotifier {
     await saveDraft();
   }
 
+  Future<void> removeDocument(String docCode) async {
+    if (_draft == null) return;
+    _draft!.documentStoragePaths.remove(docCode);
+    await saveDraft();
+  }
+
   Future<void> saveDraft() async {
     if (_draft != null) {
       await HiveDraftService.saveDraft(_draft!);

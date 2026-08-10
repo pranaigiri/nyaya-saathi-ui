@@ -63,6 +63,9 @@ class Step4DocumentUploadScreen extends StatelessWidget {
               onFilePicked: (docCode, fileName, bytes) async {
                 await draftProvider.attachDocument(docCode, fileName, bytes);
               },
+              onFileRemoved: (docCode) async {
+                await draftProvider.removeDocument(docCode);
+              },
             );
           }),
 

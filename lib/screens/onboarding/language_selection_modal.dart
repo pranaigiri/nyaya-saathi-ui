@@ -25,18 +25,31 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
           children: [
             const Row(
               children: [
-                Icon(Icons.language_rounded, color: AppColors.primaryBlue, size: 28),
+                Icon(
+                  Icons.language_rounded,
+                  color: AppColors.primaryBlue,
+                  size: 28,
+                ),
                 SizedBox(width: 12),
-                Text(
-                  "Choose Language / भाषा छान्नुहोस्",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                Expanded(
+                  child: Text(
+                    "Choose Language / भाषा छान्नुहोस्",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             const Text(
               "Select your preferred language for using Nyaya Saathi. You can change this later in settings.",
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondaryLight,
+              ),
             ),
             const SizedBox(height: 20),
             _buildLangTile(
@@ -62,23 +75,34 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (_) => SlsaInfoModal(selectedLanguage: _selectedLang),
+                    builder: (_) =>
+                        SlsaInfoModal(selectedLanguage: _selectedLang),
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text("Continue / अगाडि बढ्नुहोस्", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                child: const Text(
+                  "Continue / अगाडि बढ्नुहोस्",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLangTile({required String code, required String title, required String subtitle, required String flag}) {
+  Widget _buildLangTile({
+    required String code,
+    required String title,
+    required String subtitle,
+    required String flag,
+  }) {
     final isSelected = _selectedLang == code;
     return InkWell(
       onTap: () => setState(() => _selectedLang = code),
@@ -86,7 +110,9 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryBlue.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.05),
+          color: isSelected
+              ? AppColors.primaryBlue.withValues(alpha: 0.08)
+              : Colors.grey.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primaryBlue : Colors.grey.shade300,
@@ -101,13 +127,28 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                  ),
                 ],
               ),
             ),
             Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
               color: isSelected ? AppColors.primaryBlue : Colors.grey.shade400,
             ),
           ],

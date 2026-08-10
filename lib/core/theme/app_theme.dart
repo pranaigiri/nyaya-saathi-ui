@@ -66,6 +66,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2),
         ),
       ),
+      listTileTheme: const ListTileThemeData(),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryBlue,
@@ -129,6 +130,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.accentGold, width: 2),
         ),
       ),
+      listTileTheme: const ListTileThemeData(),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryBlue,

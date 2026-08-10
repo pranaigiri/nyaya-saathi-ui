@@ -88,23 +88,26 @@ class _ChatTabState extends State<ChatTab> {
                     final item = _faqs[index];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
+                      child: Material(
                         color: isDark ? AppColors.darkSurface : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                      ),
-                      child: ExpansionTile(
-                        leading: const Icon(Icons.help_outline, color: AppColors.primaryBlue),
-                        title: Text(item['q']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Text(
-                              item['a']!,
-                              style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, height: 1.4),
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                        ),
+                        child: ExpansionTile(
+                          leading: const Icon(Icons.help_outline, color: AppColors.primaryBlue),
+                          title: Text(item['q']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Text(
+                                item['a']!,
+                                style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, height: 1.4),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
