@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/services/supabase_service.dart';
+import '../../providers/apply_data_provider.dart';
 import '../../models/legal_aid_category.dart';
 import '../../providers/draft_provider.dart';
 
@@ -20,7 +20,7 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
   @override
   void initState() {
     super.initState();
-    _categoriesFuture = SupabaseService().getCategories();
+    _categoriesFuture = Provider.of<ApplyDataProvider>(context, listen: false).getLegalAidCategories();
   }
 
   @override
@@ -61,7 +61,7 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
 
             ...list.map((cat) {
               final isSelected = selectedCatId == cat.categoryId;
-              final catIcon = SupabaseService.getIconData(cat.iconName);
+              final catIcon = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(cat.iconName);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),

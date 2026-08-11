@@ -4,15 +4,21 @@ import '../models/draft_application_model.dart';
 import '../models/document_master.dart';
 import '../core/services/hive_draft_service.dart';
 import '../core/services/supabase_service.dart';
+import 'apply_data_provider.dart';
 
 class DraftProvider extends ChangeNotifier {
   DraftApplicationModel? _draft;
   List<DocumentMaster> _requiredDocuments = [];
   bool _isLoading = false;
+  ApplyDataProvider? _applyDataProvider;
 
   DraftApplicationModel? get draft => _draft;
   List<DocumentMaster> get requiredDocuments => _requiredDocuments;
   bool get isLoading => _isLoading;
+
+  void setApplyDataProvider(ApplyDataProvider provider) {
+    _applyDataProvider = provider;
+  }
 
   @override
   void notifyListeners() {
@@ -69,7 +75,6 @@ class DraftProvider extends ChangeNotifier {
     _draft!.categoryCode = code;
     _draft!.categoryName = name;
 
-    // Auto update gender if category is Women
     if (code == 'CAT_WOMEN') {
       _draft!.gender = 'Female';
     }
@@ -127,10 +132,18 @@ class DraftProvider extends ChangeNotifier {
 
   Future<void> updateRequiredDocuments() async {
     if (_draft != null && _draft!.categoryId != null && _draft!.caseTypeId != null) {
-      _requiredDocuments = await SupabaseService().getRequiredDocuments(
-        categoryId: _draft!.categoryId!,
-        caseTypeId: _draft!.caseTypeId!,
-      );
+      final provider = _applyDataProvider;
+      if (provider != null) {
+        _requiredDocuments = await provider.getRequiredDocuments(
+          categoryId: _draft!.categoryId!,
+          caseTypeId: _draft!.caseTypeId!,
+        );
+      } else {
+        _requiredDocuments = await SupabaseService().getRequiredDocuments(
+          categoryId: _draft!.categoryId!,
+          caseTypeId: _draft!.caseTypeId!,
+        );
+      }
       notifyListeners();
     }
   }

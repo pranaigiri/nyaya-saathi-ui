@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/services/supabase_service.dart';
+import '../../providers/apply_data_provider.dart';
 import '../../models/case_type_master.dart';
 import '../../providers/draft_provider.dart';
 
@@ -26,12 +26,10 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
   @override
   void initState() {
     super.initState();
-    _caseTypesFuture = SupabaseService().getCaseTypes();
-    final draft = Provider.of<DraftProvider>(context, listen: false).draft;
-    if (draft != null) {
-      _grievanceController.text = draft.summaryOfGrievance;
-      _reliefController.text = draft.reliefSought;
-    }
+    _caseTypesFuture = Provider.of<ApplyDataProvider>(context, listen: false).getCaseTypes();
+    final draft = Provider.of<DraftProvider>(context, listen: false);
+    _grievanceController.text = draft.draft?.summaryOfGrievance ?? '';
+    _reliefController.text = draft.draft?.reliefSought ?? '';
   }
 
   void _saveAndNext() {
@@ -117,9 +115,9 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                   ),
                 ),
               ] else ...[
-                ...filteredList.map((ct) {
-                  final isSelected = selectedCaseTypeId == ct.caseTypeId;
-                  final iconData = SupabaseService.getIconData(ct.iconName);
+                 ...filteredList.map((ct) {
+                   final isSelected = selectedCaseTypeId == ct.caseTypeId;
+                   final iconData = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(ct.iconName);
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),

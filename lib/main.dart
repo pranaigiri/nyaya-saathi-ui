@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/services/supabase_service.dart';
+import 'data/repositories/local_apply_repository.dart';
 import 'providers/theme_provider.dart';
 import 'providers/language_provider.dart';
+import 'providers/apply_data_provider.dart';
 import 'providers/draft_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/splash/splash_screen.dart';
@@ -20,7 +22,16 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadPreferences()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()..init()),
-        ChangeNotifierProvider(create: (_) => DraftProvider()),
+        ChangeNotifierProvider(create: (_) => ApplyDataProvider(LocalApplyRepository())),
+        ChangeNotifierProxyProvider<ApplyDataProvider, DraftProvider>(
+          create: (_) => DraftProvider(),
+          update: (_, applyDataProvider, draftProvider) {
+            if (draftProvider != null) {
+              draftProvider.setApplyDataProvider(applyDataProvider);
+            }
+            return draftProvider ?? DraftProvider();
+          },
+        ),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: const NyayaSaathiApp(),

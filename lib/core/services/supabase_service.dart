@@ -10,6 +10,7 @@ import '../../models/application_applicant_details.dart';
 import '../../models/draft_application_model.dart';
 import '../../models/notification_model.dart';
 import '../../models/chat_message_model.dart';
+import '../../data/repositories/local_apply_repository.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -170,13 +171,7 @@ class SupabaseService {
         return (res as List).map((x) => LegalAidCategory.fromJson(x)).toList();
       } catch (_) {}
     }
-    return [
-      LegalAidCategory(categoryId: 1, categoryCode: 'CAT_GEN', categoryName: 'General (Income < ₹3,00,000/yr)', description: 'Annual family income below ₹3 Lakhs', incomeLimit: 300000, iconName: 'account_balance_wallet'),
-      LegalAidCategory(categoryId: 2, categoryCode: 'CAT_WOMEN', categoryName: 'Women & Children', description: 'Women and minor children regardless of income', iconName: 'female'),
-      LegalAidCategory(categoryId: 3, categoryCode: 'CAT_SC_ST', categoryName: 'Scheduled Caste / Scheduled Tribe', description: 'Members of SC/ST communities', iconName: 'groups'),
-      LegalAidCategory(categoryId: 4, categoryCode: 'CAT_DISABLED', categoryName: 'Mentally Ill / Differently Abled', description: 'Persons with physical or mental disabilities', iconName: 'accessible'),
-      LegalAidCategory(categoryId: 5, categoryCode: 'CAT_DISASTER', categoryName: 'Victim of Mass Disaster / Ethnic Violence', description: 'Victims of disaster or violence', iconName: 'warning'),
-    ];
+    return LocalApplyRepository().getLegalAidCategories();
   }
 
   Future<List<CaseTypeMaster>> getCaseTypes() async {
@@ -186,47 +181,15 @@ class SupabaseService {
         return (res as List).map((x) => CaseTypeMaster.fromJson(x)).toList();
       } catch (_) {}
     }
-    return [
-      CaseTypeMaster(caseTypeId: 1, caseTypeCode: 'CT_DOMESTIC', caseTypeName: 'Domestic Violence & Maintenance', categoryGroup: 'Family Law', iconName: 'home'),
-      CaseTypeMaster(caseTypeId: 2, caseTypeCode: 'CT_PROPERTY', caseTypeName: 'Land & Property Dispute', categoryGroup: 'Civil Law', iconName: 'landscape'),
-      CaseTypeMaster(caseTypeId: 3, caseTypeCode: 'CT_SUCCESSION', caseTypeName: 'Succession & Heirship Certificate', categoryGroup: 'Civil Law', iconName: 'history_edu'),
-      CaseTypeMaster(caseTypeId: 4, caseTypeCode: 'CT_CRIMINAL_DEFENSE', caseTypeName: 'Criminal Defense / Bail Application', categoryGroup: 'Criminal Law', iconName: 'gavel'),
-      CaseTypeMaster(caseTypeId: 5, caseTypeCode: 'CT_LABOUR', caseTypeName: 'Wages & Labour Dispute', categoryGroup: 'Labour Law', iconName: 'work'),
-      CaseTypeMaster(caseTypeId: 6, caseTypeCode: 'CT_CONSUMER', caseTypeName: 'Consumer Protection', categoryGroup: 'Civil Law', iconName: 'shopping_bag'),
-    ];
+    return LocalApplyRepository().getCaseTypes();
   }
 
   // Union of required documents based on category + case type
   Future<List<DocumentMaster>> getRequiredDocuments({required int categoryId, required int caseTypeId}) async {
-    final allDocs = [
-      DocumentMaster(documentId: 1, documentCode: 'DOC_ID', documentName: 'Identity Proof (Aadhaar / Voter ID)', description: 'Valid Govt photo identity', isMandatoryDefault: true),
-      DocumentMaster(documentId: 2, documentCode: 'DOC_INCOME', documentName: 'Income Certificate', description: 'Tehsildar issued income proof'),
-      DocumentMaster(documentId: 3, documentCode: 'DOC_GENDER_PROOF', documentName: 'Gender / Identity Declaration', description: 'Self declaration or ID proof for women'),
-      DocumentMaster(documentId: 4, documentCode: 'DOC_CASTE_CERT', documentName: 'Caste Certificate (SC/ST)', description: 'Official SC/ST certificate'),
-      DocumentMaster(documentId: 5, documentCode: 'DOC_DISABILITY_CERT', documentName: 'Disability Certificate', description: 'Medical civil surgeon certificate'),
-      DocumentMaster(documentId: 6, documentCode: 'DOC_DEATH_CERT', documentName: 'Death Certificate of Deceased', description: 'Inheritance/succession cases'),
-      DocumentMaster(documentId: 7, documentCode: 'DOC_FIR_COPY', documentName: 'FIR / Police Complaint Copy', description: 'Copy of police report'),
-    ];
-
-    List<DocumentMaster> requiredList = [allDocs[0]]; // Identity proof always required
-
-    if (categoryId == 1) { // General category requires income proof
-      requiredList.add(allDocs[1]);
-    } else if (categoryId == 2) { // Women
-      requiredList.add(allDocs[2]);
-    } else if (categoryId == 3) { // SC/ST
-      requiredList.add(allDocs[3]);
-    } else if (categoryId == 4) { // Disabled
-      requiredList.add(allDocs[4]);
-    }
-
-    if (caseTypeId == 3) { // Succession
-      requiredList.add(allDocs[5]);
-    } else if (caseTypeId == 4) { // Criminal Defense
-      requiredList.add(allDocs[6]);
-    }
-
-    return requiredList;
+    return LocalApplyRepository().getRequiredDocuments(
+      categoryId: categoryId,
+      caseTypeId: caseTypeId,
+    );
   }
 
   // Upload picked file to Supabase Storage immediately under draft UUID

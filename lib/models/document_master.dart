@@ -4,13 +4,17 @@ class DocumentMaster {
   final String documentName;
   final String description;
   final bool isMandatoryDefault;
+  final bool isActive;
+  final int displayOrder;
 
-  DocumentMaster({
+  const DocumentMaster({
     required this.documentId,
     required this.documentCode,
     required this.documentName,
     required this.description,
     this.isMandatoryDefault = false,
+    this.isActive = true,
+    this.displayOrder = 0,
   });
 
   factory DocumentMaster.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class DocumentMaster {
       documentName: json['document_name'] ?? json['documentName'] ?? '',
       description: json['description'] ?? '',
       isMandatoryDefault: json['is_mandatory_default'] ?? false,
+      isActive: json['is_active'] ?? true,
+      displayOrder: json['display_order'] ?? 0,
     );
   }
 
@@ -29,5 +35,7 @@ class DocumentMaster {
     'document_name': documentName,
     'description': description,
     'is_mandatory_default': isMandatoryDefault,
+    'is_active': isActive,
+    'display_order': displayOrder,
   };
 }

@@ -1,0 +1,58 @@
+import '../../models/case_type_master.dart';
+
+const List<CaseTypeMaster> localCaseTypes = [
+  CaseTypeMaster(
+    caseTypeId: 1,
+    caseTypeCode: 'CT_DOMESTIC',
+    caseTypeName: 'Domestic Violence & Maintenance',
+    categoryGroup: 'Family Law',
+    iconName: 'home',
+    isActive: true,
+    displayOrder: 1,
+  ),
+  CaseTypeMaster(
+    caseTypeId: 2,
+    caseTypeCode: 'CT_PROPERTY',
+    caseTypeName: 'Land & Property Dispute',
+    categoryGroup: 'Civil Law',
+    iconName: 'landscape',
+    isActive: true,
+    displayOrder: 2,
+  ),
+  CaseTypeMaster(
+    caseTypeId: 3,
+    caseTypeCode: 'CT_SUCCESSION',
+    caseTypeName: 'Succession & Heirship Certificate',
+    categoryGroup: 'Civil Law',
+    iconName: 'history_edu',
+    isActive: true,
+    displayOrder: 3,
+  ),
+  CaseTypeMaster(
+    caseTypeId: 4,
+    caseTypeCode: 'CT_CRIMINAL_DEFENSE',
+    caseTypeName: 'Criminal Defense / Bail Application',
+    categoryGroup: 'Criminal Law',
+    iconName: 'gavel',
+    isActive: true,
+    displayOrder: 4,
+  ),
+  CaseTypeMaster(
+    caseTypeId: 5,
+    caseTypeCode: 'CT_LABOUR',
+    caseTypeName: 'Wages & Labour Dispute',
+    categoryGroup: 'Labour Law',
+    iconName: 'work',
+    isActive: true,
+    displayOrder: 5,
+  ),
+  CaseTypeMaster(
+    caseTypeId: 6,
+    caseTypeCode: 'CT_CONSUMER',
+    caseTypeName: 'Consumer Protection',
+    categoryGroup: 'Civil Law',
+    iconName: 'shopping_bag',
+    isActive: true,
+    displayOrder: 6,
+  ),
+];

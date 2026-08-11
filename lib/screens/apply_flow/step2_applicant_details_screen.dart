@@ -5,34 +5,9 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/draft_provider.dart';
 import '../../providers/auth_provider.dart';
-
-// ─────────────────────────────────────────────────────────
-//  Gender option model
-// ─────────────────────────────────────────────────────────
-class _GenderOption {
-  const _GenderOption({required this.value, required this.label, this.icon});
-  final String value;
-  final String label;
-  final IconData? icon;
-}
-
-const List<_GenderOption> _genderOptions = [
-  _GenderOption(value: 'Male', label: 'Male', icon: Icons.male_rounded),
-  _GenderOption(value: 'Female', label: 'Female', icon: Icons.female_rounded),
-  _GenderOption(value: 'Other', label: 'Other'),
-];
-
-// ─────────────────────────────────────────────────────────
-//  District data
-// ─────────────────────────────────────────────────────────
-const List<Map<String, dynamic>> _districts = [
-  {'id': 1, 'name': 'Gangtok (East Sikkim)'},
-  {'id': 2, 'name': 'Namchi (South Sikkim)'},
-  {'id': 3, 'name': 'Gyalshing (West Sikkim)'},
-  {'id': 4, 'name': 'Mangan (North Sikkim)'},
-  {'id': 5, 'name': 'Soreng'},
-  {'id': 6, 'name': 'Pakyong'},
-];
+import '../../providers/apply_data_provider.dart';
+import '../../data/models/gender_option.dart';
+import '../../data/models/district.dart';
 
 // ─────────────────────────────────────────────────────────
 //  Main Widget
@@ -65,6 +40,9 @@ class _Step2ApplicantDetailsScreenState
   String _gender = 'Male';
   int _districtId = 1;
   String _districtName = 'Gangtok (East Sikkim)';
+
+  late Future<List<GenderOption>> _genderOptionsFuture;
+  late Future<List<District>> _districtsFuture;
 
   // DOB – stored as separate parts for the Cupertino wheel pickers
   late int _dobYear;
@@ -113,6 +91,10 @@ class _Step2ApplicantDetailsScreenState
   @override
   void initState() {
     super.initState();
+
+    final applyDataProvider = Provider.of<ApplyDataProvider>(context, listen: false);
+    _genderOptionsFuture = applyDataProvider.getGenderOptions();
+    _districtsFuture = applyDataProvider.getDistricts();
 
     // Default DOB anchor: 25 years ago
     final anchor = DateTime.now().subtract(const Duration(days: 365 * 25));
@@ -593,10 +575,21 @@ class _Step2ApplicantDetailsScreenState
 
             // ── Gender Pill Selector ──────────────────────
             _sectionLabel('GENDER'),
-            _GenderPillSelector(
-              selected: _gender,
-              isDark: isDark,
-              onChanged: (val) => setState(() => _gender = val),
+            FutureBuilder<List<GenderOption>>(
+              future: _genderOptionsFuture,
+              builder: (context, snapshot) {
+                final options = snapshot.data ?? const <GenderOption>[];
+                if (options.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+                  return const Text('No gender options available');
+                }
+                return _GenderPillSelector(
+                  selected: _gender,
+                  isDark: isDark,
+                  options: options,
+                  resolveIcon: Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon,
+                  onChanged: (val) => setState(() => _gender = val),
+                );
+              },
             ),
             const SizedBox(height: 20),
 
@@ -627,29 +620,36 @@ class _Step2ApplicantDetailsScreenState
                   : null,
             ),
             const SizedBox(height: 14),
-            DropdownButtonFormField<int>(
-              initialValue: _districtId,
-              decoration: const InputDecoration(
-                hintText: 'Select district',
-                prefixIcon: Icon(Icons.map_outlined),
-              ),
-              items: _districts
-                  .map(
-                    (d) => DropdownMenuItem<int>(
-                      value: d['id'] as int,
-                      child: Text(d['name'] as String),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _districtId = val;
-                    _districtName =
-                        _districts.firstWhere((d) => d['id'] == val)['name']
-                            as String;
-                  });
+            FutureBuilder<List<District>>(
+              future: _districtsFuture,
+              builder: (context, snapshot) {
+                final districts = snapshot.data ?? const <District>[];
+                if (districts.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+                  return const Text('No districts available');
                 }
+                return DropdownButtonFormField<int>(
+                  initialValue: _districtId,
+                  decoration: const InputDecoration(
+                    hintText: 'Select district',
+                    prefixIcon: Icon(Icons.map_outlined),
+                  ),
+                  items: districts
+                      .map(
+                        (d) => DropdownMenuItem<int>(
+                          value: d.districtId,
+                          child: Text(d.districtName),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _districtId = val;
+                        _districtName = districts.firstWhere((d) => d.districtId == val).districtName;
+                      });
+                    }
+                  },
+                );
               },
             ),
             const SizedBox(height: 20),
@@ -715,20 +715,24 @@ class _GenderPillSelector extends StatelessWidget {
   const _GenderPillSelector({
     required this.selected,
     required this.isDark,
+    required this.options,
+    required this.resolveIcon,
     required this.onChanged,
   });
 
   final String selected;
   final bool isDark;
+  final List<GenderOption> options;
+  final IconData? Function(String) resolveIcon;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: _genderOptions.asMap().entries.map((entry) {
+      children: options.asMap().entries.map((entry) {
         final index = entry.key;
         final opt = entry.value;
-        final isLast = index == _genderOptions.length - 1;
+        final isLast = index == options.length - 1;
         return Expanded(
           child: Padding(
             padding: EdgeInsets.only(right: isLast ? 0 : 8),
@@ -736,6 +740,7 @@ class _GenderPillSelector extends StatelessWidget {
               option: opt,
               isActive: opt.value == selected,
               isDark: isDark,
+              resolveIcon: resolveIcon,
               onTap: () => onChanged(opt.value),
             ),
           ),
@@ -750,12 +755,14 @@ class _GenderPill extends StatelessWidget {
     required this.option,
     required this.isActive,
     required this.isDark,
+    required this.resolveIcon,
     required this.onTap,
   });
 
-  final _GenderOption option;
+  final GenderOption option;
   final bool isActive;
   final bool isDark;
+  final IconData? Function(String) resolveIcon;
   final VoidCallback onTap;
 
   @override
@@ -781,6 +788,7 @@ class _GenderPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
     );
 
+    final icon = option.iconName.isNotEmpty ? resolveIcon(option.iconName) : null;
     final label = Text(
       option.label,
       overflow: TextOverflow.ellipsis,
@@ -792,10 +800,10 @@ class _GenderPill extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      child: option.icon != null
+      child: icon != null
           ? OutlinedButton.icon(
               onPressed: onTap,
-              icon: Icon(option.icon, size: 17),
+              icon: Icon(icon, size: 17),
               label: label,
               style: buttonStyle,
             )
