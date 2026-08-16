@@ -9,7 +9,6 @@ import '../apply_flow/apply_wizard_screen.dart';
 import 'tracking_screen.dart';
 import '../auth/login_screen.dart';
 import 'citizen_dashboard_shell.dart';
-import '../advocate/advocate_dashboard_screen.dart';
 
 class UnauthHomeScreen extends StatelessWidget {
   const UnauthHomeScreen({super.key});
@@ -22,9 +21,6 @@ class UnauthHomeScreen extends StatelessWidget {
 
     // Auto-redirect if already logged in
     if (authProvider.isAuthenticated) {
-      if (authProvider.isAdvocate) {
-        return const AdvocateDashboardScreen();
-      }
       return const CitizenDashboardShell();
     }
 
@@ -127,7 +123,7 @@ class UnauthHomeScreen extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    "Already filed or an Advocate? ",
+                    "Already registered or filed? ",
                     style: TextStyle(
                       fontSize: 14,
                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,

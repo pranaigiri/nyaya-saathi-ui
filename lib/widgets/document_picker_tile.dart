@@ -8,8 +8,6 @@ import 'document_scanner_modal.dart';
 class DocumentPickerTile extends StatefulWidget {
   final DocumentMaster doc;
   final String? uploadedPath;
-  final String? frontPath;
-  final String? backPath;
   final Function(String docCode, String fileName, List<int> bytes) onFilePicked;
   final Function(String docCode)? onFileRemoved;
 
@@ -17,8 +15,6 @@ class DocumentPickerTile extends StatefulWidget {
     super.key,
     required this.doc,
     this.uploadedPath,
-    this.frontPath,
-    this.backPath,
     required this.onFilePicked,
     this.onFileRemoved,
   });
@@ -60,11 +56,11 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
     }
   }
 
-  void _openScanner(String docCode, String sideLabel) {
+  void _openScanner(String docCode) {
     showDialog(
       context: context,
       builder: (context) => DocumentScannerModal(
-        documentTitle: "${widget.doc.documentName} ($sideLabel)",
+        documentTitle: widget.doc.documentName,
         onScanned: (fileName, bytes) async {
           setState(() {
             _isUploading = true;
@@ -119,96 +115,6 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isIdentityProof = widget.doc.documentCode == 'DOC_ID';
-
-    if (isIdentityProof) {
-      final isFrontUploaded = widget.frontPath != null && widget.frontPath!.isNotEmpty;
-      final isBackUploaded = widget.backPath != null && widget.backPath!.isNotEmpty;
-      final isBothUploaded = isFrontUploaded && isBackUploaded;
-
-      return Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isBothUploaded ? AppColors.successGreen : AppColors.accentGold,
-            width: 1.8,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isBothUploaded ? Icons.verified_user : Icons.badge_outlined,
-                  color: isBothUploaded ? AppColors.successGreen : AppColors.accentGold,
-                  size: 24,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    widget.doc.documentName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: (isBothUploaded ? AppColors.successGreen : AppColors.dangerRed).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    isBothUploaded ? "Complete ✓" : "Required Front & Back",
-                    style: TextStyle(
-                      color: isBothUploaded ? AppColors.successGreen : AppColors.dangerRed,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Please scan or upload both Front (Photo) and Back (Address) sides of your ID card.",
-              style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-            ),
-            const SizedBox(height: 14),
-
-            // Sub-tile 1: Front Side
-            _buildIdentitySideTile(
-              context: context,
-              sideTitle: "Front Side (Photo)",
-              docCode: "DOC_ID_FRONT",
-              storagePath: widget.frontPath,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 10),
-
-            // Sub-tile 2: Back Side
-            _buildIdentitySideTile(
-              context: context,
-              sideTitle: "Back Side (Address)",
-              docCode: "DOC_ID_BACK",
-              storagePath: widget.backPath,
-              isDark: isDark,
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Standard Single Document Tile
     final isUploaded = widget.uploadedPath != null && widget.uploadedPath!.isNotEmpty;
     final cachedName = _localFileNameCache[widget.doc.documentCode];
 
@@ -348,7 +254,7 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
                     PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'scan') {
-                          _openScanner(widget.doc.documentCode, "Full Document");
+                          _openScanner(widget.doc.documentCode);
                         } else if (value == 'upload') {
                           _pickFile(widget.doc.documentCode);
                         }
@@ -408,7 +314,7 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
                 Row(
                   children: [
                     OutlinedButton.icon(
-                      onPressed: () => _openScanner(widget.doc.documentCode, "Full Document"),
+                      onPressed: () => _openScanner(widget.doc.documentCode),
                       icon: const Icon(Icons.camera_alt, size: 14),
                       label: const Text("Scan", style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
@@ -433,147 +339,6 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
                 ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIdentitySideTile({
-    required BuildContext context,
-    required String sideTitle,
-    required String docCode,
-    required String? storagePath,
-    required bool isDark,
-  }) {
-    final isUploaded = storagePath != null && storagePath.isNotEmpty;
-    final isThisUploading = _isUploading && _activeUploadingCode == docCode;
-    final cachedName = _localFileNameCache[docCode];
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isUploaded ? AppColors.successGreen.withValues(alpha: 0.5) : (isDark ? AppColors.borderDark : AppColors.borderLight),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isUploaded ? Icons.check_circle : Icons.crop_original_outlined,
-            color: isUploaded ? AppColors.successGreen : AppColors.textSecondaryLight,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(sideTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(
-                  isUploaded ? (cachedName ?? "Uploaded ✓") : "Pending",
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isUploaded ? AppColors.successGreen : AppColors.textSecondaryLight,
-                    fontWeight: isUploaded ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (isThisUploading)
-            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-          else if (isUploaded)
-            Row(
-              children: [
-                // View Button
-                IconButton(
-                  icon: const Icon(Icons.visibility_outlined, color: AppColors.primaryBlue, size: 20),
-                  tooltip: "View $sideTitle",
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  constraints: const BoxConstraints(),
-                  onPressed: () => _viewFile(docCode, sideTitle, storagePath),
-                ),
-                const SizedBox(width: 6),
-
-                // Replace Popup Menu
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'scan') {
-                      _openScanner(docCode, sideTitle);
-                    } else if (value == 'upload') {
-                      _pickFile(docCode);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'scan',
-                      child: Row(
-                        children: [
-                          Icon(Icons.camera_alt, size: 16, color: AppColors.primaryBlue),
-                          SizedBox(width: 8),
-                          Text("Scan Camera", style: TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'upload',
-                      child: Row(
-                        children: [
-                          Icon(Icons.folder_open, size: 16, color: AppColors.primaryBlue),
-                          SizedBox(width: 8),
-                          Text("Choose File", style: TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Icon(Icons.refresh, color: AppColors.accentGold, size: 20),
-                  ),
-                ),
-                const SizedBox(width: 6),
-
-                // Remove Button
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.dangerRed, size: 20),
-                  tooltip: "Remove $sideTitle",
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  constraints: const BoxConstraints(),
-                  onPressed: () => _removeFile(docCode, sideTitle),
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _openScanner(docCode, sideTitle),
-                  icon: const Icon(Icons.camera_alt, size: 14),
-                  label: const Text("Scan", style: TextStyle(fontSize: 11)),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    visualDensity: VisualDensity.compact,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                ElevatedButton.icon(
-                  onPressed: () => _pickFile(docCode),
-                  icon: const Icon(Icons.upload_file, size: 14, color: Colors.white),
-                  label: const Text("File", style: TextStyle(fontSize: 11, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    visualDensity: VisualDensity.compact,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
-            ),
         ],
       ),
     );

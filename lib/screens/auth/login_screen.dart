@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../citizen/citizen_dashboard_shell.dart';
-import '../advocate/advocate_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,7 +14,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _identityController = TextEditingController();
   final _otpController = TextEditingController();
-  bool _isAdvocateRole = false;
   bool _otpSent = false;
   bool _isLoading = false;
 
@@ -36,21 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_otpController.text.trim().isEmpty) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (_isAdvocateRole) {
-      authProvider.loginAsAdvocate(_identityController.text.trim());
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const AdvocateDashboardScreen()),
-        (route) => false,
-      );
-    } else {
-      authProvider.loginAsCitizen(_identityController.text.trim());
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const CitizenDashboardShell()),
-        (route) => false,
-      );
-    }
+    authProvider.loginAsCitizen(_identityController.text.trim());
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const CitizenDashboardShell()),
+      (route) => false,
+    );
   }
 
   @override
@@ -112,35 +101,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Role selector
-            Row(
-              children: [
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text("Citizen Portal"),
-                    selected: !_isAdvocateRole,
-                    onSelected: (val) => setState(() => _isAdvocateRole = false),
-                    selectedColor: AppColors.primaryBlue.withValues(alpha: 0.2),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text("Advocate Portal"),
-                    selected: _isAdvocateRole,
-                    onSelected: (val) => setState(() => _isAdvocateRole = true),
-                    selectedColor: AppColors.accentGold.withValues(alpha: 0.2),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
             TextField(
               controller: _identityController,
-              decoration: InputDecoration(
-                labelText: _isAdvocateRole ? "Advocate Phone / Email / Bar ID *" : "Citizen Phone Number / Email *",
-                prefixIcon: const Icon(Icons.person_outline),
+              decoration: const InputDecoration(
+                labelText: "Citizen Phone Number / Email *",
+                prefixIcon: Icon(Icons.person_outline),
               ),
             ),
             const SizedBox(height: 16),
@@ -169,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ? null
                     : (_otpSent ? _verifyLogin : _sendOtp),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isAdvocateRole ? AppColors.accentGold : AppColors.primaryBlue,
+                  backgroundColor: AppColors.primaryBlue,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _isLoading

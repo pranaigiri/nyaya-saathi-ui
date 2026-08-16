@@ -331,11 +331,6 @@ class SupabaseService {
     return _mockApplications;
   }
 
-  // Fetch advocate assigned applications
-  Future<List<LegalAidApplication>> getAdvocateAssignedCases() async {
-    return _mockApplications.where((a) => a.currentStatus == 'CASE_IN_PROGRESS' || a.currentStatus == 'ASSIGNED_TO_ADVOCATE').toList();
-  }
-
   Future<List<NotificationModel>> getNotifications() async {
     return _mockNotifications;
   }

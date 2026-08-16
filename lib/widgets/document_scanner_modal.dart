@@ -124,8 +124,9 @@ class _DocumentScannerModalState extends State<DocumentScannerModal>
   }
 
   Future<void> _toggleFlash() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized)
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return;
+    }
 
     FlashMode nextMode;
     switch (_currentFlashMode) {

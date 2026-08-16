@@ -16,15 +16,10 @@ class Step4DocumentUploadScreen extends StatelessWidget {
     final draft = draftProvider.draft;
     final docs = draftProvider.requiredDocuments;
 
-    final hasIdFront = draft?.documentStoragePaths.containsKey('DOC_ID_FRONT') ?? false;
-    final hasIdBack = draft?.documentStoragePaths.containsKey('DOC_ID_BACK') ?? false;
-    final hasSingleId = draft?.documentStoragePaths.containsKey('DOC_ID') ?? false;
-    final isIdentityComplete = (hasIdFront && hasIdBack) || hasSingleId;
+    final mandatoryDocs = docs.where((d) => d.isMandatoryDefault).toList();
+    final mandatoryUploadedCount = mandatoryDocs.where((d) => draft?.documentStoragePaths.containsKey(d.documentCode) ?? false).length;
 
-    final nonIdMandatoryDocs = docs.where((d) => d.isMandatoryDefault && d.documentCode != 'DOC_ID');
-    final nonIdMandatoryUploaded = nonIdMandatoryDocs.where((d) => draft?.documentStoragePaths.containsKey(d.documentCode) ?? false).length;
-
-    final canProceed = isIdentityComplete && (nonIdMandatoryUploaded >= nonIdMandatoryDocs.length);
+    final canProceed = mandatoryUploadedCount >= mandatoryDocs.length;
 
     final mq = MediaQuery.of(context);
     final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
@@ -39,7 +34,7 @@ class Step4DocumentUploadScreen extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          "Documents required for category '${draft?.categoryName ?? ''}' and case type '${draft?.caseTypeName ?? ''}'. Use File Upload or Document Scanner.",
+          "Documents required for category '${draft?.categoryName ?? ''}' and case type '${draft?.caseTypeName ?? ''}'. Upload or scan each document.",
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
         ),
         const SizedBox(height: 20),
@@ -52,14 +47,10 @@ class Step4DocumentUploadScreen extends StatelessWidget {
         else
           ...docs.map((d) {
             final existingPath = draft?.documentStoragePaths[d.documentCode];
-            final frontPath = draft?.documentStoragePaths['DOC_ID_FRONT'];
-            final backPath = draft?.documentStoragePaths['DOC_ID_BACK'];
 
             return DocumentPickerTile(
               doc: d,
               uploadedPath: existingPath,
-              frontPath: frontPath,
-              backPath: backPath,
               onFilePicked: (docCode, fileName, bytes) async {
                 await draftProvider.attachDocument(docCode, fileName, bytes);
               },
@@ -90,3 +81,4 @@ class Step4DocumentUploadScreen extends StatelessWidget {
     );
   }
 }
+
