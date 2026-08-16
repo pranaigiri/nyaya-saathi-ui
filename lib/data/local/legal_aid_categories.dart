@@ -1,0 +1,50 @@
+import '../../models/legal_aid_category.dart';
+
+const List<LegalAidCategory> localLegalAidCategories = [
+  LegalAidCategory(
+    categoryId: 1,
+    categoryCode: 'CAT_GEN',
+    categoryName: 'General (Income < ₹3,00,000/yr)',
+    description: 'Annual family income below ₹3 Lakhs',
+    incomeLimit: 300000,
+    iconName: 'account_balance_wallet',
+    isActive: true,
+    displayOrder: 1,
+  ),
+  LegalAidCategory(
+    categoryId: 2,
+    categoryCode: 'CAT_WOMEN',
+    categoryName: 'Women & Children',
+    description: 'Women and minor children regardless of income',
+    iconName: 'female',
+    isActive: true,
+    displayOrder: 2,
+  ),
+  LegalAidCategory(
+    categoryId: 3,
+    categoryCode: 'CAT_SC_ST',
+    categoryName: 'Scheduled Caste / Scheduled Tribe',
+    description: 'Members of SC/ST communities',
+    iconName: 'groups',
+    isActive: true,
+    displayOrder: 3,
+  ),
+  LegalAidCategory(
+    categoryId: 4,
+    categoryCode: 'CAT_DISABLED',
+    categoryName: 'Mentally Ill / Differently Abled',
+    description: 'Persons with physical or mental disabilities',
+    iconName: 'accessible',
+    isActive: true,
+    displayOrder: 4,
+  ),
+  LegalAidCategory(
+    categoryId: 5,
+    categoryCode: 'CAT_DISASTER',
+    categoryName: 'Victim of Mass Disaster / Ethnic Violence',
+    description: 'Victims of disaster or violence',
+    iconName: 'warning',
+    isActive: true,
+    displayOrder: 5,
+  ),
+];

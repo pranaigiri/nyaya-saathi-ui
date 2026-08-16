@@ -4,13 +4,17 @@ class CaseTypeMaster {
   final String caseTypeName;
   final String categoryGroup;
   final String iconName;
+  final bool isActive;
+  final int displayOrder;
 
-  CaseTypeMaster({
+  const CaseTypeMaster({
     required this.caseTypeId,
     required this.caseTypeCode,
     required this.caseTypeName,
     required this.categoryGroup,
     this.iconName = 'gavel',
+    this.isActive = true,
+    this.displayOrder = 0,
   });
 
   factory CaseTypeMaster.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class CaseTypeMaster {
       caseTypeName: json['case_type_name'] ?? json['caseTypeName'] ?? '',
       categoryGroup: json['category_group'] ?? json['categoryGroup'] ?? 'General',
       iconName: json['icon_name'] ?? json['iconName'] ?? 'gavel',
+      isActive: json['is_active'] ?? true,
+      displayOrder: json['display_order'] ?? 0,
     );
   }
 
@@ -29,5 +35,7 @@ class CaseTypeMaster {
     'case_type_name': caseTypeName,
     'category_group': categoryGroup,
     'icon_name': iconName,
+    'is_active': isActive,
+    'display_order': displayOrder,
   };
 }
