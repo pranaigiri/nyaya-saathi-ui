@@ -1,4 +1,4 @@
-package com.sikkim.slsa.nyaya_saathi_ui
+package com.sikkim.slsa.nyaya_saathi
 
 import io.flutter.embedding.android.FlutterActivity
 

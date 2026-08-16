@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../../models/legal_aid_category.dart';
 import '../../models/case_type_master.dart';
 import '../../models/document_master.dart';
-import '../../data/models/caste_type.dart';
-import '../../data/models/document_mapping.dart';
-import '../../data/models/gender_option.dart';
+import '../../models/taluka.dart';
+import '../../models/advocate.dart';
 import '../../data/models/district.dart';
+import '../../data/models/gender_option.dart';
 import '../../data/repositories/apply_repository.dart';
 
 class ApplyDataProvider extends ChangeNotifier {
@@ -14,39 +15,58 @@ class ApplyDataProvider extends ChangeNotifier {
 
   ApplyDataProvider(this.repository);
 
+  @override
+  void notifyListeners() {
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        super.notifyListeners();
+      });
+    } else {
+      super.notifyListeners();
+    }
+  }
+
   List<LegalAidCategory>? _cachedCategories;
   List<CaseTypeMaster>? _cachedCaseTypes;
   List<DocumentMaster>? _cachedDocuments;
-  List<CasteType>? _cachedCasteTypes;
   List<GenderOption>? _cachedGenderOptions;
   List<District>? _cachedDistricts;
-  List<DocumentMapping>? _cachedDocumentMappings;
 
   bool _isLoadingCategories = false;
   bool _isLoadingCaseTypes = false;
   bool _isLoadingDocuments = false;
-  bool _isLoadingCasteTypes = false;
   bool _isLoadingGenderOptions = false;
   bool _isLoadingDistricts = false;
-  bool _isLoadingDocumentMappings = false;
+
+  String? _categoriesError;
+  String? _caseTypesError;
+  String? _documentsError;
+  String? _districtsError;
 
   bool get isLoadingCategories => _isLoadingCategories;
   bool get isLoadingCaseTypes => _isLoadingCaseTypes;
   bool get isLoadingDocuments => _isLoadingDocuments;
-  bool get isLoadingCasteTypes => _isLoadingCasteTypes;
   bool get isLoadingGenderOptions => _isLoadingGenderOptions;
   bool get isLoadingDistricts => _isLoadingDistricts;
-  bool get isLoadingDocumentMappings => _isLoadingDocumentMappings;
+
+  String? get categoriesError => _categoriesError;
+  String? get caseTypesError => _caseTypesError;
+  String? get documentsError => _documentsError;
+  String? get districtsError => _districtsError;
 
   Future<List<LegalAidCategory>> getLegalAidCategories() async {
     if (_cachedCategories != null) {
       return _cachedCategories!;
     }
     _isLoadingCategories = true;
+    _categoriesError = null;
     notifyListeners();
     try {
       _cachedCategories = await repository.getLegalAidCategories();
       return _cachedCategories!;
+    } catch (e) {
+      _categoriesError = 'Failed to load categories. Please try again.';
+      return [];
     } finally {
       _isLoadingCategories = false;
       notifyListeners();
@@ -58,10 +78,14 @@ class ApplyDataProvider extends ChangeNotifier {
       return _cachedCaseTypes!;
     }
     _isLoadingCaseTypes = true;
+    _caseTypesError = null;
     notifyListeners();
     try {
       _cachedCaseTypes = await repository.getCaseTypes();
       return _cachedCaseTypes!;
+    } catch (e) {
+      _caseTypesError = 'Failed to load case types. Please try again.';
+      return [];
     } finally {
       _isLoadingCaseTypes = false;
       notifyListeners();
@@ -73,27 +97,16 @@ class ApplyDataProvider extends ChangeNotifier {
       return _cachedDocuments!;
     }
     _isLoadingDocuments = true;
+    _documentsError = null;
     notifyListeners();
     try {
       _cachedDocuments = await repository.getDocumentTypes();
       return _cachedDocuments!;
+    } catch (e) {
+      _documentsError = 'Failed to load document types. Please try again.';
+      return [];
     } finally {
       _isLoadingDocuments = false;
-      notifyListeners();
-    }
-  }
-
-  Future<List<CasteType>> getCasteTypes() async {
-    if (_cachedCasteTypes != null) {
-      return _cachedCasteTypes!;
-    }
-    _isLoadingCasteTypes = true;
-    notifyListeners();
-    try {
-      _cachedCasteTypes = await repository.getCasteTypes();
-      return _cachedCasteTypes!;
-    } finally {
-      _isLoadingCasteTypes = false;
       notifyListeners();
     }
   }
@@ -118,45 +131,43 @@ class ApplyDataProvider extends ChangeNotifier {
       return _cachedDistricts!;
     }
     _isLoadingDistricts = true;
+    _districtsError = null;
     notifyListeners();
     try {
       _cachedDistricts = await repository.getDistricts();
       return _cachedDistricts!;
+    } catch (e) {
+      _districtsError = 'Failed to load districts. Please try again.';
+      return [];
     } finally {
       _isLoadingDistricts = false;
       notifyListeners();
     }
   }
 
-  Future<List<DocumentMapping>> getDocumentMappings() async {
-    if (_cachedDocumentMappings != null) {
-      return _cachedDocumentMappings!;
-    }
-    _isLoadingDocumentMappings = true;
-    notifyListeners();
-    try {
-      _cachedDocumentMappings = await repository.getDocumentMappings();
-      return _cachedDocumentMappings!;
-    } finally {
-      _isLoadingDocumentMappings = false;
-      notifyListeners();
-    }
+  Future<List<Taluka>> getTalukas({String? districtId}) async {
+    return repository.getTalukas(districtId: districtId);
   }
 
   Future<List<DocumentMaster>> getRequiredDocuments({
-    required int categoryId,
-    required int caseTypeId,
-    int? casteTypeId,
+    required String categoryId,
+    required String caseTypeId,
   }) async {
     return repository.getRequiredDocuments(
       categoryId: categoryId,
       caseTypeId: caseTypeId,
-      casteTypeId: casteTypeId,
     );
   }
 
-  IconData resolveIcon(String iconName) {
-    switch (iconName.toLowerCase()) {
+  Future<List<Advocate>> getAdvocatesForDistrict(String districtId) async {
+    return repository.getAdvocatesForDistrict(districtId);
+  }
+
+  IconData resolveIcon(String? iconUrl) {
+    if (iconUrl == null || iconUrl.isEmpty) return Icons.gavel_outlined;
+    // Map known icon_url values to IconData
+    final key = iconUrl.toLowerCase();
+    switch (key) {
       case 'payments':
       case 'account_balance_wallet':
         return Icons.account_balance_wallet_outlined;
@@ -201,10 +212,12 @@ class ApplyDataProvider extends ChangeNotifier {
     _cachedCategories = null;
     _cachedCaseTypes = null;
     _cachedDocuments = null;
-    _cachedCasteTypes = null;
     _cachedGenderOptions = null;
     _cachedDistricts = null;
-    _cachedDocumentMappings = null;
+    _categoriesError = null;
+    _caseTypesError = null;
+    _documentsError = null;
+    _districtsError = null;
     notifyListeners();
   }
 }

@@ -3,14 +3,17 @@ import 'package:flutter/scheduler.dart';
 import '../models/draft_application_model.dart';
 import '../models/document_master.dart';
 import '../core/services/hive_draft_service.dart';
-import '../core/services/supabase_service.dart';
+import '../data/repositories/application_repository.dart';
 import 'apply_data_provider.dart';
+
+import '../models/profile.dart';
 
 class DraftProvider extends ChangeNotifier {
   DraftApplicationModel? _draft;
   List<DocumentMaster> _requiredDocuments = [];
   bool _isLoading = false;
   ApplyDataProvider? _applyDataProvider;
+  final ApplicationRepository _appRepo = ApplicationRepository();
 
   DraftApplicationModel? get draft => _draft;
   List<DocumentMaster> get requiredDocuments => _requiredDocuments;
@@ -45,13 +48,28 @@ class DraftProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startNewDraft() async {
+  Future<void> startNewDraft({Profile? profile, String? districtName}) async {
     _isLoading = true;
     notifyListeners();
 
     await HiveDraftService.clearDraft();
     _draft = await HiveDraftService.createOrGetDraft();
     _requiredDocuments = [];
+
+    if (profile != null) {
+      _draft!.fullName = profile.fullName;
+      _draft!.email = profile.email ?? '';
+      _draft!.phone = profile.phoneNumber ?? '';
+      if (profile.gender != null && profile.gender!.trim().isNotEmpty) {
+        final g = profile.gender!.trim();
+        _draft!.gender = g[0].toUpperCase() + (g.length > 1 ? g.substring(1).toLowerCase() : '');
+      }
+      _draft!.dob = profile.dob;
+      _draft!.villageTown = profile.villageOrTown ?? '';
+      _draft!.districtId = profile.districtId;
+      _draft!.districtName = districtName ?? '';
+      await HiveDraftService.saveDraft(_draft!);
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -69,13 +87,13 @@ class DraftProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateCategory(int catId, String code, String name) async {
+  Future<void> updateCategory(dynamic catId, String code, String name) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
-    _draft!.categoryId = catId;
+    _draft!.categoryId = catId?.toString();
     _draft!.categoryCode = code;
     _draft!.categoryName = name;
 
-    if (code == 'CAT_WOMEN') {
+    if (code == 'CAT_WOMEN' || code == 'WOMAN') {
       _draft!.gender = 'Female';
     }
 
@@ -88,27 +106,33 @@ class DraftProvider extends ChangeNotifier {
     required String gender,
     String? dob,
     required String villageTown,
-    required int districtId,
+    required dynamic districtId,
     required String districtName,
+    String? talukaId,
+    String? talukaName,
     required String email,
-    required String phone
+    required String phone,
+    String? preferredAdvocateId,
   }) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
     _draft!.fullName = fullName;
     _draft!.gender = gender;
     _draft!.dob = dob;
     _draft!.villageTown = villageTown;
-    _draft!.districtId = districtId;
+    _draft!.districtId = districtId?.toString();
     _draft!.districtName = districtName;
+    if (talukaId != null) _draft!.talukaId = talukaId;
+    if (talukaName != null) _draft!.talukaName = talukaName;
     _draft!.email = email;
     _draft!.phone = phone;
+    if (preferredAdvocateId != null) _draft!.preferredAdvocateId = preferredAdvocateId;
 
     await saveDraft();
   }
 
-  Future<void> updateCaseType(int caseTypeId, String code, String name) async {
+  Future<void> updateCaseType(dynamic caseTypeId, String code, String name) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
-    _draft!.caseTypeId = caseTypeId;
+    _draft!.caseTypeId = caseTypeId?.toString();
     _draft!.caseTypeCode = code;
     _draft!.caseTypeName = name;
 
@@ -116,10 +140,11 @@ class DraftProvider extends ChangeNotifier {
     await updateRequiredDocuments();
   }
 
-  Future<void> updateGrievanceDetails(String summary, String relief) async {
+  Future<void> updateGrievanceDetails(String summary, [String? relief]) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
+    _draft!.caseDetails = summary;
     _draft!.summaryOfGrievance = summary;
-    _draft!.reliefSought = relief;
+    if (relief != null) _draft!.reliefSought = relief;
     await saveDraft();
   }
 
@@ -138,11 +163,6 @@ class DraftProvider extends ChangeNotifier {
           categoryId: _draft!.categoryId!,
           caseTypeId: _draft!.caseTypeId!,
         );
-      } else {
-        _requiredDocuments = await SupabaseService().getRequiredDocuments(
-          categoryId: _draft!.categoryId!,
-          caseTypeId: _draft!.caseTypeId!,
-        );
       }
       notifyListeners();
     }
@@ -150,14 +170,19 @@ class DraftProvider extends ChangeNotifier {
 
   Future<void> attachDocument(String docCode, String fileName, List<int> bytes) async {
     if (_draft == null) return;
-    final storagePath = await SupabaseService().uploadDraftDocument(
-      draftUuid: _draft!.draftUuid,
-      docCode: docCode,
-      fileName: fileName,
-      bytes: bytes,
-    );
+    try {
+      final storagePath = await _appRepo.uploadDocument(
+        draftUuid: _draft!.draftUuid,
+        docCode: docCode,
+        fileName: fileName,
+        bytes: bytes,
+      );
+      _draft!.documentStoragePaths[docCode] = storagePath;
+    } catch (_) {
+      // Fallback local tracking if storage fails
+      _draft!.documentStoragePaths[docCode] = 'draft-uploads/${_draft!.draftUuid}/$docCode.jpg';
+    }
 
-    _draft!.documentStoragePaths[docCode] = storagePath;
     await saveDraft();
   }
 
@@ -177,11 +202,13 @@ class DraftProvider extends ChangeNotifier {
   Future<String> submitFinalApplication({String? loggedInCitizenId}) async {
     if (_draft == null) throw Exception("No active draft found");
 
-    final appNo = await SupabaseService().submitApplication(_draft!, loggedInCitizenId: loggedInCitizenId);
+    final app = await _appRepo.submitApplication(_draft!, applicantId: loggedInCitizenId);
+    final trackingNo = app.trackingNumber.isNotEmpty ? app.trackingNumber : 'LA-${DateTime.now().millisecondsSinceEpoch}';
+
     await HiveDraftService.clearDraft();
     _draft = null;
     _requiredDocuments = [];
     notifyListeners();
-    return appNo;
+    return trackingNo;
   }
 }

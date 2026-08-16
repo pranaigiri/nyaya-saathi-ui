@@ -1,10 +1,10 @@
 class NotificationModel {
-  final int id;
+  final String id;
   final String title;
   final String body;
   final bool isRead;
   final String createdAt;
-  final int? applicationId;
+  final String? applicationId;
 
   NotificationModel({
     required this.id,
@@ -17,13 +17,21 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      body: json['body'] ?? '',
-      isRead: json['is_read'] ?? false,
-      createdAt: json['created_at'] ?? DateTime.now().toIso8601String(),
-      applicationId: json['application_id'],
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
+      isRead: json['is_read'] == true,
+      createdAt: json['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+      applicationId: json['application_id']?.toString(),
     );
   }
-}
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'body': body,
+    'is_read': isRead,
+    'created_at': createdAt,
+    'application_id': applicationId,
+  };
+}

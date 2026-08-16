@@ -43,7 +43,6 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
         return ListView(
           padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
           children: [
-
             const FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -60,8 +59,8 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
             const SizedBox(height: 20),
 
             ...list.map((cat) {
-              final isSelected = selectedCatId == cat.categoryId;
-              final catIcon = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(cat.iconName);
+              final isSelected = selectedCatId == cat.id;
+              final catIcon = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(cat.iconUrl ?? cat.iconName);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -78,7 +77,7 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    draftProvider.updateCategory(cat.categoryId, cat.categoryCode, cat.categoryName);
+                    draftProvider.updateCategory(cat.id, cat.categoryCode, cat.categoryName);
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -111,14 +110,16 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
                                   color: isSelected ? AppColors.primaryBlue : null,
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                cat.description,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              if (cat.description != null && cat.description!.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  cat.description!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -133,6 +134,7 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
                 ),
               );
             }),
+            const SizedBox(height: 20),
             SizedBox(
               height: 52,
               child: ElevatedButton(

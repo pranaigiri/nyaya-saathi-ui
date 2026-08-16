@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
-import '../../core/services/supabase_service.dart';
+import '../../data/repositories/application_repository.dart';
 import '../../models/legal_aid_application.dart';
 import '../../widgets/status_badge.dart';
 import 'application_detail_screen.dart';
@@ -16,7 +16,8 @@ class TrackingScreen extends StatefulWidget {
 class _TrackingScreenState extends State<TrackingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _appNumberController = TextEditingController();
-  final _secIdController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _appRepo = ApplicationRepository();
   bool _isLoading = false;
   LegalAidApplication? _foundApplication;
   String? _errorMessage;
@@ -29,20 +30,26 @@ class _TrackingScreenState extends State<TrackingScreen> {
       _foundApplication = null;
     });
 
-    final result = await SupabaseService().trackApplication(
-      appNumber: _appNumberController.text,
-      secondaryIdentifier: _secIdController.text,
-      deviceId: "device-uuid-12345",
-    );
+    try {
+      final result = await _appRepo.trackApplication(
+        trackingNumber: _appNumberController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+      );
 
-    setState(() {
-      _isLoading = false;
-      if (result != null) {
-        _foundApplication = result;
-      } else {
-        _errorMessage = "No matching application found. Please check your Tracking ID and Date of Birth / Phone digits.";
-      }
-    });
+      setState(() {
+        _isLoading = false;
+        if (result != null) {
+          _foundApplication = result;
+        } else {
+          _errorMessage = "No matching application found. Please check your Tracking ID and Phone Number.";
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Unable to reach server. Please check your network connection.";
+      });
+    }
   }
 
   @override
@@ -70,30 +77,31 @@ class _TrackingScreenState extends State<TrackingScreen> {
               ),
               const SizedBox(height: 4),
               const Text(
-                "No account or OTP required. Enter your Tracking ID along with your Date of Birth or phone number.",
+                "No account required. Enter your Tracking ID along with the registered applicant phone number.",
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
               ),
               const SizedBox(height: 24),
 
               TextFormField(
                 controller: _appNumberController,
-                decoration: InputDecoration(
-                  labelText: "Application Number / Tracking ID *",
-                  hintText: "e.g. SK-LA-2026-1001",
-                  prefixIcon: const Icon(Icons.confirmation_number_outlined),
+                decoration: const InputDecoration(
+                  labelText: "Tracking ID / Application Number *",
+                  hintText: "e.g. LA-20260816-001",
+                  prefixIcon: Icon(Icons.confirmation_number_outlined),
                 ),
                 validator: (val) => val == null || val.trim().isEmpty ? "Please enter Tracking ID" : null,
               ),
               const SizedBox(height: 16),
 
               TextFormField(
-                controller: _secIdController,
-                decoration: InputDecoration(
-                  labelText: "Date of Birth (YYYY-MM-DD) OR Last 4 digits of Phone *",
-                  hintText: "e.g. 1988-05-14 or 3210",
-                  prefixIcon: const Icon(Icons.lock_clock_outlined),
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: "Registered Phone Number *",
+                  hintText: "e.g. 9876543210",
+                  prefixIcon: Icon(Icons.phone_outlined),
                 ),
-                validator: (val) => val == null || val.trim().isEmpty ? "Please enter secondary identifier" : null,
+                validator: (val) => val == null || val.trim().isEmpty ? "Please enter phone number" : null,
               ),
               const SizedBox(height: 24),
 
@@ -108,7 +116,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   ),
                   child: _isLoading
                       ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text(context.tr("track_now"), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(context.tr("track_now"), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -172,10 +180,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              _foundApplication!.applicationNumber,
+                              _foundApplication!.trackingNumber,
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
-                            StatusBadge(status: _foundApplication!.currentStatus),
+                            StatusBadge(status: _foundApplication!.status),
                           ],
                         ),
                         const Divider(height: 20),
@@ -184,7 +192,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                             const Icon(Icons.person_outline, size: 16, color: AppColors.textSecondaryLight),
                             const SizedBox(width: 6),
                             Text(
-                              _foundApplication!.applicantDetails?.fullName ?? 'N/A',
+                              _foundApplication!.applicantFullName,
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                             ),
                           ],
@@ -196,12 +204,42 @@ class _TrackingScreenState extends State<TrackingScreen> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                "${_foundApplication!.categoryName} • ${_foundApplication!.caseTypeName}",
+                                "${_foundApplication!.categoryName ?? 'Legal Aid'} • ${_foundApplication!.caseTypeName ?? 'Dispute'}",
                                 style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
                               ),
                             ),
                           ],
                         ),
+                        if (_foundApplication!.assignedAdvocateName != null && _foundApplication!.assignedAdvocateName!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.shield_outlined, size: 16, color: AppColors.successGreen),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  "Advocate: ${_foundApplication!.assignedAdvocateName!.toLowerCase().startsWith('adv') ? _foundApplication!.assignedAdvocateName! : 'Adv. ${_foundApplication!.assignedAdvocateName!}'}",
+                                  style: const TextStyle(fontSize: 12, color: AppColors.successGreen, fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else if (_foundApplication!.status.toUpperCase() == 'ADVOCATE_ASSIGNED') ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.hourglass_top_rounded, size: 16, color: Colors.amber.shade700),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  "Advocate Assignment in Progress",
+                                  style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,

@@ -36,8 +36,8 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     Provider.of<DraftProvider>(context, listen: false).updateGrievanceDetails(
-      _grievanceController.text,
-      _reliefController.text,
+      _grievanceController.text.trim(),
+      _reliefController.text.trim(),
     );
 
     widget.onNext();
@@ -60,7 +60,6 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
           if (_searchQuery.trim().isEmpty) return true;
           final q = _searchQuery.toLowerCase();
           return ct.caseTypeName.toLowerCase().contains(q) ||
-              ct.categoryGroup.toLowerCase().contains(q) ||
               ct.caseTypeCode.toLowerCase().contains(q);
         }).toList();
 
@@ -116,8 +115,8 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                 ),
               ] else ...[
                  ...filteredList.map((ct) {
-                   final isSelected = selectedCaseTypeId == ct.caseTypeId;
-                   final iconData = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(ct.iconName);
+                   final isSelected = selectedCaseTypeId == ct.id;
+                   final iconData = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(ct.iconUrl ?? ct.iconName);
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
@@ -134,7 +133,7 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
                       onTap: () {
-                        draftProvider.updateCaseType(ct.caseTypeId, ct.caseTypeCode, ct.caseTypeName);
+                        draftProvider.updateCaseType(ct.id, ct.caseTypeCode, ct.caseTypeName);
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -169,7 +168,7 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    ct.categoryGroup,
+                                    ct.caseTypeCode,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -199,7 +198,7 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                   labelText: "Summary of Grievance / Case Details *",
                   hintText: "Explain facts of the case, dates, opposing parties, and key issues...",
                 ),
-                validator: (v) => v == null || v.trim().length < 15 ? "Please provide a detailed summary (min 15 chars)" : null,
+                validator: (v) => v == null || v.trim().length < 10 ? "Please provide a summary (min 10 chars)" : null,
               ),
               const SizedBox(height: 14),
 

@@ -3,17 +3,36 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../providers/draft_provider.dart';
+import '../../../providers/application_provider.dart';
 import '../../../widgets/draft_resumption_card.dart';
 import '../../../widgets/stat_card.dart';
-import '../../apply_flow/apply_wizard_screen.dart';
 import '../tracking_screen.dart';
+import '../../../widgets/apply_choice_modal.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ApplicationProvider>(context, listen: false).fetchApplications();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final draftProvider = Provider.of<DraftProvider>(context);
+    final appProvider = Provider.of<ApplicationProvider>(context);
+    final apps = appProvider.applications;
+
+    final activeCount = apps.where((a) => a.status != 'RESOLVED' && a.status != 'REJECTED' && a.status != 'WITHDRAWN').length;
+    final resolvedCount = apps.where((a) => a.status == 'RESOLVED').length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -22,20 +41,20 @@ class HomeTab extends StatelessWidget {
         children: [
           // Stat Strip
           Row(
-            children: const [
+            children: [
               Expanded(
                 child: StatCard(
                   title: "Active",
-                  value: "2 Cases",
+                  value: "$activeCount ${activeCount == 1 ? 'Case' : 'Cases'}",
                   icon: Icons.pending_actions,
                   color: AppColors.infoCyan,
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: StatCard(
-                  title: "Approved",
-                  value: "1 Approved",
+                  title: "Resolved",
+                  value: "$resolvedCount Resolved",
                   icon: Icons.check_circle_outline,
                   color: AppColors.successGreen,
                 ),
@@ -58,20 +77,14 @@ class HomeTab extends StatelessWidget {
             icon: Icons.post_add_rounded,
             gradientColors: [AppColors.primaryBlue, const Color(0xFF1E40AF)],
             onTap: () {
-              if (draftProvider.draft == null) {
-                draftProvider.startNewDraft();
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
-              );
+              ApplyChoiceModal.show(context);
             },
           ),
           const SizedBox(height: 16),
           _buildActionCard(
             context,
             title: context.tr("track_application"),
-            subtitle: "Instant status check using Application Number & DOB",
+            subtitle: "Instant status check using Application Number & Phone",
             icon: Icons.location_searching_rounded,
             gradientColors: [const Color(0xFF0F766E), const Color(0xFF0D9488)],
             onTap: () {

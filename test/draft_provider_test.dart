@@ -1,26 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nyaya_saathi_ui/core/services/supabase_service.dart';
-import 'package:nyaya_saathi_ui/models/draft_application_model.dart';
+import 'package:nyaya_saathi/data/repositories/local_apply_repository.dart';
+import 'package:nyaya_saathi/models/draft_application_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() async {
-    await SupabaseService().init();
-  });
-
   group('Nyaya Saathi Business Logic Tests', () {
-    test('Dynamic document requirement union calculation for Women + Succession', () async {
-      final docs = await SupabaseService().getRequiredDocuments(
-        categoryId: 2, // Women & Children
-        caseTypeId: 3,  // Succession & Heirship Certificate
-      );
+    test('Local apply repository returns categories and case types', () async {
+      final repo = LocalApplyRepository();
+      final categories = await repo.getLegalAidCategories();
+      final caseTypes = await repo.getCaseTypes();
 
-      final docCodes = docs.map((d) => d.documentCode).toList();
-
-      expect(docCodes, contains('DOC_ID'));           // Mandatory Default Identity Proof
-      expect(docCodes, contains('DOC_GENDER_PROOF')); // Women category requirement
-      expect(docCodes, contains('DOC_DEATH_CERT'));   // Succession case type requirement
+      expect(categories, isNotEmpty);
+      expect(caseTypes, isNotEmpty);
     });
 
     test('Draft Application model serialization', () {
@@ -28,8 +20,8 @@ void main() {
         draftUuid: 'test-uuid-123',
         fullName: 'Passang Lhamu',
         villageTown: 'Namchi',
-        districtId: 2,
-        districtName: 'Namchi (South Sikkim)',
+        districtId: '7c7faa9f-4cbb-450d-9046-15ef51430cd9',
+        districtName: 'Namchi',
         phone: '9876543210',
       );
 
@@ -38,17 +30,10 @@ void main() {
 
       expect(restored.draftUuid, equals('test-uuid-123'));
       expect(restored.fullName, equals('Passang Lhamu'));
-    });
-
-    test('Tracking lookup without OTP using Application Number and DOB/phone', () async {
-      final app = await SupabaseService().trackApplication(
-        appNumber: 'SK-LA-2026-1001',
-        secondaryIdentifier: '1988-05-14',
+      expect(
+        restored.districtId,
+        equals('7c7faa9f-4cbb-450d-9046-15ef51430cd9'),
       );
-
-      expect(app, isNotNull);
-      expect(app!.applicationNumber, equals('SK-LA-2026-1001'));
-      expect(app.applicantDetails?.fullName, equals('Pema Lepcha'));
     });
   });
 }

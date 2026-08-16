@@ -50,5 +50,12 @@
   "advocate_portal": "Advocate Portal",
   "assigned_cases": "Assigned Cases",
   "case_details": "Case Details",
-  "applicant_contact": "Applicant Contact Info"
+  "applicant_contact": "Applicant Contact Info",
+  "citizen_registration": "Citizen Registration",
+  "create_citizen_account": "Create Citizen Account",
+  "register_as_citizen": "Register as Citizen",
+  "sign_in": "Sign In",
+  "confirm_password": "Confirm Password",
+  "security_verification": "Security Verification",
+  "enter_captcha": "Enter Security Code"
 }

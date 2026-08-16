@@ -1,7 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/draft_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'application_success_screen.dart';
 
 class Step5ReviewSubmitScreen extends StatefulWidget {
@@ -16,83 +18,178 @@ class Step5ReviewSubmitScreen extends StatefulWidget {
 class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
   bool _declarationAccepted = false;
   bool _isSubmitting = false;
-  final _otpController = TextEditingController();
+  final _captchaController = TextEditingController();
+  String _currentCaptcha = '';
 
-  void _showOtpVerificationDialog(BuildContext context) {
+  @override
+  void initState() {
+    super.initState();
+    _generateCaptcha();
+  }
+
+  void _generateCaptcha() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random();
+    _currentCaptcha = List.generate(5, (_) => chars[rand.nextInt(chars.length)]).join();
+  }
+
+  void _showCaptchaVerificationDialog(BuildContext context) {
+    _captchaController.clear();
+    _generateCaptcha();
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.mark_email_read_outlined, color: AppColors.primaryBlue),
-            SizedBox(width: 8),
-            Text("Verify OTP", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "An OTP has been sent to your registered phone & email address for digital authentication.",
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: "Enter 6-digit OTP *",
-                hintText: "123456",
-                prefixIcon: Icon(Icons.lock_outline),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return AlertDialog(
+              scrollable: true,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.security_outlined, color: AppColors.primaryBlue),
+                  SizedBox(width: 10),
+                  Text("Security Verification", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                  const Text(
+                    "Please enter the security Captcha code shown below to confirm and submit your legal aid application.",
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Visual Captcha display with refresh button
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurface : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Stylized captcha text
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.3)),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Text(
+                                _currentCaptcha,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 6,
+                                  color: AppColors.primaryBlue,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: _CaptchaLinePainter(isDark: isDark),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Refresh button
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryBlue),
+                          tooltip: "Get New Code",
+                          onPressed: () {
+                            setDialogState(() {
+                              _generateCaptcha();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: _captchaController,
+                    textCapitalization: TextCapitalization.characters,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: "Enter Captcha Code *",
+                      hintText: "Enter the 5 characters",
+                      prefixIcon: Icon(Icons.pin_outlined),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              "Demo Mode: Enter '123456' to verify immediately.",
-              style: TextStyle(fontSize: 11, color: AppColors.accentGold, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_otpController.text.trim().length >= 4) {
-                Navigator.of(ctx).pop();
-                _submitApplication();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a valid 6-digit OTP")),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-            child: const Text("Verify & Submit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+            actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final entered = _captchaController.text.trim().toUpperCase();
+                    if (entered == _currentCaptcha) {
+                      Navigator.of(ctx).pop();
+                      _submitApplication();
+                    } else {
+                      setDialogState(() {
+                        _generateCaptcha();
+                        _captchaController.clear();
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Incorrect captcha code. A new code has been generated."),
+                          backgroundColor: AppColors.dangerRed,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("Verify & Submit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   Future<void> _submitApplication() async {
     setState(() => _isSubmitting = true);
     try {
-      final appNum = await Provider.of<DraftProvider>(context, listen: false).submitFinalApplication();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final citizenId = auth.profile?.id ?? auth.currentUser?.id;
+      final appNum = await Provider.of<DraftProvider>(context, listen: false).submitFinalApplication(
+        loggedInCitizenId: citizenId,
+      );
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => ApplicationSuccessScreen(applicationNumber: appNum)),
           (route) => false,
         );
       }
-    } catch (e) {
+    } catch (e, stack) {
+      // ignore: avoid_print
+      print('[Step5ReviewSubmitScreen] Submission error: $e');
+      // ignore: avoid_print
+      print(stack);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Submission failed: $e"), backgroundColor: AppColors.dangerRed),
@@ -223,7 +320,7 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
           child: ElevatedButton(
             onPressed: (!_declarationAccepted || _isSubmitting)
                 ? null
-                : () => _showOtpVerificationDialog(context),
+                : () => _showCaptchaVerificationDialog(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.successGreen,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -232,7 +329,7 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : const FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text("Verify OTP & Submit ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: Text("Verify Captcha & Submit ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
           ),
         ),
@@ -350,3 +447,21 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
   }
 }
 
+class _CaptchaLinePainter extends CustomPainter {
+  final bool isDark;
+  _CaptchaLinePainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = isDark ? Colors.white24 : Colors.black12
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width, size.height * 0.3), paint);
+    canvas.drawLine(Offset(0, size.height * 0.2), Offset(size.width, size.height * 0.8), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

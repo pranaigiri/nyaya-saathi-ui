@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_colors.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../citizen/unauth_home_screen.dart';
 import '../citizen/citizen_dashboard_shell.dart';
 
 class ApplicationSuccessScreen extends StatelessWidget {
@@ -10,6 +13,8 @@ class ApplicationSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAuth = Provider.of<AuthProvider>(context, listen: false).isAuthenticated;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -89,12 +94,19 @@ class ApplicationSuccessScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (_) => const CitizenDashboardShell()),
+                            MaterialPageRoute(
+                              builder: (_) => isAuth
+                                  ? const CitizenDashboardShell()
+                                  : const UnauthHomeScreen(),
+                            ),
                             (route) => false,
                           );
                         },
-                        icon: const Icon(Icons.dashboard, size: 18),
-                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text("Dashboard")),
+                        icon: Icon(isAuth ? Icons.dashboard : Icons.home, size: 18),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(isAuth ? "Dashboard" : "Home"),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
                           padding: const EdgeInsets.symmetric(vertical: 14),

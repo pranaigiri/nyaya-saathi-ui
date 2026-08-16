@@ -13,7 +13,9 @@ class HiveDraftService {
   // Single preference record flag check
   static Future<bool> isFirstLaunch() async {
     final prefs = await SharedPreferences.getInstance();
-    return !(prefs.getBool(_prefInfoModalSeenKey) ?? false);
+    final modalSeen = prefs.getBool(_prefInfoModalSeenKey) ?? false;
+    final hasLang = prefs.getString(_prefLanguageKey) != null;
+    return !(modalSeen || hasLang);
   }
 
   static Future<void> markFirstLaunchCompleted(String languageCode) async {
@@ -30,6 +32,7 @@ class HiveDraftService {
   static Future<void> setLanguage(String lang) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefLanguageKey, lang);
+    await prefs.setBool(_prefInfoModalSeenKey, true);
   }
 
   static Future<String> getTheme() async {

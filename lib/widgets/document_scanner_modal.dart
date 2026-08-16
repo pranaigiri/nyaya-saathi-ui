@@ -104,7 +104,9 @@ class _DocumentScannerModalState extends State<DocumentScannerModal>
 
     try {
       await controller.initialize();
-      await controller.setFlashMode(_currentFlashMode);
+      try {
+        await controller.setFlashMode(_currentFlashMode);
+      } catch (_) {}
 
       if (mounted) {
         setState(() {

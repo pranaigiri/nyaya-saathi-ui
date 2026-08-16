@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "597775198746",
+    "project_id": "nyaya-saathi-app",
+    "storage_bucket": "nyaya-saathi-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597775198746:android:ef24c4dd4f3bbb59c33fa3",
+        "android_client_info": {
+          "package_name": "com.sikkim.slsa.nyaya_saathi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "597775198746-61u8a5rijm2ul4b7vhn1i29e7mtcm2k7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBk9kLjUavSN9f987TWIk_cyF8hO-IIMm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "597775198746-61u8a5rijm2ul4b7vhn1i29e7mtcm2k7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

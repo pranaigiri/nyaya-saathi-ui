@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/services/notification_service.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/draft_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../citizen/unauth_home_screen.dart';
+import '../citizen/citizen_dashboard_shell.dart';
 import '../onboarding/language_selection_modal.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -67,30 +70,50 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _navigateToNext() async {
     final langProvider = Provider.of<LanguageProvider>(context, listen: false);
-
     final draftProvider = Provider.of<DraftProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    await Future.wait([
+    // Run all initialization in parallel
+    final results = await Future.wait([
       langProvider.init(),
       draftProvider.loadDraft(),
-
-      // Brief splash display matching animation timing
+      authProvider.restoreSession(),
       Future.delayed(const Duration(milliseconds: 2500)),
     ]);
 
     if (!mounted) return;
 
+    final sessionResult = results[2] as String;
+
+    // Handle language first launch
     if (langProvider.isFirstLaunch) {
-      showDialog(
+      await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => const LanguageSelectionModal(),
       );
+      if (!mounted) return;
+    }
+
+    if (!mounted) return;
+
+    // Route based on session status
+    if (sessionResult == 'citizen') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const CitizenDashboardShell()),
+      );
+      NotificationService.instance.checkAndConsumePendingNavigation();
     } else {
+      if (sessionResult == 'non_citizen') {
+        await authProvider.signOut(silent: true);
+      }
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const UnauthHomeScreen()),
       );
+      NotificationService.instance.checkAndConsumePendingNavigation();
     }
   }
 

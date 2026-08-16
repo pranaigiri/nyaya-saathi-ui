@@ -1,29 +1,35 @@
 class DraftApplicationModel {
   final String draftUuid;
   int stepIndex;
-  int? categoryId;
+  String? categoryId;
   String? categoryCode;
   String? categoryName;
-  
+
   // Applicant details
   String fullName;
   String gender;
   String? dob;
   String villageTown;
-  int districtId;
+  String? districtId;
   String districtName;
+  String? talukaId;
+  String? talukaName;
   String email;
   String phone;
 
   // Case details
-  int? caseTypeId;
+  String? caseTypeId;
   String? caseTypeCode;
   String? caseTypeName;
-  String summaryOfGrievance;
+  String caseDetails;
   String reliefSought;
+  String? preferredAdvocateId;
 
   // Storage path map for picked documents: docCode -> Supabase Storage Path
   Map<String, String> documentStoragePaths;
+
+  String get summaryOfGrievance => caseDetails;
+  set summaryOfGrievance(String value) => caseDetails = value;
 
   DraftApplicationModel({
     required this.draftUuid,
@@ -35,15 +41,18 @@ class DraftApplicationModel {
     this.gender = 'Male',
     this.dob,
     this.villageTown = '',
-    this.districtId = 1,
-    this.districtName = 'Gangtok (East Sikkim)',
+    this.districtId,
+    this.districtName = '',
+    this.talukaId,
+    this.talukaName,
     this.email = '',
     this.phone = '',
     this.caseTypeId,
     this.caseTypeCode,
     this.caseTypeName,
-    this.summaryOfGrievance = '',
+    this.caseDetails = '',
     this.reliefSought = '',
+    this.preferredAdvocateId,
     Map<String, String>? documentStoragePaths,
   }) : documentStoragePaths = documentStoragePaths ?? {};
 
@@ -59,13 +68,16 @@ class DraftApplicationModel {
     'villageTown': villageTown,
     'districtId': districtId,
     'districtName': districtName,
+    'talukaId': talukaId,
+    'talukaName': talukaName,
     'email': email,
     'phone': phone,
     'caseTypeId': caseTypeId,
     'caseTypeCode': caseTypeCode,
     'caseTypeName': caseTypeName,
-    'summaryOfGrievance': summaryOfGrievance,
+    'caseDetails': caseDetails,
     'reliefSought': reliefSought,
+    'preferredAdvocateId': preferredAdvocateId,
     'documentStoragePaths': documentStoragePaths,
   };
 
@@ -73,22 +85,25 @@ class DraftApplicationModel {
     return DraftApplicationModel(
       draftUuid: json['draftUuid'] ?? '',
       stepIndex: json['stepIndex'] ?? 0,
-      categoryId: json['categoryId'],
+      categoryId: json['categoryId']?.toString(),
       categoryCode: json['categoryCode'],
       categoryName: json['categoryName'],
       fullName: json['fullName'] ?? '',
       gender: json['gender'] ?? 'Male',
       dob: json['dob'],
       villageTown: json['villageTown'] ?? '',
-      districtId: json['districtId'] ?? 1,
-      districtName: json['districtName'] ?? 'Gangtok (East Sikkim)',
+      districtId: json['districtId']?.toString(),
+      districtName: json['districtName'] ?? '',
+      talukaId: json['talukaId']?.toString(),
+      talukaName: json['talukaName'],
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
-      caseTypeId: json['caseTypeId'],
+      caseTypeId: json['caseTypeId']?.toString(),
       caseTypeCode: json['caseTypeCode'],
       caseTypeName: json['caseTypeName'],
-      summaryOfGrievance: json['summaryOfGrievance'] ?? '',
+      caseDetails: json['caseDetails'] ?? json['summaryOfGrievance'] ?? '',
       reliefSought: json['reliefSought'] ?? '',
+      preferredAdvocateId: json['preferredAdvocateId']?.toString(),
       documentStoragePaths: Map<String, String>.from(json['documentStoragePaths'] ?? {}),
     );
   }

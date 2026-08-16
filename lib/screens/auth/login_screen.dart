@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../citizen/citizen_dashboard_shell.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,41 +13,61 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _identityController = TextEditingController();
-  final _otpController = TextEditingController();
-  bool _otpSent = false;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
   bool _isLoading = false;
 
-  void _sendOtp() {
-    if (_identityController.text.trim().isEmpty) return;
-    setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _otpSent = true;
-        });
-      }
-    });
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
-  void _verifyLogin() {
-    if (_otpController.text.trim().isEmpty) return;
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    authProvider.loginAsCitizen(_identityController.text.trim());
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const CitizenDashboardShell()),
-      (route) => false,
-    );
+    final result = await authProvider.signInWithEmail(email, password);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result == 'citizen') {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const CitizenDashboardShell()),
+        (route) => false,
+      );
+    } else {
+      final errorMsg = authProvider.errorMessage ?? 'Login failed. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: AppColors.dangerRed,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Register / Login"),
+        title: const Text("Citizen Sign In"),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -95,51 +116,97 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 4),
             const Center(
               child: Text(
-                "Sign in with your phone number or email via OTP",
+                "Sign in with your registered email and password",
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
               ),
             ),
             const SizedBox(height: 28),
 
             TextField(
-              controller: _identityController,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: "Citizen Phone Number / Email *",
-                prefixIcon: Icon(Icons.person_outline),
+                labelText: "Email Address *",
+                prefixIcon: Icon(Icons.email_outlined),
               ),
             ),
             const SizedBox(height: 16),
 
-            if (_otpSent) ...[
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: const InputDecoration(
-                  labelText: "Enter 6-digit OTP Code *",
-                  hintText: "123456",
-                  prefixIcon: Icon(Icons.pin_outlined),
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: "Password *",
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text("Demo OTP: Enter 123456", style: TextStyle(fontSize: 11, color: AppColors.accentGold, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-            ],
+            ),
+            const SizedBox(height: 24),
 
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isLoading
-                    ? null
-                    : (_otpSent ? _verifyLogin : _sendOtp),
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
                 ),
                 child: _isLoading
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text(_otpSent ? "Verify & Login" : "Send OTP Code", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    : const Text("Sign In", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Register Account Navigation Link
+            Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account? ",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                      );
+                    },
+                    child: const Text(
+                      "Register as Citizen",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                "Sikkim State Legal Services Authority (SLSA)",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondaryLight,
+                ),
               ),
             ),
           ],
@@ -148,3 +215,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

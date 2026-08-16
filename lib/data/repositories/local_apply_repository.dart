@@ -2,17 +2,11 @@ import '../repositories/apply_repository.dart';
 import '../../models/legal_aid_category.dart';
 import '../../models/case_type_master.dart';
 import '../../models/document_master.dart';
-import '../../data/models/caste_type.dart';
-import '../../data/models/document_mapping.dart';
-import '../../data/models/gender_option.dart';
+import '../../models/taluka.dart';
+import '../../models/advocate.dart';
 import '../../data/models/district.dart';
-import '../../data/local/legal_aid_categories.dart';
-import '../../data/local/case_types.dart';
-import '../../data/local/document_types.dart';
-import '../../data/local/caste_types.dart';
-import '../../data/local/document_mappings.dart';
+import '../../data/models/gender_option.dart';
 import '../../data/local/gender_options.dart';
-import '../../data/local/districts.dart';
 
 class LocalApplyRepository implements ApplyRepository {
   static final LocalApplyRepository _instance = LocalApplyRepository._internal();
@@ -21,85 +15,105 @@ class LocalApplyRepository implements ApplyRepository {
 
   @override
   Future<List<LegalAidCategory>> getLegalAidCategories() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    return List<LegalAidCategory>.unmodifiable(localLegalAidCategories);
+    return const [
+      LegalAidCategory(
+        id: '5793c5e6-9236-4dfd-8b82-fbb3d82dc092',
+        categoryCode: 'SC_ST',
+        categoryName: 'Scheduled Caste or Scheduled Tribe',
+        description: 'Members of Scheduled Caste or Scheduled Tribe communities',
+        displayOrder: 1,
+      ),
+      LegalAidCategory(
+        id: '837cce7d-b165-42d1-b6c8-7bcbcce502d1',
+        categoryCode: 'WOMAN',
+        categoryName: 'Woman',
+        description: 'All women are eligible regardless of income',
+        displayOrder: 2,
+      ),
+      LegalAidCategory(
+        id: 'f3595cfc-9d99-4e1f-89be-b0186267de66',
+        categoryCode: 'GENERAL',
+        categoryName: 'General – Annual income below ₹3 Lakh',
+        description: 'Individuals with annual household income less than 3 Lakh Rupees',
+        displayOrder: 3,
+      ),
+    ];
   }
 
   @override
   Future<List<CaseTypeMaster>> getCaseTypes() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    return List<CaseTypeMaster>.unmodifiable(localCaseTypes);
+    return const [
+      CaseTypeMaster(
+        id: '1061ce0c-c230-47cc-b6d0-226e17acffbc',
+        caseTypeCode: 'SUCCESSION_CERTIFICATE',
+        caseTypeName: 'Succession Certificate',
+        displayOrder: 1,
+      ),
+      CaseTypeMaster(
+        id: 'ff25398e-f2f5-4968-86d1-7720a5bd88f2',
+        caseTypeCode: 'DOMESTIC_VIOLENCE',
+        caseTypeName: 'Domestic Violence',
+        displayOrder: 2,
+      ),
+      CaseTypeMaster(
+        id: '0e6b1747-e003-44e6-86dc-34ccb988658e',
+        caseTypeCode: 'PROPERTY_DISPUTE',
+        caseTypeName: 'Property Dispute',
+        displayOrder: 3,
+      ),
+    ];
   }
 
   @override
   Future<List<DocumentMaster>> getDocumentTypes() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    return List<DocumentMaster>.unmodifiable(localDocumentTypes);
-  }
-
-  @override
-  Future<List<CasteType>> getCasteTypes() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    return List<CasteType>.unmodifiable(localCasteTypes);
+    return const [
+      DocumentMaster(
+        id: '2d30eaa3-ae5c-419c-9962-e13ad6a9333e',
+        documentCode: 'IDENTIFICATION_DOCUMENT',
+        documentName: 'Identification Document (Voter, Aadhar)',
+        description: 'A government-approved identification document',
+      ),
+      DocumentMaster(
+        id: '05cffb0c-2ae7-469f-918c-9208720dd9d9',
+        documentCode: 'INCOME_CERTIFICATE',
+        documentName: 'Income Certificate',
+        description: 'Government issued annual income certificate',
+      ),
+    ];
   }
 
   @override
   Future<List<GenderOption>> getGenderOptions() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
     return List<GenderOption>.unmodifiable(localGenderOptions);
   }
 
   @override
   Future<List<District>> getDistricts() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    return List<District>.unmodifiable(localDistricts);
+    return const [
+      District(id: '162e0db6-feb9-44ea-9476-483c844f4956', districtName: 'Gangtok', districtCode: 'GANGTOK', stateId: ''),
+      District(id: '7c7faa9f-4cbb-450d-9046-15ef51430cd9', districtName: 'Namchi', districtCode: 'NAMCHI', stateId: ''),
+      District(id: '18bcf408-b669-4e7d-b52c-d3b0a9b7c89d', districtName: 'Mangan', districtCode: 'MANGAN', stateId: ''),
+      District(id: 'd434b194-4038-4342-b475-0f1ef7b44ae4', districtName: 'Gyalshing', districtCode: 'GYALSHING', stateId: ''),
+    ];
   }
 
   @override
-  Future<List<DocumentMapping>> getDocumentMappings() async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    return List<DocumentMapping>.unmodifiable(localDocumentMappings);
+  Future<List<Taluka>> getTalukas({String? districtId}) async {
+    return const [
+      Taluka(id: 'b8961244-05cf-4f40-8104-c06656479aeb', talukaName: 'Gangtok', talukaCode: 'GANGTOK_TALUKA', districtId: '162e0db6-feb9-44ea-9476-483c844f4956'),
+    ];
   }
 
   @override
   Future<List<DocumentMaster>> getRequiredDocuments({
-    required int categoryId,
-    required int caseTypeId,
-    int? casteTypeId,
+    required String categoryId,
+    required String caseTypeId,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    return getDocumentTypes();
+  }
 
-    final allDocs = Map<int, DocumentMaster>.fromIterable(
-      localDocumentTypes,
-      key: (d) => (d as DocumentMaster).documentId,
-    );
-
-    final mappings = localDocumentMappings;
-    final result = <DocumentMaster>{};
-
-    for (final mapping in mappings) {
-      if (!mapping.isRequired) continue;
-
-      final doc = allDocs[mapping.documentTypeId];
-      if (doc == null) continue;
-
-      final matchesCategory = mapping.legalAidCategoryId != null &&
-          mapping.legalAidCategoryId == categoryId;
-      final matchesCaseType = mapping.caseTypeId != null &&
-          mapping.caseTypeId == caseTypeId;
-      final matchesCasteType = mapping.casteTypeId != null &&
-          mapping.casteTypeId == casteTypeId;
-      final isGlobal = mapping.legalAidCategoryId == null &&
-          mapping.caseTypeId == null &&
-          mapping.casteTypeId == null;
-
-      if (isGlobal || matchesCategory || matchesCaseType || matchesCasteType) {
-        result.add(doc);
-      }
-    }
-
-    final sorted = result.toList()
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    return sorted;
+  @override
+  Future<List<Advocate>> getAdvocatesForDistrict(String districtId) async {
+    return const [];
   }
 }

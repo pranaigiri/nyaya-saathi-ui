@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nyaya_saathi_ui/main.dart';
-import 'package:nyaya_saathi_ui/providers/theme_provider.dart';
-import 'package:nyaya_saathi_ui/providers/language_provider.dart';
-import 'package:nyaya_saathi_ui/providers/draft_provider.dart';
-import 'package:nyaya_saathi_ui/providers/auth_provider.dart';
+import 'package:nyaya_saathi/main.dart';
+import 'package:nyaya_saathi/providers/theme_provider.dart';
+import 'package:nyaya_saathi/providers/language_provider.dart';
+import 'package:nyaya_saathi/providers/draft_provider.dart';
+import 'package:nyaya_saathi/providers/auth_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

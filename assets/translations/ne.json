@@ -50,5 +50,12 @@
   "advocate_portal": "अधिवक्ता पोर्टल",
   "assigned_cases": "तोकिएका मुद्दाहरू",
   "case_details": "मुद्दा विवरण",
-  "applicant_contact": "आवेदक सम्पर्क जानकारी"
+  "applicant_contact": "आवेदक सम्पर्क जानकारी",
+  "citizen_registration": "नागरिक दर्ता",
+  "create_citizen_account": "नागरिक खाता बनाउनुहोस्",
+  "register_as_citizen": "नागरिकको रूपमा दर्ता हुनुहोस्",
+  "sign_in": "साइन इन गर्नुहोस्",
+  "confirm_password": "पासवर्ड पुष्टि गर्नुहोस्",
+  "security_verification": "सुरक्षा प्रमाणीकरण",
+  "enter_captcha": "सुरक्षा कोड प्रविष्ट गर्नुहोस्"
 }

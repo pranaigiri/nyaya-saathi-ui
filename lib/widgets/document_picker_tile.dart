@@ -162,10 +162,10 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
                       widget.doc.documentName,
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
-                    if (widget.doc.description.isNotEmpty) ...[
+                    if (widget.doc.description != null && widget.doc.description!.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
-                        widget.doc.description,
+                        widget.doc.description!,
                         style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                       ),
                     ],

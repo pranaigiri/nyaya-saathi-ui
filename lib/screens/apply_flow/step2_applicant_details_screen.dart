@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/draft_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/apply_data_provider.dart';
 import '../../data/models/gender_option.dart';
 import '../../data/models/district.dart';
@@ -38,8 +37,8 @@ class _Step2ApplicantDetailsScreenState
 
   // State
   String _gender = 'Male';
-  int _districtId = 1;
-  String _districtName = 'Gangtok (East Sikkim)';
+  String? _districtId;
+  String _districtName = '';
 
   late Future<List<GenderOption>> _genderOptionsFuture;
   late Future<List<District>> _districtsFuture;
@@ -103,7 +102,6 @@ class _Step2ApplicantDetailsScreenState
     _dobDay = anchor.day;
 
     final draft = Provider.of<DraftProvider>(context, listen: false).draft;
-    final auth = Provider.of<AuthProvider>(context, listen: false);
 
     if (draft != null) {
       _fullNameController.text = draft.fullName;
@@ -111,9 +109,7 @@ class _Step2ApplicantDetailsScreenState
       _villageTownController.text = draft.villageTown;
       _districtId = draft.districtId;
       _districtName = draft.districtName;
-      _phoneController.text = draft.phone.isNotEmpty
-          ? draft.phone
-          : (!auth.userPhoneOrEmail.contains('@') ? auth.userPhoneOrEmail : '');
+      _phoneController.text = draft.phone;
 
       // Parse existing DOB from draft
       if (draft.dob != null && draft.dob!.isNotEmpty) {
@@ -156,7 +152,7 @@ class _Step2ApplicantDetailsScreenState
       gender: _gender,
       dob: _dobSelected ? _dobDisplay : null,
       villageTown: _villageTownController.text.trim(),
-      districtId: _districtId,
+      districtId: _districtId ?? '',
       districtName: _districtName,
       email: '',
       phone: _phoneController.text.trim(),
@@ -627,16 +623,20 @@ class _Step2ApplicantDetailsScreenState
                 if (districts.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
                   return const Text('No districts available');
                 }
-                return DropdownButtonFormField<int>(
-                  initialValue: _districtId,
+                final selectedDistrictValue = districts.any((d) => d.id == _districtId)
+                    ? _districtId
+                    : (districts.isNotEmpty ? districts.first.id : null);
+
+                return DropdownButtonFormField<String>(
+                  initialValue: selectedDistrictValue,
                   decoration: const InputDecoration(
                     hintText: 'Select district',
                     prefixIcon: Icon(Icons.map_outlined),
                   ),
                   items: districts
                       .map(
-                        (d) => DropdownMenuItem<int>(
-                          value: d.districtId,
+                        (d) => DropdownMenuItem<String>(
+                          value: d.id,
                           child: Text(d.districtName),
                         ),
                       )
@@ -645,10 +645,11 @@ class _Step2ApplicantDetailsScreenState
                     if (val != null) {
                       setState(() {
                         _districtId = val;
-                        _districtName = districts.firstWhere((d) => d.districtId == val).districtName;
+                        _districtName = districts.firstWhere((d) => d.id == val).districtName;
                       });
                     }
                   },
+                  validator: (v) => (v == null || v.isEmpty) ? 'Please select district' : null,
                 );
               },
             ),

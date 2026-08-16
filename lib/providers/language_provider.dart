@@ -29,6 +29,7 @@ class LanguageProvider extends ChangeNotifier {
 
   Future<void> setLanguage(String langCode) async {
     _locale = Locale(langCode);
+    _isFirstLaunch = false;
     await HiveDraftService.setLanguage(langCode);
     notifyListeners();
   }

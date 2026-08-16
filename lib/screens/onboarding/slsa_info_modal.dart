@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/language_provider.dart';
-import '../citizen/unauth_home_screen.dart';
 
 class SlsaInfoModal extends StatelessWidget {
   final String selectedLanguage;
@@ -148,10 +147,7 @@ class SlsaInfoModal extends StatelessWidget {
     await langProvider.completeFirstLaunch(selectedLanguage);
 
     if (context.mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const UnauthHomeScreen()),
-      );
+      Navigator.of(context).pop();
     }
   }
 }
