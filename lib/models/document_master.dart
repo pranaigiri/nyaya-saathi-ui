@@ -5,12 +5,18 @@ class DocumentMaster {
   final String? description;
   final bool isActive;
 
+  /// Why this document is required — values are 'category' (asked because of the
+  /// selected eligibility category) and/or 'case_type' (asked because of the
+  /// selected case type).
+  final List<String> sources;
+
   const DocumentMaster({
     required this.id,
     required this.documentCode,
     required this.documentName,
     this.description,
     this.isActive = true,
+    this.sources = const [],
   });
 
   bool get isMandatoryDefault => true;

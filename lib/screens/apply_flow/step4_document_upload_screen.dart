@@ -49,9 +49,19 @@ class Step4DocumentUploadScreen extends StatelessWidget {
                 ...docs.map((d) {
                   final existingPath = draft?.documentStoragePaths[d.documentCode];
 
+                  // Which selection asked for this document (badge labels)
+                  final badgeLabels = <String>[];
+                  if (d.sources.contains('category') && (draft?.categoryName ?? '').isNotEmpty) {
+                    badgeLabels.add(draft!.categoryName!);
+                  }
+                  if (d.sources.contains('case_type') && (draft?.caseTypeName ?? '').isNotEmpty) {
+                    badgeLabels.add(draft!.caseTypeName!);
+                  }
+
                   return DocumentPickerTile(
                     doc: d,
                     uploadedPath: existingPath,
+                    requiredByLabels: badgeLabels,
                     onFilePicked: (docCode, fileName, bytes) async {
                       await draftProvider.attachDocument(docCode, fileName, bytes);
                     },
