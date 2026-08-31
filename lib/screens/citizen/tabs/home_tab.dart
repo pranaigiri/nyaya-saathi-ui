@@ -8,6 +8,7 @@ import '../../../widgets/draft_resumption_card.dart';
 import '../../../widgets/stat_card.dart';
 import '../tracking_screen.dart';
 import '../../../widgets/apply_choice_modal.dart';
+import '../../../widgets/eligibility_check_modal.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -69,7 +70,18 @@ class _HomeTabState extends State<HomeTab> {
             const SizedBox(height: 24),
           ],
 
-          // 2 Primary Action Cards
+          // One Tap Eligibility Check
+          _buildActionCard(
+            context,
+            title: context.tr("one_tap_eligibility_check"),
+            subtitle: "Quick 1-minute check to see if you qualify for free legal aid",
+            icon: Icons.fact_check_rounded,
+            gradientColors: [const Color(0xFF0D9488), const Color(0xFF14B8A6)],
+            onTap: () {
+              EligibilityCheckModal.show(context);
+            },
+          ),
+          const SizedBox(height: 16),
           _buildActionCard(
             context,
             title: context.tr("apply_for_legal_aid"),

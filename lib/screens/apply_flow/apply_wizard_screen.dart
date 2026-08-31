@@ -9,20 +9,26 @@ import 'step4_document_upload_screen.dart';
 import 'step5_review_submit_screen.dart';
 
 class ApplyWizardScreen extends StatefulWidget {
-  const ApplyWizardScreen({super.key});
+  /// 0-based starting step. 1 skips Step 1 when the eligibility category was
+  /// already selected via the One Tap Eligibility Check.
+  final int initialStep;
+
+  const ApplyWizardScreen({super.key, this.initialStep = 0});
 
   @override
   State<ApplyWizardScreen> createState() => _ApplyWizardScreenState();
 }
 
 class _ApplyWizardScreenState extends State<ApplyWizardScreen> {
-  int _currentStep = 0;
+  late int _currentStep;
 
   @override
   void initState() {
     super.initState();
+    _currentStep = widget.initialStep;
     final draft = Provider.of<DraftProvider>(context, listen: false).draft;
-    if (draft != null) {
+    if (draft != null && draft.stepIndex > widget.initialStep) {
+      // Resume an existing draft only if it is further along than the entry point.
       _currentStep = draft.stepIndex;
     }
   }

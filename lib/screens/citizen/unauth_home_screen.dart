@@ -5,6 +5,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../providers/draft_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/draft_resumption_card.dart';
+import '../../widgets/eligibility_check_modal.dart';
 import '../apply_flow/apply_wizard_screen.dart';
 import 'tracking_screen.dart';
 import '../auth/login_screen.dart';
@@ -85,7 +86,18 @@ class UnauthHomeScreen extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
 
-              // 2 Large Primary Buttons
+              // 3 Large Primary Buttons
+              _buildBigActionButton(
+                context,
+                title: context.tr("one_tap_eligibility_check"),
+                subtitle: "Quick 1-minute check • See if you qualify instantly",
+                icon: Icons.fact_check_rounded,
+                gradientColors: [const Color(0xFF0D9488), const Color(0xFF14B8A6)],
+                onTap: () {
+                  EligibilityCheckModal.show(context);
+                },
+              ),
+              const SizedBox(height: 16),
               _buildBigActionButton(
                 context,
                 title: context.tr("apply_for_legal_aid"),

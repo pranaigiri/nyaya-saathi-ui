@@ -7,14 +7,40 @@ import '../providers/apply_data_provider.dart';
 import '../screens/apply_flow/apply_wizard_screen.dart';
 
 class ApplyChoiceModal extends StatelessWidget {
-  const ApplyChoiceModal({super.key});
+  /// Preselected eligibility category (from the One Tap Eligibility Check).
+  final dynamic preselectedCategoryId;
+  final String? preselectedCategoryCode;
+  final String? preselectedCategoryName;
 
-  static Future<void> show(BuildContext context) {
+  /// Initial wizard step index (0-based). 1 skips Step 1 when the category
+  /// was already selected via the eligibility check.
+  final int initialStep;
+
+  const ApplyChoiceModal({
+    super.key,
+    this.preselectedCategoryId,
+    this.preselectedCategoryCode,
+    this.preselectedCategoryName,
+    this.initialStep = 0,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    dynamic preselectedCategoryId,
+    String? preselectedCategoryCode,
+    String? preselectedCategoryName,
+    int initialStep = 0,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => const ApplyChoiceModal(),
+      builder: (ctx) => ApplyChoiceModal(
+        preselectedCategoryId: preselectedCategoryId,
+        preselectedCategoryCode: preselectedCategoryCode,
+        preselectedCategoryName: preselectedCategoryName,
+        initialStep: initialStep,
+      ),
     );
   }
 
@@ -136,11 +162,14 @@ class ApplyChoiceModal extends StatelessWidget {
                 profile: profile,
                 districtName: districtName,
               );
+              await _applyPreselection(draftProvider);
 
               if (context.mounted) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => ApplyWizardScreen(initialStep: initialStep),
+                  ),
                 );
               }
             },
@@ -161,11 +190,14 @@ class ApplyChoiceModal extends StatelessWidget {
             onTap: () async {
               Navigator.pop(context);
               await draftProvider.startNewDraft(); // Starts fresh empty draft
+              await _applyPreselection(draftProvider);
 
               if (context.mounted) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => ApplyWizardScreen(initialStep: initialStep),
+                  ),
                 );
               }
             },
@@ -174,6 +206,21 @@ class ApplyChoiceModal extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Applies the category preselected via the eligibility check (if any) and
+  /// persists the initial wizard step so the wizard opens on the right step.
+  Future<void> _applyPreselection(DraftProvider draftProvider) async {
+    if (preselectedCategoryId != null && preselectedCategoryCode != null) {
+      await draftProvider.updateCategory(
+        preselectedCategoryId,
+        preselectedCategoryCode!,
+        preselectedCategoryName ?? preselectedCategoryCode!,
+      );
+    }
+    if (initialStep > 0) {
+      await draftProvider.setStepIndex(initialStep);
+    }
   }
 
   Widget _buildOptionCard(
