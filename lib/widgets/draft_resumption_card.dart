@@ -18,7 +18,7 @@ class DraftResumptionCard extends StatelessWidget {
     final draftProvider = Provider.of<DraftProvider>(context);
     final draft = draftProvider.draft;
 
-    if (draft == null) {
+    if (draft == null || !draft.hasMeaningfulData) {
       return const SizedBox.shrink();
     }
 
@@ -152,6 +152,30 @@ class DraftResumptionCard extends StatelessWidget {
               final discardButton = showDiscardButton
                   ? TextButton.icon(
                       onPressed: () async {
+                        // Ask for confirmation before deleting the draft.
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogCtx) => AlertDialog(
+                            title: Text(dialogCtx.tr("delete_draft_title")),
+                            content: Text(dialogCtx.tr("delete_draft_body")),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogCtx, false),
+                                child: Text(dialogCtx.tr("cancel")),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogCtx, true),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.dangerRed,
+                                ),
+                                child: Text(dialogCtx.tr("delete")),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed != true) return;
+
                         await draftProvider.startNewDraft();
                         if (context.mounted) {
                           Navigator.push(

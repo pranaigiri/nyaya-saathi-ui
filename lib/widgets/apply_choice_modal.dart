@@ -6,7 +6,7 @@ import '../providers/draft_provider.dart';
 import '../providers/apply_data_provider.dart';
 import '../screens/apply_flow/apply_wizard_screen.dart';
 
-class ApplyChoiceModal extends StatelessWidget {
+class ApplyChoiceModal extends StatefulWidget {
   /// Preselected eligibility category (from the One Tap Eligibility Check).
   final dynamic preselectedCategoryId;
   final String? preselectedCategoryCode;
@@ -45,6 +45,15 @@ class ApplyChoiceModal extends StatelessWidget {
   }
 
   @override
+  State<ApplyChoiceModal> createState() => _ApplyChoiceModalState();
+}
+
+class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
+  /// Which option (1 = Self, 2 = Others) is currently preparing its draft in
+  /// the background. Only that card's trailing arrow shows the spinner.
+  int? _loadingOption;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.darkSurface : Colors.white;
@@ -55,6 +64,28 @@ class ApplyChoiceModal extends StatelessWidget {
     final userName = profile?.fullName.isNotEmpty == true
         ? profile!.fullName
         : (authProvider.userName.isNotEmpty ? authProvider.userName : 'You');
+    final initialStep = widget.initialStep;
+
+    // Prepare the draft in the background, then open the wizard.
+    Future<void> prepareAndOpen(int option, Future<void> Function() prepare) async {
+      if (_loadingOption != null) return; // ignore double-taps
+      setState(() => _loadingOption = option);
+      try {
+        // Capture the NavigatorState while this modal's context is still
+        // mounted — it stays valid across the async work and the pop below.
+        final navigator = Navigator.of(context);
+        await prepare();
+        await _applyPreselection(draftProvider);
+        navigator.pop(); // Close the choice modal AFTER all async work succeeded
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => ApplyWizardScreen(initialStep: initialStep),
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _loadingOption = null);
+      }
+    }
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -145,9 +176,8 @@ class ApplyChoiceModal extends StatelessWidget {
             subtitle: 'Auto-fill form using your profile ($userName)',
             badgeText: '1-Click Auto-Fill',
             badgeColor: AppColors.primaryBlue,
-            onTap: () async {
-              Navigator.pop(context);
-
+            loading: _loadingOption == 1,
+            onTap: () => prepareAndOpen(1, () async {
               // Find district name if available
               String? districtName;
               if (profile?.districtId != null) {
@@ -162,17 +192,7 @@ class ApplyChoiceModal extends StatelessWidget {
                 profile: profile,
                 districtName: districtName,
               );
-              await _applyPreselection(draftProvider);
-
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ApplyWizardScreen(initialStep: initialStep),
-                  ),
-                );
-              }
-            },
+            }),
           ),
           const SizedBox(height: 14),
 
@@ -187,20 +207,10 @@ class ApplyChoiceModal extends StatelessWidget {
             subtitle: 'Form will be empty to enter another person\'s details',
             badgeText: 'Blank Form',
             badgeColor: const Color(0xFF0D9488),
-            onTap: () async {
-              Navigator.pop(context);
+            loading: _loadingOption == 2,
+            onTap: () => prepareAndOpen(2, () async {
               await draftProvider.startNewDraft(); // Starts fresh empty draft
-              await _applyPreselection(draftProvider);
-
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ApplyWizardScreen(initialStep: initialStep),
-                  ),
-                );
-              }
-            },
+            }),
           ),
           const SizedBox(height: 12),
         ],
@@ -211,15 +221,15 @@ class ApplyChoiceModal extends StatelessWidget {
   /// Applies the category preselected via the eligibility check (if any) and
   /// persists the initial wizard step so the wizard opens on the right step.
   Future<void> _applyPreselection(DraftProvider draftProvider) async {
-    if (preselectedCategoryId != null && preselectedCategoryCode != null) {
+    if (widget.preselectedCategoryId != null && widget.preselectedCategoryCode != null) {
       await draftProvider.updateCategory(
-        preselectedCategoryId,
-        preselectedCategoryCode!,
-        preselectedCategoryName ?? preselectedCategoryCode!,
+        widget.preselectedCategoryId,
+        widget.preselectedCategoryCode!,
+        widget.preselectedCategoryName ?? widget.preselectedCategoryCode!,
       );
     }
-    if (initialStep > 0) {
-      await draftProvider.setStepIndex(initialStep);
+    if (widget.initialStep > 0) {
+      await draftProvider.setStepIndex(widget.initialStep);
     }
   }
 
@@ -233,11 +243,11 @@ class ApplyChoiceModal extends StatelessWidget {
     required String subtitle,
     required String badgeText,
     required Color badgeColor,
+    required bool loading,
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      onTap: loading ? null : onTap, // ignore taps while this option is preparing
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -305,10 +315,16 @@ class ApplyChoiceModal extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
+            loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.6),
+                  )
+                : Icon(
+                    Icons.chevron_right_rounded,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
           ],
         ),
       ),

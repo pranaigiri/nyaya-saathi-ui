@@ -64,8 +64,8 @@ class _HomeTabState extends State<HomeTab> {
           ),
           const SizedBox(height: 24),
 
-          // Resume Draft Banner if present
-          if (draftProvider.draft != null) ...[
+          // Resume Draft Banner if present (only for drafts with actual data)
+          if (draftProvider.draft?.hasMeaningfulData == true) ...[
             const DraftResumptionCard(showDiscardButton: true),
             const SizedBox(height: 24),
           ],

@@ -17,10 +17,14 @@ class ApplicationDetailScreen extends StatefulWidget {
     super.key,
     this.application,
     this.applicationId,
-  }) : assert(application != null || applicationId != null, 'Either application or applicationId must be provided');
+  }) : assert(
+         application != null || applicationId != null,
+         'Either application or applicationId must be provided',
+       );
 
   @override
-  State<ApplicationDetailScreen> createState() => _ApplicationDetailScreenState();
+  State<ApplicationDetailScreen> createState() =>
+      _ApplicationDetailScreenState();
 }
 
 class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
@@ -119,7 +123,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Application details could not be found. Please check the tracking number or ID.';
+            _errorMessage =
+                'Application details could not be found. Please check the tracking number or ID.';
           });
         }
       }
@@ -127,7 +132,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load application details. Please check your network connection.';
+          _errorMessage =
+              'Failed to load application details. Please check your network connection.';
         });
       }
     }
@@ -201,7 +207,11 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(child: Text('$label copied to clipboard!')),
           ],
@@ -215,11 +225,17 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
   }
 
   void _shareApplication(LegalAidApplication app) {
-    final trackingId = app.trackingNumber.isNotEmpty ? app.trackingNumber : app.id;
-    final districtName = DistrictHelper.resolveDistrictName(app.applicantDistrictId, app.districtName);
+    final trackingId = app.trackingNumber.isNotEmpty
+        ? app.trackingNumber
+        : app.id;
+    final districtName = DistrictHelper.resolveDistrictName(
+      app.applicantDistrictId,
+      app.districtName,
+    );
     final statusFormatted = app.status.replaceAll('_', ' ');
 
-    final shareText = '''
+    final shareText =
+        '''
 🏛️ Sikkim State Legal Services Authority (SLSA)
 📄 Legal Aid Application Details
 
@@ -242,7 +258,8 @@ For helpline support, dial 15100 (Toll-Free).
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    final trackingDisplay = _application != null && _application!.trackingNumber.isNotEmpty
+    final trackingDisplay =
+        _application != null && _application!.trackingNumber.isNotEmpty
         ? _application!.trackingNumber
         : (_application?.id.substring(0, 8) ?? 'Details');
 
@@ -257,22 +274,12 @@ For helpline support, dial 15100 (Toll-Free).
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          if (_application != null) ...[
-            IconButton(
-              icon: const Icon(Icons.copy_rounded, size: 20),
-              tooltip: 'Copy Tracking ID',
-              onPressed: () => _copyToClipboard(
-                context,
-                _application!.trackingNumber.isNotEmpty ? _application!.trackingNumber : _application!.id,
-                'Tracking ID',
-              ),
-            ),
+          if (_application != null)
             IconButton(
               icon: const Icon(Icons.share_rounded, size: 20),
               tooltip: 'Share Application',
               onPressed: () => _shareApplication(_application!),
             ),
-          ],
           const SizedBox(width: 4),
         ],
       ),
@@ -290,7 +297,10 @@ For helpline support, dial 15100 (Toll-Free).
             SizedBox(height: 16),
             Text(
               "Loading application details...",
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -304,12 +314,19 @@ For helpline support, dial 15100 (Toll-Free).
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 54, color: AppColors.dangerRed),
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 54,
+                color: AppColors.dangerRed,
+              ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage ?? "Application not found",
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -332,7 +349,7 @@ For helpline support, dial 15100 (Toll-Free).
                     label: const Text("Retry"),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -354,20 +371,21 @@ For helpline support, dial 15100 (Toll-Free).
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── 1. Hero Header & Tracking ID Card ────────────────────
+            // ── 1. Case Header (Tracking ID, Status, Meta) ───────────
             _buildHeroTrackingCard(application, resolvedDistrict, isDark),
             const SizedBox(height: 18),
 
-            // ── 2. Assigned Advocate Section (if allocated or in progress) ──
-            _buildAdvocateSection(context, application, isDark),
-            if (application.assignedAdvocate != null ||
-                (application.assignedAdvocateName != null && application.assignedAdvocateName!.trim().isNotEmpty) ||
-                application.status.toUpperCase() == 'ADVOCATE_ASSIGNED')
-              const SizedBox(height: 18),
-
-            // ── 3. Interactive Delivery-Style Milestone & Timeline ───
+            // ── 2. Interactive Delivery-Style Milestone & Timeline ───
             _buildInteractiveTimelineCard(context, application, isDark),
             const SizedBox(height: 18),
+
+            // ── 3. Assigned Advocate Section (if allocated or in progress) ──
+            _buildAdvocateSection(context, application, isDark),
+            if (application.assignedAdvocate != null ||
+                (application.assignedAdvocateName != null &&
+                    application.assignedAdvocateName!.trim().isNotEmpty) ||
+                application.status.toUpperCase() == 'ADVOCATE_ASSIGNED')
+              const SizedBox(height: 18),
 
             // ── 4. Applicant Details Card ────────────────────────────
             _buildDetailCard(
@@ -376,13 +394,26 @@ For helpline support, dial 15100 (Toll-Free).
               icon: Icons.person_outline_rounded,
               isDark: isDark,
               children: [
-                _buildRow("Full Name", applicant.fullName.isNotEmpty ? applicant.fullName : application.applicantFullName),
-                _buildRow("Gender", applicant.gender.isNotEmpty ? applicant.gender : application.applicantGender),
+                _buildRow(
+                  "Full Name",
+                  applicant.fullName.isNotEmpty
+                      ? applicant.fullName
+                      : application.applicantFullName,
+                ),
+                _buildRow(
+                  "Gender",
+                  applicant.gender.isNotEmpty
+                      ? applicant.gender
+                      : application.applicantGender,
+                ),
                 _buildRow(
                   "Date of Birth",
-                  applicant.dateOfBirth != null && applicant.dateOfBirth!.isNotEmpty
+                  applicant.dateOfBirth != null &&
+                          applicant.dateOfBirth!.isNotEmpty
                       ? applicant.dateOfBirth!
-                      : (application.applicantDob.isNotEmpty ? application.applicantDob : 'N/A'),
+                      : (application.applicantDob.isNotEmpty
+                            ? application.applicantDob
+                            : 'N/A'),
                 ),
                 _buildRow(
                   "Village / Town",
@@ -393,7 +424,9 @@ For helpline support, dial 15100 (Toll-Free).
                 _buildRow("District", resolvedDistrict),
                 _buildRow(
                   "Phone Number",
-                  applicant.phoneNumber.isNotEmpty ? applicant.phoneNumber : application.applicantPhoneNumber,
+                  applicant.phoneNumber.isNotEmpty
+                      ? applicant.phoneNumber
+                      : application.applicantPhoneNumber,
                 ),
                 if (applicant.email != null && applicant.email!.isNotEmpty)
                   _buildRow("Email", applicant.email!),
@@ -408,19 +441,32 @@ For helpline support, dial 15100 (Toll-Free).
               icon: Icons.gavel_rounded,
               isDark: isDark,
               children: [
-                _buildRow("Category", application.categoryName ?? 'Free Legal Aid'),
-                _buildRow("Case Type", application.caseTypeName ?? 'General Legal Dispute'),
+                _buildRow(
+                  "Category",
+                  application.categoryName ?? 'Free Legal Aid',
+                ),
+                _buildRow(
+                  "Case Type",
+                  application.caseTypeName ?? 'General Legal Dispute',
+                ),
                 _buildRow(
                   "Summary of Grievance",
                   application.caseDetails.isNotEmpty
                       ? application.caseDetails
-                      : (application.summaryOfGrievance.isNotEmpty ? application.summaryOfGrievance : 'N/A'),
+                      : (application.summaryOfGrievance.isNotEmpty
+                            ? application.summaryOfGrievance
+                            : 'N/A'),
                 ),
-                if (application.reliefSought != null && application.reliefSought!.isNotEmpty)
+                if (application.reliefSought != null &&
+                    application.reliefSought!.isNotEmpty)
                   _buildRow("Relief Sought", application.reliefSought!),
                 _buildRow("Filed On", _formatDateOnly(application.createdAt)),
-                _buildRow("Last Updated", _formatDateTime(application.updatedAt)),
-                if (application.withdrawalReason != null && application.withdrawalReason!.isNotEmpty)
+                _buildRow(
+                  "Last Updated",
+                  _formatDateTime(application.updatedAt),
+                ),
+                if (application.withdrawalReason != null &&
+                    application.withdrawalReason!.isNotEmpty)
                   _buildRow("Withdrawal Reason", application.withdrawalReason!),
               ],
             ),
@@ -440,254 +486,185 @@ For helpline support, dial 15100 (Toll-Free).
   ) {
     final trackingId = application.trackingNumber.isNotEmpty
         ? application.trackingNumber
-        : (application.id.isNotEmpty ? 'ID: ${application.id.substring(0, 10)}...' : 'Submitted');
+        : (application.id.isNotEmpty
+              ? 'ID: ${application.id.substring(0, 10)}...'
+              : 'Submitted');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black26 : Colors.blue.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+    final categoryText = application.categoryName ?? 'Legal Aid';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top accent gradient bar
-          Container(
-            height: 5,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(18),
+          // Row 1: Label + Status Badge (Protected with Expanded)
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  "TRACKING NO.",
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              gradient: LinearGradient(
-                colors: [AppColors.primaryBlue, Color(0xFF38BDF8), AppColors.accentGold],
+              const SizedBox(width: 8),
+              StatusBadge(status: application.status),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Row 2: Prominent Tracking ID with inline Copy button
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(
+              left: 14,
+              right: 6,
+              top: 6,
+              bottom: 6,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? AppColors.borderDark : const Color(0xFFCBD5E1),
               ),
             ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                // Row 1: Label + Share & Copy buttons (Protected with Expanded)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.receipt_long_rounded,
-                              size: 15,
-                              color: AppColors.primaryBlue,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                              "TRACKING NUMBER",
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
-                                color: AppColors.textSecondaryLight,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Copy Button
-                        Material(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () => _copyToClipboard(context, trackingId, "Tracking ID"),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.copy_rounded, size: 13, color: AppColors.primaryBlue),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    "Copy",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryBlue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        // Share Button
-                        Material(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () => _shareApplication(application),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.share_rounded, size: 13, color: AppColors.primaryBlue),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    "Share",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryBlue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Row 2: Prominent Tracking ID
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDark ? AppColors.borderDark : const Color(0xFFCBD5E1),
+                Expanded(
+                  child: SelectableText(
+                    trackingId,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16.5,
+                      letterSpacing: 1.0,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.qr_code_2_rounded, size: 22, color: AppColors.primaryBlue),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: SelectableText(
-                          trackingId,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16.5,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
+                ),
+                Material(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () =>
+                        _copyToClipboard(context, trackingId, "Tracking ID"),
+                    child: const Padding(
+                      padding: EdgeInsets.all(7),
+                      child: Icon(
+                        Icons.copy_rounded,
+                        size: 16,
+                        color: AppColors.primaryBlue,
                       ),
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-
-                // Row 3: Status Badge on its own row with full width & breathing room
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Current Status:",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    StatusBadge(status: application.status),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-
-                // Row 4: Meta Information Badges (District, Date, Category)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _buildMetaChip(
-                      icon: Icons.calendar_today_rounded,
-                      label: "Filed: ${_formatDateOnly(application.createdAt)}",
-                      isDark: isDark,
-                    ),
-                    _buildMetaChip(
-                      icon: Icons.location_on_rounded,
-                      label: resolvedDistrict,
-                      isDark: isDark,
-                      color: AppColors.primaryBlue,
-                    ),
-                    _buildMetaChip(
-                      icon: Icons.category_rounded,
-                      label: application.categoryName ?? "Legal Aid",
-                      isDark: isDark,
-                    ),
-                  ],
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Row 3: Legal Aid Category & Case Type badges
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoBadge(
+                icon: Icons.category_rounded,
+                label: categoryText,
+                color: AppColors.successGreen,
+                isDark: isDark,
+              ),
+              if (application.caseTypeName != null &&
+                  application.caseTypeName!.trim().isNotEmpty)
+                _buildInfoBadge(
+                  icon: Icons.gavel_rounded,
+                  label: application.caseTypeName!,
+                  color: AppColors.primaryBlue,
+                  isDark: isDark,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Row 4: Date Applied & District in a single row
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 14,
+                color: AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  _formatDateOnly(application.createdAt),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Icon(
+                Icons.location_on_rounded,
+                size: 14,
+                color: AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  resolvedDistrict,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetaChip({
+  Widget _buildInfoBadge({
     required IconData icon,
     required String label,
+    required Color color,
     required bool isDark,
-    Color? color,
   }) {
-    final effectiveColor = color ?? (isDark ? Colors.blueGrey.shade300 : Colors.blueGrey.shade700);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white12 : Colors.black12,
-          width: 0.8,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: effectiveColor),
+          Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
               fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: effectiveColor,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
         ],
@@ -732,7 +709,11 @@ For helpline support, dial 15100 (Toll-Free).
                   color: AppColors.primaryBlue.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.route_rounded, size: 16, color: AppColors.primaryBlue),
+                child: const Icon(
+                  Icons.route_rounded,
+                  size: 16,
+                  color: AppColors.primaryBlue,
+                ),
               ),
               const SizedBox(width: 8),
               const Expanded(
@@ -766,7 +747,11 @@ For helpline support, dial 15100 (Toll-Free).
           // ── Detailed Event Log (Vertical Track) ───────────────────
           const Text(
             "Activity & Status History Log",
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textSecondaryLight,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -774,7 +759,8 @@ For helpline support, dial 15100 (Toll-Free).
             _buildSingleHistoryNode(
               title: application.status.replaceAll('_', ' '),
               statusKey: application.status,
-              remarks: "Your application was registered with Sikkim SLSA and is currently active.",
+              remarks:
+                  "Your application was registered with Sikkim SLSA and is currently active.",
               dateTime: _formatDateTime(application.createdAt),
               isFirst: true,
               isLast: true,
@@ -788,14 +774,18 @@ For helpline support, dial 15100 (Toll-Free).
               itemBuilder: (context, index) {
                 final item = _statusHistory[index];
                 final rawStatus = (item['new_status'] ?? '').toString();
-                final statusTitle = rawStatus.replaceAll('_', ' ').toUpperCase();
+                final statusTitle = rawStatus
+                    .replaceAll('_', ' ')
+                    .toUpperCase();
                 final createdAt = item['created_at']?.toString();
                 final remarks = item['remarks']?.toString();
                 final isFirst = index == 0;
                 final isLast = index == _statusHistory.length - 1;
 
                 return _buildSingleHistoryNode(
-                  title: statusTitle.isNotEmpty ? statusTitle : 'STATUS UPDATED',
+                  title: statusTitle.isNotEmpty
+                      ? statusTitle
+                      : 'STATUS UPDATED',
                   statusKey: rawStatus,
                   remarks: remarks,
                   dateTime: _formatDateTime(createdAt),
@@ -818,11 +808,15 @@ For helpline support, dial 15100 (Toll-Free).
 
     if (upperStatus == 'SUBMITTED') {
       currentStage = 1;
-    } else if (upperStatus == 'UNDER_REVIEW' || upperStatus == 'UNDER_SCRUTINY') {
+    } else if (upperStatus == 'UNDER_REVIEW' ||
+        upperStatus == 'UNDER_SCRUTINY') {
       currentStage = 2;
-    } else if (upperStatus == 'ADVOCATE_ASSIGNED' || upperStatus == 'ADVOCATE_ACCEPTED') {
+    } else if (upperStatus == 'ADVOCATE_ASSIGNED' ||
+        upperStatus == 'ADVOCATE_ACCEPTED') {
       currentStage = 3;
-    } else if (upperStatus == 'HEARING_SCHEDULED' || upperStatus == 'IN_PROGRESS' || upperStatus == 'ACTION_TAKEN') {
+    } else if (upperStatus == 'HEARING_SCHEDULED' ||
+        upperStatus == 'IN_PROGRESS' ||
+        upperStatus == 'ACTION_TAKEN') {
       currentStage = 4;
     } else if (upperStatus == 'RESOLVED' || upperStatus == 'DISPOSED') {
       currentStage = 5;
@@ -849,7 +843,8 @@ For helpline support, dial 15100 (Toll-Free).
           children: List.generate(stages.length, (idx) {
             final stageIndex = idx + 1;
             final isCompleted = stageIndex < currentStage;
-            final isCurrent = stageIndex == currentStage && !isRejected && !isWithdrawn;
+            final isCurrent =
+                stageIndex == currentStage && !isRejected && !isWithdrawn;
             Color nodeColor;
             Color iconColor;
             if (isCompleted) {
@@ -865,8 +860,12 @@ For helpline support, dial 15100 (Toll-Free).
               nodeColor = Colors.blueGrey;
               iconColor = Colors.white;
             } else {
-              nodeColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
-              iconColor = isDark ? Colors.blueGrey.shade400 : Colors.blueGrey.shade400;
+              nodeColor = isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFE2E8F0);
+              iconColor = isDark
+                  ? Colors.blueGrey.shade400
+                  : Colors.blueGrey.shade400;
             }
 
             return Expanded(
@@ -888,8 +887,10 @@ For helpline support, dial 15100 (Toll-Free).
                                   color: idx == 0
                                       ? Colors.transparent
                                       : (stageIndex <= currentStage
-                                          ? AppColors.successGreen
-                                          : (isDark ? Colors.white12 : const Color(0xFFE2E8F0))),
+                                            ? AppColors.successGreen
+                                            : (isDark
+                                                  ? Colors.white12
+                                                  : const Color(0xFFE2E8F0))),
                                 ),
                               ),
                               Expanded(
@@ -898,8 +899,10 @@ For helpline support, dial 15100 (Toll-Free).
                                   color: idx == stages.length - 1
                                       ? Colors.transparent
                                       : (stageIndex < currentStage
-                                          ? AppColors.successGreen
-                                          : (isDark ? Colors.white12 : const Color(0xFFE2E8F0))),
+                                            ? AppColors.successGreen
+                                            : (isDark
+                                                  ? Colors.white12
+                                                  : const Color(0xFFE2E8F0))),
                                 ),
                               ),
                             ],
@@ -919,7 +922,9 @@ For helpline support, dial 15100 (Toll-Free).
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.primaryBlue.withValues(alpha: 0.3 + 0.35 * glowVal),
+                                      color: AppColors.primaryBlue.withValues(
+                                        alpha: 0.3 + 0.35 * glowVal,
+                                      ),
                                       blurRadius: 6 + 8 * glowVal,
                                       spreadRadius: 1 + 2.5 * glowVal,
                                     ),
@@ -957,13 +962,17 @@ For helpline support, dial 15100 (Toll-Free).
                                   color: nodeColor,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isCompleted ? AppColors.successGreen : Colors.transparent,
+                                    color: isCompleted
+                                        ? AppColors.successGreen
+                                        : Colors.transparent,
                                     width: 1.5,
                                   ),
                                 ),
                                 child: Center(
                                   child: Icon(
-                                    isCompleted ? Icons.check_rounded : (stages[idx]['icon'] as IconData),
+                                    isCompleted
+                                        ? Icons.check_rounded
+                                        : (stages[idx]['icon'] as IconData),
                                     size: 14,
                                     color: iconColor,
                                   ),
@@ -978,12 +987,16 @@ For helpline support, dial 15100 (Toll-Free).
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: (isCurrent || isCompleted) ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: (isCurrent || isCompleted)
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       color: isCurrent
                           ? AppColors.primaryBlue
                           : (isCompleted
-                              ? AppColors.successGreen
-                              : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                                ? AppColors.successGreen
+                                : (isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight)),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1042,7 +1055,9 @@ For helpline support, dial 15100 (Toll-Free).
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: isFirst ? statusColor : statusColor.withValues(alpha: 0.15),
+                  color: isFirst
+                      ? statusColor
+                      : statusColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: statusColor,
@@ -1073,12 +1088,16 @@ For helpline support, dial 15100 (Toll-Free).
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                color: isDark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isFirst
                       ? statusColor.withValues(alpha: 0.3)
-                      : (isDark ? AppColors.borderDark : const Color(0xFFE2E8F0)),
+                      : (isDark
+                            ? AppColors.borderDark
+                            : const Color(0xFFE2E8F0)),
                 ),
               ),
               child: Column(
@@ -1093,13 +1112,20 @@ For helpline support, dial 15100 (Toll-Free).
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
-                            color: isFirst ? statusColor : (isDark ? Colors.white : AppColors.primaryDark),
+                            color: isFirst
+                                ? statusColor
+                                : (isDark
+                                      ? Colors.white
+                                      : AppColors.primaryDark),
                           ),
                         ),
                       ),
                       if (isFirst)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
@@ -1118,23 +1144,37 @@ For helpline support, dial 15100 (Toll-Free).
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondaryLight),
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 12,
+                        color: AppColors.textSecondaryLight,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         dateTime,
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondaryLight,
+                        ),
                       ),
                     ],
                   ),
                   if (remarks != null && remarks.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF),
+                        color: isDark
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isDark ? Colors.white10 : const Color(0xFFBFDBFE),
+                          color: isDark
+                              ? Colors.white10
+                              : const Color(0xFFBFDBFE),
                           width: 0.8,
                         ),
                       ),
@@ -1144,7 +1184,9 @@ For helpline support, dial 15100 (Toll-Free).
                           Icon(
                             Icons.chat_bubble_outline_rounded,
                             size: 13,
-                            color: isDark ? Colors.blue.shade300 : AppColors.primaryBlue,
+                            color: isDark
+                                ? Colors.blue.shade300
+                                : AppColors.primaryBlue,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -1153,7 +1195,9 @@ For helpline support, dial 15100 (Toll-Free).
                               style: TextStyle(
                                 fontSize: 11.5,
                                 height: 1.35,
-                                color: isDark ? Colors.blue.shade100 : const Color(0xFF1E3A8A),
+                                color: isDark
+                                    ? Colors.blue.shade100
+                                    : const Color(0xFF1E3A8A),
                               ),
                             ),
                           ),
@@ -1173,10 +1217,17 @@ For helpline support, dial 15100 (Toll-Free).
   // ──────────────────────────────────────────────────────────────────────────
   // Advocate Section
   // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildAdvocateSection(BuildContext context, LegalAidApplication application, bool isDark) {
-    final bool hasAdvocate = application.assignedAdvocate != null ||
-        (application.assignedAdvocateName != null && application.assignedAdvocateName!.trim().isNotEmpty);
-    final bool isAdvocateAssignedStatus = application.status.toUpperCase() == 'ADVOCATE_ASSIGNED';
+  Widget _buildAdvocateSection(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
+    final bool hasAdvocate =
+        application.assignedAdvocate != null ||
+        (application.assignedAdvocateName != null &&
+            application.assignedAdvocateName!.trim().isNotEmpty);
+    final bool isAdvocateAssignedStatus =
+        application.status.toUpperCase() == 'ADVOCATE_ASSIGNED';
 
     if (hasAdvocate) {
       return _buildAssignedAdvocateCard(context, application, isDark);
@@ -1187,10 +1238,18 @@ For helpline support, dial 15100 (Toll-Free).
     return const SizedBox.shrink();
   }
 
-  Widget _buildAssignedAdvocateCard(BuildContext context, LegalAidApplication application, bool isDark) {
+  Widget _buildAssignedAdvocateCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
     final advocate = application.assignedAdvocate;
-    final String advocateName = advocate?.fullName ?? application.assignedAdvocateName ?? 'Assigned Panel Advocate';
-    final String enrollmentNumber = advocate?.enrollmentNumber.isNotEmpty == true
+    final String advocateName =
+        advocate?.fullName ??
+        application.assignedAdvocateName ??
+        'Assigned Panel Advocate';
+    final String enrollmentNumber =
+        advocate?.enrollmentNumber.isNotEmpty == true
         ? advocate!.enrollmentNumber
         : 'Sikkim State Bar Council Panel';
     final String? primaryPhone = advocate?.primaryPhoneNumber;
@@ -1199,10 +1258,15 @@ For helpline support, dial 15100 (Toll-Free).
     final String? officeAddress = advocate?.officeAddress;
     final int experience = advocate?.experienceYears ?? 0;
 
-    final nameParts = advocateName.replaceAll(RegExp(r'^Adv\.?\s*', caseSensitive: false), '').trim().split(' ');
+    final nameParts = advocateName
+        .replaceAll(RegExp(r'^Adv\.?\s*', caseSensitive: false), '')
+        .trim()
+        .split(' ');
     final initials = nameParts.length > 1
         ? '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase()
-        : (nameParts.isNotEmpty && nameParts[0].isNotEmpty ? nameParts[0][0].toUpperCase() : 'A');
+        : (nameParts.isNotEmpty && nameParts[0].isNotEmpty
+              ? nameParts[0][0].toUpperCase()
+              : 'A');
 
     return Container(
       decoration: BoxDecoration(
@@ -1226,7 +1290,9 @@ For helpline support, dial 15100 (Toll-Free).
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.successGreen.withValues(alpha: isDark ? 0.2 : 0.1),
+              color: AppColors.successGreen.withValues(
+                alpha: isDark ? 0.2 : 0.1,
+              ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(17),
                 topRight: Radius.circular(17),
@@ -1234,7 +1300,11 @@ For helpline support, dial 15100 (Toll-Free).
             ),
             child: Row(
               children: [
-                const Icon(Icons.shield_rounded, color: AppColors.successGreen, size: 20),
+                const Icon(
+                  Icons.shield_rounded,
+                  color: AppColors.successGreen,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -1248,14 +1318,21 @@ For helpline support, dial 15100 (Toll-Free).
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.successGreen,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
                     "Free Legal Aid",
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -1272,7 +1349,9 @@ For helpline support, dial 15100 (Toll-Free).
                   children: [
                     CircleAvatar(
                       radius: 26,
-                      backgroundColor: AppColors.primaryBlue.withValues(alpha: isDark ? 0.3 : 0.15),
+                      backgroundColor: AppColors.primaryBlue.withValues(
+                        alpha: isDark ? 0.3 : 0.15,
+                      ),
                       child: Text(
                         initials,
                         style: const TextStyle(
@@ -1288,7 +1367,9 @@ For helpline support, dial 15100 (Toll-Free).
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            advocateName.toLowerCase().startsWith('adv') ? advocateName : "Adv. $advocateName",
+                            advocateName.toLowerCase().startsWith('adv')
+                                ? advocateName
+                                : "Adv. $advocateName",
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -1297,12 +1378,19 @@ For helpline support, dial 15100 (Toll-Free).
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              const Icon(Icons.badge_outlined, size: 14, color: AppColors.textSecondaryLight),
+                              const Icon(
+                                Icons.badge_outlined,
+                                size: 14,
+                                color: AppColors.textSecondaryLight,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   "Bar Reg: $enrollmentNumber",
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondaryLight,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1312,11 +1400,18 @@ For helpline support, dial 15100 (Toll-Free).
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const Icon(Icons.workspace_premium_outlined, size: 14, color: AppColors.textSecondaryLight),
+                                const Icon(
+                                  Icons.workspace_premium_outlined,
+                                  size: 14,
+                                  color: AppColors.textSecondaryLight,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "$experience Years Bar Experience",
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondaryLight,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1333,7 +1428,11 @@ For helpline support, dial 15100 (Toll-Free).
 
                 const Text(
                   "Connect with your Advocate",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryBlue,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
@@ -1411,14 +1510,22 @@ For helpline support, dial 15100 (Toll-Free).
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.blue.withValues(alpha: 0.1) : const Color(0xFFF0F7FF),
+                    color: isDark
+                        ? Colors.blue.withValues(alpha: 0.1)
+                        : const Color(0xFFF0F7FF),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.blue.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primaryBlue),
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: AppColors.primaryBlue,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1426,7 +1533,9 @@ For helpline support, dial 15100 (Toll-Free).
                           style: TextStyle(
                             fontSize: 11.5,
                             height: 1.4,
-                            color: isDark ? Colors.blue.shade100 : const Color(0xFF1E3A8A),
+                            color: isDark
+                                ? Colors.blue.shade100
+                                : const Color(0xFF1E3A8A),
                           ),
                         ),
                       ),
@@ -1441,15 +1550,23 @@ For helpline support, dial 15100 (Toll-Free).
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          final details = "Advocate: $advocateName\n"
+                          final details =
+                              "Advocate: $advocateName\n"
                               "Bar Reg: $enrollmentNumber\n"
                               "${primaryPhone != null ? 'Phone: $primaryPhone\n' : ''}"
                               "${email != null ? 'Email: $email\n' : ''}"
                               "Case Ref: #${application.trackingNumber}";
-                          _copyToClipboard(context, details, "Advocate contact info");
+                          _copyToClipboard(
+                            context,
+                            details,
+                            "Advocate contact info",
+                          );
                         },
                         icon: const Icon(Icons.copy_rounded, size: 15),
-                        label: const Text("Copy Details", style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          "Copy Details",
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1461,13 +1578,20 @@ For helpline support, dial 15100 (Toll-Free).
                       child: OutlinedButton.icon(
                         onPressed: () => _showAdvocateChangeDialog(context),
                         icon: const Icon(Icons.swap_horiz, size: 16),
-                        label: const Text("Change Request", style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          "Change Request",
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          foregroundColor: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                          foregroundColor: isDark
+                              ? Colors.amber.shade300
+                              : Colors.amber.shade900,
                           side: BorderSide(
-                            color: isDark ? Colors.amber.withValues(alpha: 0.4) : Colors.amber.shade300,
+                            color: isDark
+                                ? Colors.amber.withValues(alpha: 0.4)
+                                : Colors.amber.shade300,
                           ),
                         ),
                       ),
@@ -1482,7 +1606,11 @@ For helpline support, dial 15100 (Toll-Free).
     );
   }
 
-  Widget _buildAdvocateFallbackCard(BuildContext context, LegalAidApplication application, bool isDark) {
+  Widget _buildAdvocateFallbackCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
@@ -1513,7 +1641,11 @@ For helpline support, dial 15100 (Toll-Free).
             ),
             child: Row(
               children: [
-                Icon(Icons.hourglass_top_rounded, color: Colors.amber.shade700, size: 20),
+                Icon(
+                  Icons.hourglass_top_rounded,
+                  color: Colors.amber.shade700,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1527,14 +1659,21 @@ For helpline support, dial 15100 (Toll-Free).
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade700,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
                     "Authority Processing",
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -1552,10 +1691,16 @@ For helpline support, dial 15100 (Toll-Free).
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: isDark ? 0.2 : 0.1),
+                        color: Colors.amber.withValues(
+                          alpha: isDark ? 0.2 : 0.1,
+                        ),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.assignment_ind_outlined, color: Colors.amber.shade700, size: 28),
+                      child: Icon(
+                        Icons.assignment_ind_outlined,
+                        color: Colors.amber.shade700,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     const Expanded(
@@ -1564,12 +1709,19 @@ For helpline support, dial 15100 (Toll-Free).
                         children: [
                           Text(
                             "Panel Advocate Allocation in Progress",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           SizedBox(height: 4),
                           Text(
                             "Your application has been approved for free legal aid. The Sikkim State Legal Services Authority (SLSA) is assigning a designated panel advocate to your case.",
-                            style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight, height: 1.4),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.textSecondaryLight,
+                              height: 1.4,
+                            ),
                           ),
                         ],
                       ),
@@ -1582,13 +1734,15 @@ For helpline support, dial 15100 (Toll-Free).
 
                 _buildFallbackBullet(
                   icon: Icons.check_circle_outline_rounded,
-                  text: "The advocate's name, phone number, and contact info will appear here once finalized.",
+                  text:
+                      "The advocate's name, phone number, and contact info will appear here once finalized.",
                   isDark: isDark,
                 ),
                 const SizedBox(height: 6),
                 _buildFallbackBullet(
                   icon: Icons.notifications_none_rounded,
-                  text: "You will also receive an automatic update as soon as the lawyer is allocated.",
+                  text:
+                      "You will also receive an automatic update as soon as the lawyer is allocated.",
                   isDark: isDark,
                 ),
                 const SizedBox(height: 14),
@@ -1597,13 +1751,23 @@ For helpline support, dial 15100 (Toll-Free).
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : const Color(0xFFF9FAFB),
+                    color: isDark
+                        ? AppColors.darkSurface
+                        : const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                    border: Border.all(
+                      color: isDark
+                          ? AppColors.borderDark
+                          : AppColors.borderLight,
+                    ),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.support_agent_rounded, size: 20, color: AppColors.primaryBlue),
+                      Icon(
+                        Icons.support_agent_rounded,
+                        size: 20,
+                        color: AppColors.primaryBlue,
+                      ),
                       SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -1611,12 +1775,18 @@ For helpline support, dial 15100 (Toll-Free).
                           children: [
                             Text(
                               "Need urgent legal assistance?",
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             SizedBox(height: 2),
                             Text(
                               "Call Sikkim SLSA Helpline: 15100 (Toll-Free) / 03592-202695",
-                              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.textSecondaryLight,
+                              ),
                             ),
                           ],
                         ),
@@ -1632,7 +1802,10 @@ For helpline support, dial 15100 (Toll-Free).
                       child: ElevatedButton.icon(
                         onPressed: _handleRefresh,
                         icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text("Check for Updates", style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          "Check for Updates",
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: ElevatedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1641,12 +1814,22 @@ For helpline support, dial 15100 (Toll-Free).
                     ),
                     const SizedBox(width: 10),
                     OutlinedButton.icon(
-                      onPressed: () => _copyToClipboard(context, "15100", "SLSA Helpline Number"),
+                      onPressed: () => _copyToClipboard(
+                        context,
+                        "15100",
+                        "SLSA Helpline Number",
+                      ),
                       icon: const Icon(Icons.phone_outlined, size: 15),
-                      label: const Text("Helpline", style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        "Helpline",
+                        style: TextStyle(fontSize: 12),
+                      ),
                       style: OutlinedButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -1672,9 +1855,13 @@ For helpline support, dial 15100 (Toll-Free).
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Row(
         children: [
@@ -1686,19 +1873,30 @@ For helpline support, dial 15100 (Toll-Free).
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primaryBlue),
+            icon: const Icon(
+              Icons.copy_rounded,
+              size: 16,
+              color: AppColors.primaryBlue,
+            ),
             tooltip: "Copy $copyLabel",
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
@@ -1709,7 +1907,11 @@ For helpline support, dial 15100 (Toll-Free).
     );
   }
 
-  Widget _buildFallbackBullet({required IconData icon, required String text, required bool isDark}) {
+  Widget _buildFallbackBullet({
+    required IconData icon,
+    required String text,
+    required bool isDark,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1718,7 +1920,11 @@ For helpline support, dial 15100 (Toll-Free).
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.35),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondaryLight,
+              height: 1.35,
+            ),
           ),
         ),
       ],
@@ -1826,22 +2032,32 @@ For helpline support, dial 15100 (Toll-Free).
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text("Request Advocate Change", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text(
+            "Request Advocate Change",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 "Please state your reason for requesting a change of assigned panel advocate. Your request will be reviewed by the Member Secretary, Sikkim SLSA.",
-                style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight, height: 1.4),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondaryLight,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: reasonController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText: "State your reasons clearly (e.g. communication issue, conflict of interest)...",
+                  hintText:
+                      "State your reasons clearly (e.g. communication issue, conflict of interest)...",
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1859,7 +2075,11 @@ For helpline support, dial 15100 (Toll-Free).
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Please enter a reason for advocate change")),
+                          const SnackBar(
+                            content: Text(
+                              "Please enter a reason for advocate change",
+                            ),
+                          ),
                         );
                         return;
                       }
@@ -1878,9 +2098,11 @@ For helpline support, dial 15100 (Toll-Free).
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(success
-                                ? "Advocate change request submitted successfully to SLSA."
-                                : "Request submitted. SLSA admin will review your case."),
+                            content: Text(
+                              success
+                                  ? "Advocate change request submitted successfully to SLSA."
+                                  : "Request submitted. SLSA admin will review your case.",
+                            ),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -1890,7 +2112,10 @@ For helpline support, dial 15100 (Toll-Free).
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text("Submit Request"),
             ),

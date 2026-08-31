@@ -31,6 +31,25 @@ class DraftApplicationModel {
   String get summaryOfGrievance => caseDetails;
   set summaryOfGrievance(String value) => caseDetails = value;
 
+  /// A draft is only worth resuming if the user has actually entered
+  /// something (category, case type, applicant info, grievance or documents).
+  bool get hasMeaningfulData {
+    final hasCategory = (categoryId != null && categoryId!.isNotEmpty) ||
+        (categoryCode != null && categoryCode!.isNotEmpty);
+    final hasCaseType = (caseTypeId != null && caseTypeId!.isNotEmpty) ||
+        (caseTypeCode != null && caseTypeCode!.isNotEmpty);
+    final hasApplicant = fullName.trim().isNotEmpty ||
+        villageTown.trim().isNotEmpty ||
+        email.trim().isNotEmpty ||
+        phone.trim().isNotEmpty ||
+        (districtId != null && districtId!.isNotEmpty) ||
+        (dob != null && dob!.isNotEmpty);
+    final hasGrievance = caseDetails.trim().isNotEmpty || reliefSought.trim().isNotEmpty;
+    final hasDocuments = documentStoragePaths.isNotEmpty;
+
+    return hasCategory || hasCaseType || hasApplicant || hasGrievance || hasDocuments;
+  }
+
   DraftApplicationModel({
     required this.draftUuid,
     this.stepIndex = 0,

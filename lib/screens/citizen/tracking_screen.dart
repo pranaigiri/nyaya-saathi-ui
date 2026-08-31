@@ -60,22 +60,31 @@ class _TrackingScreenState extends State<TrackingScreen> {
       final prefs = await SharedPreferences.getInstance();
       final list = prefs.getStringList(_prefKeyRecent) ?? [];
       setState(() {
-        _recentSearches = list.map((item) {
-          try {
-            final decoded = jsonDecode(item) as Map<String, dynamic>;
-            return decoded.map((k, v) => MapEntry(k, v.toString()));
-          } catch (_) {
-            return <String, String>{};
-          }
-        }).where((m) => m.isNotEmpty).toList();
+        _recentSearches = list
+            .map((item) {
+              try {
+                final decoded = jsonDecode(item) as Map<String, dynamic>;
+                return decoded.map((k, v) => MapEntry(k, v.toString()));
+              } catch (_) {
+                return <String, String>{};
+              }
+            })
+            .where((m) => m.isNotEmpty)
+            .toList();
       });
     } catch (_) {}
   }
 
-  Future<void> _saveRecentSearch(String trackingNumber, String phone, String applicantName) async {
+  Future<void> _saveRecentSearch(
+    String trackingNumber,
+    String phone,
+    String applicantName,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final existing = _recentSearches.where((s) => s['trackingNumber'] != trackingNumber).toList();
+      final existing = _recentSearches
+          .where((s) => s['trackingNumber'] != trackingNumber)
+          .toList();
       final updated = [
         {
           'trackingNumber': trackingNumber,
@@ -150,7 +159,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Row(
           children: [
-            Icon(Icons.search_off_rounded, color: AppColors.dangerRed, size: 28),
+            Icon(
+              Icons.search_off_rounded,
+              color: AppColors.dangerRed,
+              size: 28,
+            ),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -188,12 +201,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 children: [
                   Text(
                     "Tracking ID: $trackingNum",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     "Phone: $phone",
-                    style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12.5),
+                    style: const TextStyle(
+                      color: AppColors.textSecondaryLight,
+                      fontSize: 12.5,
+                    ),
                   ),
                 ],
               ),
@@ -201,7 +220,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
             const SizedBox(height: 12),
             const Text(
               "• Please double-check your tracking ID or registered mobile number.\n• If you recently submitted, allow a few moments for indexing.\n• Dial Sikkim SLSA Helpline at 15100 for live support.",
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondaryLight,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -215,7 +238,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text("Try Again"),
           ),
@@ -233,7 +258,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
           children: [
             Icon(Icons.wifi_off_rounded, color: AppColors.dangerRed, size: 26),
             SizedBox(width: 10),
-            Text("Connection Error", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(
+              "Connection Error",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ],
         ),
         content: Text(
@@ -250,7 +278,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text("OK"),
           ),
@@ -315,7 +345,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        _showErrorDialog("Unable to reach server. Please check your network connection and try again.");
+        _showErrorDialog(
+          "Unable to reach server. Please check your network connection and try again.",
+        );
       }
     }
   }
@@ -325,10 +357,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text("Security CAPTCHA failed. Please enter the correct code."),
+              child: Text(
+                "Security CAPTCHA failed. Please enter the correct code.",
+              ),
             ),
           ],
         ),
@@ -362,195 +400,233 @@ class _TrackingScreenState extends State<TrackingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Balanced District Prefix Selector (Uniform 3x2 Grid) ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Select District Prefix:",
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  if (_selectedDistrictCode != null)
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedDistrictCode = null;
-                          _appNumberController.clear();
-                        });
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        child: Text(
-                          "Reset",
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: _violet,
-                        ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // 3-Column x 2-Row Balanced Grid for all 6 Sikkim Districts
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _sikkimDistricts.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 1.75,
-                ),
-                itemBuilder: (context, index) {
-                  final dist = _sikkimDistricts[index];
-                  final name = dist['name']!;
-                  final code = dist['code']!;
-                  final isSelected = _selectedDistrictCode == code;
-
-                  return InkWell(
-                    onTap: () => _applyQuickDistrictPrefix(code),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? _violet.withValues(alpha: isDark ? 0.25 : 0.12)
-                            : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primaryBlue
-                              : (isDark ? AppColors.borderDark : const Color(0xFFCBD5E1)),
-                          width: isSelected ? 1.5 : 1.0,
-                        ),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              name,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                color: isSelected
-                                    ? AppColors.primaryBlue
-                                    : (isDark ? Colors.white : AppColors.primaryDark),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primaryBlue
-                                    : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                code,
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // ── Field 1: Tracking ID (Smart Auto-formatted) ────────
-              TextFormField(
-                controller: _appNumberController,
-                inputFormatters: [
-                  TrackingNumberFormatter(),
-                ],
-                decoration: InputDecoration(
-                  labelText: "Tracking ID / Application Number *",
-                  hintText: "e.g. SK-GTK-26-00013",
-                  prefixIcon: const Icon(Icons.confirmation_number_outlined),
-                  suffixIcon: IconButton(
-                    tooltip: "Paste from Clipboard",
-                    icon: const Icon(Icons.content_paste_rounded, size: 20, color: AppColors.primaryBlue),
-                    onPressed: _pasteFromClipboard,
-                  ),
-                ),
-                validator: (val) => val == null || val.trim().isEmpty ? "Please enter Tracking ID" : null,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Field 2: Registered Phone Number ───────────────────
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: "Registered Applicant Phone Number *",
-                  hintText: "e.g. 9876543210",
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) return "Please enter phone number";
-                  if (val.trim().length < 10) return "Phone number must be at least 10 digits";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 18),
-
-              // ── Field 3: Visual Security Captcha (Full-Width Input Below Canvas) ──
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
-                  ),
-                ),
+              // ── Section 1: Application Details ─────────────────────
+              _sectionCard(
+                isDark,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.security_rounded, size: 16, color: AppColors.primaryBlue),
-                            SizedBox(width: 6),
-                            Text(
-                              "Security Verification *",
-                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          "Case Sensitive",
-                          style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-                        ),
-                      ],
+                    _sectionHeader(
+                      isDark,
+                      Icons.assignment_rounded,
+                      "Application Details",
                     ),
                     const SizedBox(height: 12),
+                    // ── District Prefix Selector (Uniform 3x2 Grid) ──
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Select District Prefix:",
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        if (_selectedDistrictCode != null)
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedDistrictCode = null;
+                                _appNumberController.clear();
+                              });
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                "Reset",
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _violet,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
 
-                    // Centered / Full Captcha Visual Canvas with refresh button
+                    // 3-Column x 2-Row Balanced Grid for all 6 Sikkim Districts
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _sikkimDistricts.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            childAspectRatio: 1.75,
+                          ),
+                      itemBuilder: (context, index) {
+                        final dist = _sikkimDistricts[index];
+                        final name = dist['name']!;
+                        final code = dist['code']!;
+                        final isSelected = _selectedDistrictCode == code;
+
+                        return InkWell(
+                          onTap: () => _applyQuickDistrictPrefix(code),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? _violet.withValues(
+                                      alpha: isDark ? 0.25 : 0.12,
+                                    )
+                                  : (isDark
+                                        ? const Color(0xFF1E293B)
+                                        : const Color(0xFFF1F5F9)),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primaryBlue
+                                    : (isDark
+                                          ? AppColors.borderDark
+                                          : const Color(0xFFCBD5E1)),
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w600,
+                                      color: isSelected
+                                          ? AppColors.primaryBlue
+                                          : (isDark
+                                                ? Colors.white
+                                                : AppColors.primaryDark),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.primaryBlue
+                                          : (isDark
+                                                ? Colors.white10
+                                                : Colors.black.withValues(
+                                                    alpha: 0.06,
+                                                  )),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      code,
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : (isDark
+                                                  ? AppColors.textSecondaryDark
+                                                  : AppColors
+                                                        .textSecondaryLight),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Field 1: Tracking ID (Smart Auto-formatted) ────────
+                    TextFormField(
+                      controller: _appNumberController,
+                      inputFormatters: [TrackingNumberFormatter()],
+                      decoration: InputDecoration(
+                        labelText: "Tracking ID / Application Number *",
+                        hintText: "e.g. SK-GTK-26-00013",
+                        prefixIcon: const Icon(
+                          Icons.confirmation_number_outlined,
+                        ),
+                        suffixIcon: IconButton(
+                          tooltip: "Paste from Clipboard",
+                          icon: const Icon(
+                            Icons.content_paste_rounded,
+                            size: 20,
+                            color: AppColors.primaryBlue,
+                          ),
+                          onPressed: _pasteFromClipboard,
+                        ),
+                      ),
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? "Please enter Tracking ID"
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Field 2: Registered Phone Number ───────────────────
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: "Registered Applicant Phone Number *",
+                        hintText: "e.g. 9876543210",
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return "Please enter phone number";
+                        }
+                        if (val.trim().length < 10) {
+                          return "Phone number must be at least 10 digits";
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Section 2: Security Verification ───────────────────
+              _sectionCard(
+                isDark,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionHeader(
+                      isDark,
+                      Icons.security_rounded,
+                      "Security Verification",
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Enter the 5-character code shown below. Case sensitive.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Full Captcha Visual Canvas with refresh button
                     Center(
                       child: CaptchaBox(
                         controller: _captchaController,
@@ -567,15 +643,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         labelText: "Enter 5-Character Security Code *",
                         hintText: "Type the code shown above",
                         prefixIcon: Icon(Icons.password_rounded),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
                       ),
-                      validator: (val) => val == null || val.trim().isEmpty ? "Please enter security code" : null,
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? "Please enter security code"
+                          : null,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-
               // ── Submit Button ──────────────────────────────────────
               SizedBox(
                 width: double.infinity,
@@ -585,14 +665,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _violet,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 2,
                   ),
                   child: _isLoading
                       ? const SizedBox(
                           height: 22,
                           width: 22,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -601,7 +686,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
                             const SizedBox(width: 8),
                             Text(
                               context.tr("track_now"),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -616,27 +704,81 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.history_rounded, size: 18, color: AppColors.textSecondaryLight),
+                        Icon(
+                          Icons.history_rounded,
+                          size: 18,
+                          color: AppColors.textSecondaryLight,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           "Recently Tracked Inquiries",
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondaryLight,
+                          ),
                         ),
                       ],
                     ),
                     TextButton(
                       onPressed: _clearRecentSearches,
-                      child: const Text("Clear", style: TextStyle(fontSize: 12)),
+                      child: const Text(
+                        "Clear",
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                ..._recentSearches.map((item) => _buildRecentSearchTile(item, isDark)),
+                ..._recentSearches.map(
+                  (item) => _buildRecentSearchTile(item, isDark),
+                ),
               ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // ── Shared Section Card (consistent card styling across the screen) ──
+  Widget _sectionCard(bool isDark, {required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
+      child: child,
+    );
+  }
+
+  // ── Shared Section Header (icon + title, consistent typography) ──
+  Widget _sectionHeader(bool isDark, IconData icon, String title) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: _violet.withValues(alpha: isDark ? 0.25 : 0.10),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: _violet),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimaryLight,
+          ),
+        ),
+      ],
     );
   }
 
@@ -651,18 +793,26 @@ class _TrackingScreenState extends State<TrackingScreen> {
         color: isDark ? AppColors.darkSurface : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          side: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
         ),
         child: ListTile(
           dense: true,
-          leading: const Icon(Icons.saved_search_rounded, color: AppColors.primaryBlue),
+          leading: const Icon(
+            Icons.saved_search_rounded,
+            color: AppColors.primaryBlue,
+          ),
           title: Text(
             tracking,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
           ),
           subtitle: Text(
             "$name • $phone",
-            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight),
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.textSecondaryLight,
+            ),
           ),
           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
           onTap: () {

@@ -151,9 +151,13 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
     final q = _matchedQuestion;
     if (q == null) return;
     final cat = _resolveCategory(q);
-    Navigator.pop(context);
+    // Capture the NavigatorState before popping: after the pop this sheet's
+    // context becomes deactivated and can no longer be used to open the next
+    // modal (otherwise the "Apply for Legal Aid" sheet would silently fail).
+    final navigator = Navigator.of(context);
+    navigator.pop();
     ApplyChoiceModal.show(
-      context,
+      navigator.context,
       preselectedCategoryId: cat?.id,
       preselectedCategoryCode: cat?.categoryCode ?? q.categoryCode,
       preselectedCategoryName: cat?.categoryName ?? q.categoryLabel,
