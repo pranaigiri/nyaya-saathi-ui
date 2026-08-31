@@ -87,12 +87,14 @@ class UnauthHomeScreen extends StatelessWidget {
               ],
 
               // 3 Large Primary Buttons
+              // One Tap Eligibility Check (outlined, compact)
               _buildBigActionButton(
                 context,
                 title: context.tr("one_tap_eligibility_check"),
                 subtitle: "Quick 1-minute check • See if you qualify instantly",
                 icon: Icons.fact_check_rounded,
-                gradientColors: [const Color(0xFF0D9488), const Color(0xFF14B8A6)],
+                gradientColors: [const Color(0xFF0F9D78), const Color(0xFF34D399)],
+                outlinedColor: const Color(0xFF0F9D78),
                 onTap: () {
                   EligibilityCheckModal.show(context);
                 },
@@ -120,7 +122,7 @@ class UnauthHomeScreen extends StatelessWidget {
                 title: context.tr("track_application"),
                 subtitle: "Check status using Application Number & DOB",
                 icon: Icons.track_changes_rounded,
-                gradientColors: [const Color(0xFF0F766E), const Color(0xFF0D9488)],
+                gradientColors: [const Color(0xFF6750C8), const Color(0xFF8B7CE0)],
                 onTap: () {
                   Navigator.push(
                     context,
@@ -210,7 +212,58 @@ class UnauthHomeScreen extends StatelessWidget {
     required IconData icon,
     required List<Color> gradientColors,
     required VoidCallback onTap,
+    Color? outlinedColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (outlinedColor != null) {
+      // Compact outlined variant for secondary actions
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: outlinedColor, width: 1.5),
+            color: outlinedColor.withValues(alpha: isDark ? 0.12 : 0.06),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: outlinedColor, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: outlinedColor,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, color: outlinedColor, size: 13),
+            ],
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),

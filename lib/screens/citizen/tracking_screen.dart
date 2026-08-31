@@ -28,6 +28,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
   List<Map<String, String>> _recentSearches = [];
   String? _selectedDistrictCode;
 
+  static const Color _violet = Color(0xFF6750C8);
+
   static const String _prefKeyRecent = 'recent_case_tracking_list';
 
   static const List<Map<String, String>> _sikkimDistricts = [
@@ -345,6 +347,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr("track_application")),
+        backgroundColor: _violet,
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -381,11 +386,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                         child: Text(
                           "Reset",
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primaryBlue,
-                          ),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: _violet,
+                        ),
                         ),
                       ),
                     ),
@@ -417,7 +422,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primaryBlue.withValues(alpha: isDark ? 0.25 : 0.12)
+                            ? _violet.withValues(alpha: isDark ? 0.25 : 0.12)
                             : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
@@ -578,7 +583,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _performTrack,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: _violet,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 2,
