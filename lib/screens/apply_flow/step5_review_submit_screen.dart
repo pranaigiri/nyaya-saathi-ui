@@ -211,126 +211,144 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
       return const Center(child: Text("No draft application data found"));
     }
 
-    final mq = MediaQuery.of(context);
-    final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
-
-    return ListView(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+    return Column(
       children: [
-        const FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text("Step 5: Review Application Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          "Please review all information filled in your legal aid application before final submission.",
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-        ),
-        const SizedBox(height: 20),
-
-        // Section 1: Category Details
-        _buildSectionCard(
-          context: context,
-          title: "Legal Aid Category",
-          icon: Icons.category_outlined,
-          children: [
-            _buildDetailRow("Selected Category", draft.categoryName ?? 'General'),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Section 2: Applicant Personal Details
-        _buildSectionCard(
-          context: context,
-          title: "Applicant Details",
-          icon: Icons.person_outline,
-          children: [
-            _buildDetailRow("Full Name", draft.fullName),
-            _buildDetailRow("Gender", draft.gender),
-            if (draft.dob != null && draft.dob!.isNotEmpty) _buildDetailRow("Date of Birth", draft.dob!),
-            _buildDetailRow("Phone Number", draft.phone),
-            _buildDetailRow("Email Address", draft.email.isNotEmpty ? draft.email : "Not Provided"),
-            _buildDetailRow("Village / Town", draft.villageTown),
-            _buildDetailRow("District", draft.districtName),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Section 3: Case & Grievance Details
-        _buildSectionCard(
-          context: context,
-          title: "Case & Grievance Details",
-          icon: Icons.gavel_outlined,
-          children: [
-            _buildDetailRow("Case Type", draft.caseTypeName ?? 'N/A'),
-            _buildDetailRow("Summary of Grievance", draft.summaryOfGrievance.isNotEmpty ? draft.summaryOfGrievance : "N/A", isFullWidth: true),
-            _buildDetailRow("Relief Sought", draft.reliefSought.isNotEmpty ? draft.reliefSought : "N/A", isFullWidth: true),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Section 4: Uploaded Documents Summary
-        _buildSectionCard(
-          context: context,
-          title: "Uploaded Documents (${draft.documentStoragePaths.length} Attached)",
-          icon: Icons.folder_open_outlined,
-          children: [
-            if (docs.isEmpty && draft.documentStoragePaths.isEmpty)
-              const Text("No documents attached", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight))
-            else if (docs.isNotEmpty)
-              ...docs.map((doc) {
-                final isUploaded = draft.documentStoragePaths.containsKey(doc.documentCode);
-                return _buildDocumentTile(doc.documentName, isUploaded);
-              })
-            else
-              ...draft.documentStoragePaths.keys.map((docCode) {
-                return _buildDocumentTile(docCode, true);
-              }),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // Declaration Checkbox
-        Material(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _declarationAccepted ? AppColors.primaryBlue : (isDark ? AppColors.borderDark : AppColors.borderLight)),
-            ),
-            child: CheckboxListTile(
-              value: _declarationAccepted,
-              onChanged: (val) => setState(() => _declarationAccepted = val ?? false),
-              activeColor: AppColors.primaryBlue,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              title: const Text(
-                "I hereby declare that all information provided is accurate to the best of my knowledge and I agree to the terms of Legal Aid Services.",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            children: [
+              const FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text("Step 5: Review Application Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ),
-            ),
+              const SizedBox(height: 4),
+              const Text(
+                "Please review all information filled in your legal aid application before final submission.",
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+              ),
+              const SizedBox(height: 20),
+
+              // Section 1: Category Details
+              _buildSectionCard(
+                context: context,
+                title: "Legal Aid Category",
+                icon: Icons.category_outlined,
+                children: [
+                  _buildDetailRow("Selected Category", draft.categoryName ?? 'General'),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Section 2: Applicant Personal Details
+              _buildSectionCard(
+                context: context,
+                title: "Applicant Details",
+                icon: Icons.person_outline,
+                children: [
+                  _buildDetailRow("Full Name", draft.fullName),
+                  _buildDetailRow("Gender", draft.gender),
+                  if (draft.dob != null && draft.dob!.isNotEmpty) _buildDetailRow("Date of Birth", draft.dob!),
+                  _buildDetailRow("Phone Number", draft.phone),
+                  _buildDetailRow("Email Address", draft.email.isNotEmpty ? draft.email : "Not Provided"),
+                  _buildDetailRow("Village / Town", draft.villageTown),
+                  _buildDetailRow("District", draft.districtName),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Section 3: Case & Grievance Details
+              _buildSectionCard(
+                context: context,
+                title: "Case & Grievance Details",
+                icon: Icons.gavel_outlined,
+                children: [
+                  _buildDetailRow("Case Type", draft.caseTypeName ?? 'N/A'),
+                  _buildDetailRow("Summary of Grievance", draft.summaryOfGrievance.isNotEmpty ? draft.summaryOfGrievance : "N/A", isFullWidth: true),
+                  _buildDetailRow("Relief Sought", draft.reliefSought.isNotEmpty ? draft.reliefSought : "N/A", isFullWidth: true),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Section 4: Uploaded Documents Summary
+              _buildSectionCard(
+                context: context,
+                title: "Uploaded Documents (${draft.documentStoragePaths.length} Attached)",
+                icon: Icons.folder_open_outlined,
+                children: [
+                  if (docs.isEmpty && draft.documentStoragePaths.isEmpty)
+                    const Text("No documents attached", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight))
+                  else if (docs.isNotEmpty)
+                    ...docs.map((doc) {
+                      final isUploaded = draft.documentStoragePaths.containsKey(doc.documentCode);
+                      return _buildDocumentTile(doc.documentName, isUploaded);
+                    })
+                  else
+                    ...draft.documentStoragePaths.keys.map((docCode) {
+                      return _buildDocumentTile(docCode, true);
+                    }),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Declaration Checkbox
+              Material(
+                color: isDark ? AppColors.darkSurface : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _declarationAccepted ? AppColors.primaryBlue : (isDark ? AppColors.borderDark : AppColors.borderLight)),
+                  ),
+                  child: CheckboxListTile(
+                    value: _declarationAccepted,
+                    onChanged: (val) => setState(() => _declarationAccepted = val ?? false),
+                    activeColor: AppColors.primaryBlue,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    title: const Text(
+                      "I hereby declare that all information provided is accurate to the best of my knowledge and I agree to the terms of Legal Aid Services.",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 24),
-
-        SizedBox(
-          height: 52,
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: (!_declarationAccepted || _isSubmitting)
-                ? null
-                : () => _showCaptchaVerificationDialog(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.successGreen,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        // Fixed bottom Submit button
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkBg : AppColors.lightBg,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 52,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: (!_declarationAccepted || _isSubmitting)
+                    ? null
+                    : () => _showCaptchaVerificationDialog(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.successGreen,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text("Verify Captcha & Submit ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+              ),
             ),
-            child: _isSubmitting
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text("Verify Captcha & Submit ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ),
           ),
         ),
       ],

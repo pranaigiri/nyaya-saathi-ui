@@ -20,60 +20,78 @@ class Step4DocumentUploadScreen extends StatelessWidget {
     final mandatoryUploadedCount = mandatoryDocs.where((d) => draft?.documentStoragePaths.containsKey(d.documentCode) ?? false).length;
 
     final canProceed = mandatoryUploadedCount >= mandatoryDocs.length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final mq = MediaQuery.of(context);
-    final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
-
-    return ListView(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+    return Column(
       children: [
-        const FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text("Step 4: Document Upload & Scanning", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            children: [
+              const FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text("Step 4: Document Upload & Scanning", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Documents required for category '${draft?.categoryName ?? ''}' and case type '${draft?.caseTypeName ?? ''}'. Upload or scan each document.",
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+              ),
+              const SizedBox(height: 20),
+
+              if (docs.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                ...docs.map((d) {
+                  final existingPath = draft?.documentStoragePaths[d.documentCode];
+
+                  return DocumentPickerTile(
+                    doc: d,
+                    uploadedPath: existingPath,
+                    onFilePicked: (docCode, fileName, bytes) async {
+                      await draftProvider.attachDocument(docCode, fileName, bytes);
+                    },
+                    onFileRemoved: (docCode) async {
+                      await draftProvider.removeDocument(docCode);
+                    },
+                  );
+                }),
+            ],
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          "Documents required for category '${draft?.categoryName ?? ''}' and case type '${draft?.caseTypeName ?? ''}'. Upload or scan each document.",
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-        ),
-        const SizedBox(height: 20),
-
-        if (docs.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else
-          ...docs.map((d) {
-            final existingPath = draft?.documentStoragePaths[d.documentCode];
-
-            return DocumentPickerTile(
-              doc: d,
-              uploadedPath: existingPath,
-              onFilePicked: (docCode, fileName, bytes) async {
-                await draftProvider.attachDocument(docCode, fileName, bytes);
-              },
-              onFileRemoved: (docCode) async {
-                await draftProvider.removeDocument(docCode);
-              },
-            );
-          }),
-
-        const SizedBox(height: 28),
-
-        SizedBox(
-          height: 52,
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: canProceed ? onNext : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text("Next: Review & Submit →", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+        // Fixed bottom button
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkBg : AppColors.lightBg,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 52,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: canProceed ? onNext : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text("Next: Review & Submit →", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
             ),
           ),
         ),

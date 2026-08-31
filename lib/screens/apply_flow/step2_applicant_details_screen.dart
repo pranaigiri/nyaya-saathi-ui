@@ -519,8 +519,6 @@ class _Step2ApplicantDetailsScreenState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mq = MediaQuery.of(context);
-    final bottomPad = mq.viewInsets.bottom + mq.padding.bottom + 24;
     final primaryTxt = isDark
         ? AppColors.textPrimaryDark
         : AppColors.textPrimaryLight;
@@ -532,178 +530,198 @@ class _Step2ApplicantDetailsScreenState
 
     return Form(
       key: _formKey,
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPad),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ───────────────────────────────────
-            Text(
-              'Personal Information',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: primaryTxt,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Fill in the applicant\'s personal details accurately.',
-              style: TextStyle(fontSize: 13, color: secondTxt),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Full Name ─────────────────────────────────
-            _sectionLabel('APPLICANT NAME'),
-            TextFormField(
-              controller: _fullNameController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                hintText: 'Enter full name',
-                prefixIcon: Icon(Icons.person_outline_rounded),
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Full name is required'
-                  : null,
-            ),
-            const SizedBox(height: 20),
-
-            // ── Gender Pill Selector ──────────────────────
-            _sectionLabel('GENDER'),
-            FutureBuilder<List<GenderOption>>(
-              future: _genderOptionsFuture,
-              builder: (context, snapshot) {
-                final options = snapshot.data ?? const <GenderOption>[];
-                if (options.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
-                  return const Text('No gender options available');
-                }
-                return _GenderPillSelector(
-                  selected: _gender,
-                  isDark: isDark,
-                  options: options,
-                  resolveIcon: Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon,
-                  onChanged: (val) => setState(() => _gender = val),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // ── Date of Birth ─────────────────────────────
-            _sectionLabel('DATE OF BIRTH'),
-            _DobTriggerButton(
-              dobDisplay: _dobSelected ? _dobDisplay : null,
-              isDark: isDark,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-              primaryTxt: primaryTxt,
-              secondTxt: secondTxt,
-              onTap: _openDobModal,
-            ),
-            const SizedBox(height: 20),
-
-            // ── Location ──────────────────────────────────
-            _sectionLabel('LOCATION'),
-            TextFormField(
-              controller: _villageTownController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                hintText: 'Village / Town / Ward',
-                prefixIcon: Icon(Icons.location_city_outlined),
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Village/town is required'
-                  : null,
-            ),
-            const SizedBox(height: 14),
-            FutureBuilder<List<District>>(
-              future: _districtsFuture,
-              builder: (context, snapshot) {
-                final districts = snapshot.data ?? const <District>[];
-                if (districts.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
-                  return const Text('No districts available');
-                }
-                final selectedDistrictValue = districts.any((d) => d.id == _districtId)
-                    ? _districtId
-                    : (districts.isNotEmpty ? districts.first.id : null);
-
-                return DropdownButtonFormField<String>(
-                  initialValue: selectedDistrictValue,
-                  decoration: const InputDecoration(
-                    hintText: 'Select district',
-                    prefixIcon: Icon(Icons.map_outlined),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header ───────────────────────────────────
+                  Text(
+                    'Personal Information',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: primaryTxt,
+                    ),
                   ),
-                  items: districts
-                      .map(
-                        (d) => DropdownMenuItem<String>(
-                          value: d.id,
-                          child: Text(d.districtName),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Fill in the applicant\'s personal details accurately.',
+                    style: TextStyle(fontSize: 13, color: secondTxt),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Full Name ─────────────────────────────────
+                  _sectionLabel('APPLICANT NAME'),
+                  TextFormField(
+                    controller: _fullNameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter full name',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Full name is required'
+                        : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Gender Pill Selector ──────────────────────
+                  _sectionLabel('GENDER'),
+                  FutureBuilder<List<GenderOption>>(
+                    future: _genderOptionsFuture,
+                    builder: (context, snapshot) {
+                      final options = snapshot.data ?? const <GenderOption>[];
+                      if (options.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+                        return const Text('No gender options available');
+                      }
+                      return _GenderPillSelector(
+                        selected: _gender,
+                        isDark: isDark,
+                        options: options,
+                        resolveIcon: Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon,
+                        onChanged: (val) => setState(() => _gender = val),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Date of Birth ─────────────────────────────
+                  _sectionLabel('DATE OF BIRTH'),
+                  _DobTriggerButton(
+                    dobDisplay: _dobSelected ? _dobDisplay : null,
+                    isDark: isDark,
+                    surfaceColor: surfaceColor,
+                    borderColor: borderColor,
+                    primaryTxt: primaryTxt,
+                    secondTxt: secondTxt,
+                    onTap: _openDobModal,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Location ──────────────────────────────────
+                  _sectionLabel('LOCATION'),
+                  TextFormField(
+                    controller: _villageTownController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      hintText: 'Village / Town / Ward',
+                      prefixIcon: Icon(Icons.location_city_outlined),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Village/town is required'
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  FutureBuilder<List<District>>(
+                    future: _districtsFuture,
+                    builder: (context, snapshot) {
+                      final districts = snapshot.data ?? const <District>[];
+                      if (districts.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+                        return const Text('No districts available');
+                      }
+                      final selectedDistrictValue = districts.any((d) => d.id == _districtId)
+                          ? _districtId
+                          : (districts.isNotEmpty ? districts.first.id : null);
+
+                      return DropdownButtonFormField<String>(
+                        initialValue: selectedDistrictValue,
+                        decoration: const InputDecoration(
+                          hintText: 'Select district',
+                          prefixIcon: Icon(Icons.map_outlined),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _districtId = val;
-                        _districtName = districts.firstWhere((d) => d.id == val).districtName;
-                      });
-                    }
-                  },
-                  validator: (v) => (v == null || v.isEmpty) ? 'Please select district' : null,
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // ── Contact ───────────────────────────────────
-            _sectionLabel('CONTACT'),
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ],
-              decoration: const InputDecoration(
-                hintText: '10-digit mobile number',
-                prefixIcon: Icon(Icons.phone_outlined),
-                counterText: '',
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Phone number is required';
-                }
-                if (v.trim().length < 10) {
-                  return 'Enter a valid 10-digit phone number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-
-            // ── Submit ────────────────────────────────────
-            SizedBox(
-              height: 54,
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _saveAndNext,
-                icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-                label: const Text(
-                  'Next: Case Type',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                        items: districts
+                            .map(
+                              (d) => DropdownMenuItem<String>(
+                                value: d.id,
+                                child: Text(d.districtName),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              _districtId = val;
+                              _districtName = districts.firstWhere((d) => d.id == val).districtName;
+                            });
+                          }
+                        },
+                        validator: (v) => (v == null || v.isEmpty) ? 'Please select district' : null,
+                      );
+                    },
                   ),
-                  elevation: 3,
+                  const SizedBox(height: 20),
+
+                  // ── Contact ───────────────────────────────────
+                  _sectionLabel('CONTACT'),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    decoration: const InputDecoration(
+                      hintText: '10-digit mobile number',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                      counterText: '',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Phone number is required';
+                      }
+                      if (v.trim().length < 10) {
+                        return 'Enter a valid 10-digit phone number';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Fixed bottom button
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkBg : AppColors.lightBg,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _saveAndNext,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                  label: const Text(
+                    'Next: Case Type',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 3,
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -63,167 +63,185 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
               ct.caseTypeCode.toLowerCase().contains(q);
         }).toList();
 
-        final mq = MediaQuery.of(context);
-        final bottomInset = mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.padding.bottom;
-
         return Form(
           key: _formKey,
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+          child: Column(
             children: [
-              const FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text("Step 3: Case Type & Summary", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 4),
-              const Text("Select the primary nature of your legal dispute and summarize your grievance.", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
-              const SizedBox(height: 16),
-
-              // Search Bar for Case Types
-              TextFormField(
-                controller: _searchController,
-                onChanged: (val) => setState(() => _searchQuery = val),
-                decoration: InputDecoration(
-                  labelText: "Search Case Type...",
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              const Text("Select Case Type *", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              const SizedBox(height: 10),
-
-              if (filteredList.isEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Center(
-                    child: Text(
-                      "No case types matching '$_searchQuery'",
-                      style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  children: [
+                    const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text("Step 3: Case Type & Summary", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                ),
-              ] else ...[
-                 ...filteredList.map((ct) {
-                   final isSelected = selectedCaseTypeId == ct.id;
-                   final iconData = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(ct.iconUrl ?? ct.iconName);
+                    const SizedBox(height: 4),
+                    const Text("Select the primary nature of your legal dispute and summarize your grievance.", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
+                    const SizedBox(height: 16),
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? (isDark ? AppColors.primaryBlue.withValues(alpha: 0.2) : const Color(0xFFEFF6FF))
-                          : (isDark ? AppColors.darkSurface : Colors.white),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isSelected ? AppColors.primaryBlue : (isDark ? AppColors.borderDark : AppColors.borderLight),
-                        width: isSelected ? 2 : 1,
+                    // Search Bar for Case Types
+                    TextFormField(
+                      controller: _searchController,
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                      decoration: InputDecoration(
+                        labelText: "Search Case Type...",
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
                       ),
                     ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () {
-                        draftProvider.updateCaseType(ct.id, ct.caseTypeCode, ct.caseTypeName);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primaryBlue
-                                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                iconData,
-                                color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                                size: 22,
-                              ),
+                    const SizedBox(height: 16),
+
+                    const Text("Select Case Type *", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 10),
+
+                    if (filteredList.isEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Center(
+                          child: Text(
+                            "No case types matching '$_searchQuery'",
+                            style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                       ...filteredList.map((ct) {
+                         final isSelected = selectedCaseTypeId == ct.id;
+                         final iconData = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(ct.iconUrl ?? ct.iconName);
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? (isDark ? AppColors.primaryBlue.withValues(alpha: 0.2) : const Color(0xFFEFF6FF))
+                                : (isDark ? AppColors.darkSurface : Colors.white),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primaryBlue : (isDark ? AppColors.borderDark : AppColors.borderLight),
+                              width: isSelected ? 2 : 1,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              draftProvider.updateCaseType(ct.id, ct.caseTypeCode, ct.caseTypeName);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    ct.caseTypeName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: isSelected ? AppColors.primaryBlue : null,
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.primaryBlue
+                                          : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      iconData,
+                                      color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                      size: 22,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    ct.caseTypeCode,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          ct.caseTypeName,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: isSelected ? AppColors.primaryBlue : null,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          ct.caseTypeCode,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
+                                  if (isSelected)
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 8),
+                                      child: Icon(Icons.check_circle, color: AppColors.primaryBlue, size: 20),
+                                    ),
                                 ],
                               ),
                             ),
-                            if (isSelected)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 8),
-                                child: Icon(Icons.check_circle, color: AppColors.primaryBlue, size: 20),
-                              ),
-                          ],
-                        ),
+                          ),
+                        );
+                      }),
+                    ],
+
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _grievanceController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: "Summary of Grievance / Case Details *",
+                        hintText: "Explain facts of the case, dates, opposing parties, and key issues...",
+                      ),
+                      validator: (v) => v == null || v.trim().length < 10 ? "Please provide a summary (min 10 chars)" : null,
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextFormField(
+                      controller: _reliefController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: "Relief Sought (Optional)",
+                        hintText: "e.g. Free advocate for bail application / property court suit...",
                       ),
                     ),
-                  );
-                }),
-              ],
-
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _grievanceController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: "Summary of Grievance / Case Details *",
-                  hintText: "Explain facts of the case, dates, opposing parties, and key issues...",
-                ),
-                validator: (v) => v == null || v.trim().length < 10 ? "Please provide a summary (min 10 chars)" : null,
-              ),
-              const SizedBox(height: 14),
-
-              TextFormField(
-                controller: _reliefController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: "Relief Sought (Optional)",
-                  hintText: "e.g. Free advocate for bail application / property court suit...",
+                  ],
                 ),
               ),
-              const SizedBox(height: 28),
-
-              SizedBox(
-                height: 52,
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: selectedCaseTypeId == null ? null : _saveAndNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text("Next: Upload Docs →", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              // Fixed bottom button
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkBg : AppColors.lightBg,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: SizedBox(
+                    height: 52,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: selectedCaseTypeId == null ? null : _saveAndNext,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text("Next: Upload Docs →", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    ),
                   ),
                 ),
               ),

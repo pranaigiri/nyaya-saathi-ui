@@ -333,7 +333,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
     return RefreshIndicator(
       onRefresh: _fetchNotifications,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 36 + MediaQuery.of(context).padding.bottom),
         itemCount: _notifications.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {

@@ -35,7 +35,7 @@ class _HomeTabState extends State<HomeTab> {
     final resolvedCount = apps.where((a) => a.status == 'RESOLVED').length;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 36 + MediaQuery.of(context).padding.bottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

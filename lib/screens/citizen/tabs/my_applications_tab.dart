@@ -89,7 +89,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     return RefreshIndicator(
       onRefresh: () => appProvider.refresh(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 36 + MediaQuery.of(context).padding.bottom),
         itemCount: list.length,
         itemBuilder: (context, index) {
           final app = list[index];

@@ -7,6 +7,9 @@ import '../../models/draft_application_model.dart';
 class ApplicationRepository {
   SupabaseClient get _client => Supabase.instance.client;
 
+  static const String _applicationSelectFields =
+      '*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*), district_master:applicant_district_id(district_name)';
+
   /// Submit a new legal aid application from a draft
   Future<LegalAidApplication> submitApplication(DraftApplicationModel draft, {String? applicantId}) async {
     final effectiveApplicantId = applicantId ?? _client.auth.currentUser?.id;
@@ -48,7 +51,7 @@ class ApplicationRepository {
       final res = await _client
           .from('legal_aid_application')
           .insert(insertData)
-          .select('*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*)')
+          .select(_applicationSelectFields)
           .single();
 
       // ignore: avoid_print
@@ -103,7 +106,7 @@ class ApplicationRepository {
   Future<List<LegalAidApplication>> getMyApplications() async {
     final res = await _client
         .from('legal_aid_application')
-        .select('*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*)')
+        .select(_applicationSelectFields)
         .order('created_at', ascending: false);
 
     return (res as List).map((x) => LegalAidApplication.fromJson(x)).toList();
@@ -134,7 +137,7 @@ class ApplicationRepository {
     try {
       final res = await _client
           .from('legal_aid_application')
-          .select('*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*)')
+          .select(_applicationSelectFields)
           .eq('id', cleanId)
           .maybeSingle();
 
@@ -153,7 +156,7 @@ class ApplicationRepository {
     try {
       final res = await _client
           .from('legal_aid_application')
-          .select('*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*)')
+          .select(_applicationSelectFields)
           .eq('tracking_number', cleanId)
           .maybeSingle();
 
