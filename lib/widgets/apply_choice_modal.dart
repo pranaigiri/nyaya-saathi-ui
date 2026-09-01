@@ -6,17 +6,52 @@ import '../providers/draft_provider.dart';
 import '../providers/apply_data_provider.dart';
 import '../screens/apply_flow/apply_wizard_screen.dart';
 
-class ApplyChoiceModal extends StatelessWidget {
-  const ApplyChoiceModal({super.key});
+class ApplyChoiceModal extends StatefulWidget {
+  /// Preselected eligibility category (from the One Tap Eligibility Check).
+  final dynamic preselectedCategoryId;
+  final String? preselectedCategoryCode;
+  final String? preselectedCategoryName;
 
-  static Future<void> show(BuildContext context) {
+  /// Initial wizard step index (0-based). 1 skips Step 1 when the category
+  /// was already selected via the eligibility check.
+  final int initialStep;
+
+  const ApplyChoiceModal({
+    super.key,
+    this.preselectedCategoryId,
+    this.preselectedCategoryCode,
+    this.preselectedCategoryName,
+    this.initialStep = 0,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    dynamic preselectedCategoryId,
+    String? preselectedCategoryCode,
+    String? preselectedCategoryName,
+    int initialStep = 0,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => const ApplyChoiceModal(),
+      builder: (ctx) => ApplyChoiceModal(
+        preselectedCategoryId: preselectedCategoryId,
+        preselectedCategoryCode: preselectedCategoryCode,
+        preselectedCategoryName: preselectedCategoryName,
+        initialStep: initialStep,
+      ),
     );
   }
+
+  @override
+  State<ApplyChoiceModal> createState() => _ApplyChoiceModalState();
+}
+
+class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
+  /// Which option (1 = Self, 2 = Others) is currently preparing its draft in
+  /// the background. Only that card's trailing arrow shows the spinner.
+  int? _loadingOption;
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +59,40 @@ class ApplyChoiceModal extends StatelessWidget {
     final bgColor = isDark ? AppColors.darkSurface : Colors.white;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final draftProvider = Provider.of<DraftProvider>(context, listen: false);
-    final applyDataProvider = Provider.of<ApplyDataProvider>(context, listen: false);
+    final applyDataProvider = Provider.of<ApplyDataProvider>(
+      context,
+      listen: false,
+    );
     final profile = authProvider.profile;
     final userName = profile?.fullName.isNotEmpty == true
         ? profile!.fullName
         : (authProvider.userName.isNotEmpty ? authProvider.userName : 'You');
+    final initialStep = widget.initialStep;
+
+    // Prepare the draft in the background, then open the wizard.
+    Future<void> prepareAndOpen(
+      int option,
+      Future<void> Function() prepare,
+    ) async {
+      if (_loadingOption != null) return; // ignore double-taps
+      setState(() => _loadingOption = option);
+      try {
+        // Capture the NavigatorState while this modal's context is still
+        // mounted — it stays valid across the async work and the pop below.
+        final navigator = Navigator.of(context);
+        await prepare();
+        await _applyPreselection(draftProvider);
+        navigator
+            .pop(); // Close the choice modal AFTER all async work succeeded
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => ApplyWizardScreen(initialStep: initialStep),
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _loadingOption = null);
+      }
+    }
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -90,7 +154,9 @@ class ApplyChoiceModal extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -98,7 +164,9 @@ class ApplyChoiceModal extends StatelessWidget {
                       'Select who this application is for',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -115,19 +183,20 @@ class ApplyChoiceModal extends StatelessWidget {
             icon: Icons.person_rounded,
             iconBgColor: AppColors.primaryBlue.withValues(alpha: 0.15),
             iconColor: AppColors.primaryBlue,
-            title: 'Apply for Self',
+            title: 'Self',
             subtitle: 'Auto-fill form using your profile ($userName)',
             badgeText: '1-Click Auto-Fill',
             badgeColor: AppColors.primaryBlue,
-            onTap: () async {
-              Navigator.pop(context);
-
+            loading: _loadingOption == 1,
+            onTap: () => prepareAndOpen(1, () async {
               // Find district name if available
               String? districtName;
               if (profile?.districtId != null) {
                 try {
                   final districts = await applyDataProvider.getDistricts();
-                  final match = districts.where((d) => d.id == profile!.districtId).firstOrNull;
+                  final match = districts
+                      .where((d) => d.id == profile!.districtId)
+                      .firstOrNull;
                   districtName = match?.districtName;
                 } catch (_) {}
               }
@@ -136,14 +205,7 @@ class ApplyChoiceModal extends StatelessWidget {
                 profile: profile,
                 districtName: districtName,
               );
-
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
-                );
-              }
-            },
+            }),
           ),
           const SizedBox(height: 14),
 
@@ -154,26 +216,35 @@ class ApplyChoiceModal extends StatelessWidget {
             icon: Icons.group_add_rounded,
             iconBgColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
             iconColor: const Color(0xFF0D9488),
-            title: 'Apply for Others',
+            title: 'Others',
             subtitle: 'Form will be empty to enter another person\'s details',
             badgeText: 'Blank Form',
             badgeColor: const Color(0xFF0D9488),
-            onTap: () async {
-              Navigator.pop(context);
+            loading: _loadingOption == 2,
+            onTap: () => prepareAndOpen(2, () async {
               await draftProvider.startNewDraft(); // Starts fresh empty draft
-
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
-                );
-              }
-            },
+            }),
           ),
           const SizedBox(height: 12),
         ],
       ),
     );
+  }
+
+  /// Applies the category preselected via the eligibility check (if any) and
+  /// persists the initial wizard step so the wizard opens on the right step.
+  Future<void> _applyPreselection(DraftProvider draftProvider) async {
+    if (widget.preselectedCategoryId != null &&
+        widget.preselectedCategoryCode != null) {
+      await draftProvider.updateCategory(
+        widget.preselectedCategoryId,
+        widget.preselectedCategoryCode!,
+        widget.preselectedCategoryName ?? widget.preselectedCategoryCode!,
+      );
+    }
+    if (widget.initialStep > 0) {
+      await draftProvider.setStepIndex(widget.initialStep);
+    }
   }
 
   Widget _buildOptionCard(
@@ -186,11 +257,13 @@ class ApplyChoiceModal extends StatelessWidget {
     required String subtitle,
     required String badgeText,
     required Color badgeColor,
+    required bool loading,
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      onTap: loading
+          ? null
+          : onTap, // ignore taps while this option is preparing
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -218,17 +291,25 @@ class ApplyChoiceModal extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      Flexible(
+                        child: Text(
+                          title,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: badgeColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
@@ -249,16 +330,26 @@ class ApplyChoiceModal extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
+            loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.6),
+                  )
+                : Icon(
+                    Icons.chevron_right_rounded,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
           ],
         ),
       ),

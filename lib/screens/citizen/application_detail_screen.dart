@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/district_helper.dart';
 import '../../data/repositories/application_repository.dart';
 import '../../models/legal_aid_application.dart';
 import '../../widgets/status_badge.dart';
@@ -15,13 +17,18 @@ class ApplicationDetailScreen extends StatefulWidget {
     super.key,
     this.application,
     this.applicationId,
-  }) : assert(application != null || applicationId != null, 'Either application or applicationId must be provided');
+  }) : assert(
+         application != null || applicationId != null,
+         'Either application or applicationId must be provided',
+       );
 
   @override
-  State<ApplicationDetailScreen> createState() => _ApplicationDetailScreenState();
+  State<ApplicationDetailScreen> createState() =>
+      _ApplicationDetailScreenState();
 }
 
-class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
+class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
+    with SingleTickerProviderStateMixin {
   final ApplicationRepository _repository = ApplicationRepository();
   LegalAidApplication? _application;
   List<Map<String, dynamic>> _statusHistory = [];
@@ -31,9 +38,16 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   RealtimeChannel? _appRealtimeChannel;
   RealtimeChannel? _historyRealtimeChannel;
 
+  late final AnimationController _glowController;
+
   @override
   void initState() {
     super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
     if (widget.application != null) {
       _application = widget.application;
       _isLoading = false;
@@ -53,8 +67,6 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       _appRealtimeChannel = _repository.subscribeToApplicationDetail(
         applicationId: appId,
         onData: (payload) {
-          // ignore: avoid_print
-          print('[ApplicationDetailScreen] Realtime app update: ${payload.eventType}');
           _refreshApplicationSilently(appId);
         },
       );
@@ -62,15 +74,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       _historyRealtimeChannel = _repository.subscribeToStatusHistory(
         applicationId: appId,
         onData: (payload) {
-          // ignore: avoid_print
-          print('[ApplicationDetailScreen] Realtime history update: ${payload.eventType}');
           _fetchStatusHistorySilently(appId);
         },
       );
-    } catch (e) {
-      // ignore: avoid_print
-      print('[ApplicationDetailScreen] Realtime subscription error: $e');
-    }
+    } catch (_) {}
   }
 
   void _cleanupRealtime() {
@@ -116,7 +123,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Application details could not be found. Please check the tracking number or ID.';
+            _errorMessage =
+                'Application details could not be found. Please check the tracking number or ID.';
           });
         }
       }
@@ -124,7 +132,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load application details. Please check your network connection.';
+          _errorMessage =
+              'Failed to load application details. Please check your network connection.';
         });
       }
     }
@@ -167,10 +176,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
   @override
   void dispose() {
+    _glowController.dispose();
     _cleanupRealtime();
     super.dispose();
   }
-
 
   String _formatDateTime(String? isoString) {
     if (isoString == null || isoString.isEmpty) return 'N/A';
@@ -182,42 +191,116 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     }
   }
 
+  String _formatDateOnly(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return 'N/A';
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      return DateFormat('dd MMM yyyy').format(dt);
+    } catch (_) {
+      return isoString.split('T')[0];
+    }
+  }
+
+  void _copyToClipboard(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text('$label copied to clipboard!')),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: const Color(0xFF1E293B),
+      ),
+    );
+  }
+
+  void _shareApplication(LegalAidApplication app) {
+    final trackingId = app.trackingNumber.isNotEmpty
+        ? app.trackingNumber
+        : app.id;
+    final districtName = DistrictHelper.resolveDistrictName(
+      app.applicantDistrictId,
+      app.districtName,
+    );
+    final statusFormatted = app.status.replaceAll('_', ' ');
+
+    final shareText =
+        '''
+🏛️ Sikkim State Legal Services Authority (SLSA)
+📄 Legal Aid Application Details
+
+• Tracking ID: $trackingId
+• Applicant: ${app.applicantFullName}
+• District: $districtName
+• Status: $statusFormatted
+• Category: ${app.categoryName ?? 'Legal Aid'}
+• Filed Date: ${_formatDateOnly(app.createdAt)}
+${app.assignedAdvocateName != null ? '• Advocate: ${app.assignedAdvocateName}\n' : ''}
+Track application updates live on Nyaya Saathi App.
+For helpline support, dial 15100 (Toll-Free).
+''';
+
+    Share.share(shareText, subject: 'Legal Aid Application #$trackingId');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    final caseTitle = _application != null
-        ? (_application!.trackingNumber.isNotEmpty
-            ? 'Case #${_application!.trackingNumber}'
-            : 'Case #${_application!.id.substring(0, 8)}')
-        : 'Application Details';
+    final trackingDisplay =
+        _application != null && _application!.trackingNumber.isNotEmpty
+        ? _application!.trackingNumber
+        : (_application?.id.substring(0, 8) ?? 'Details');
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          caseTitle,
+          'Case #$trackingDisplay',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          if (_application != null)
+            IconButton(
+              icon: const Icon(Icons.share_rounded, size: 20),
+              tooltip: 'Share Application',
+              onPressed: () => _shareApplication(_application!),
+            ),
+          const SizedBox(width: 4),
+        ],
       ),
-      body: _buildBody(isDark),
+      body: _buildBody(isDark, bottomInset),
     );
   }
 
-  Widget _buildBody(bool isDark) {
+  Widget _buildBody(bool isDark, double bottomInset) {
     if (_isLoading) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text(
               "Loading application details...",
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -231,12 +314,19 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 54, color: AppColors.dangerRed),
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 54,
+                color: AppColors.dangerRed,
+              ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage ?? "Application not found",
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -259,7 +349,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                     label: const Text("Retry"),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -268,82 +358,62 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
     final application = _application!;
     final applicant = application.applicantDetails;
+    final resolvedDistrict = DistrictHelper.resolveDistrictName(
+      application.applicantDistrictId,
+      application.districtName,
+    );
 
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 48 + bottomInset),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Summary Card
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Tracking Number",
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          application.trackingNumber.isNotEmpty ? application.trackingNumber : "Application Submitted",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Filed on: ${application.createdAt.split('T')[0]}",
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  StatusBadge(status: application.status),
-                ],
-              ),
-            ),
+            // ── 1. Case Header (Tracking ID, Status, Meta) ───────────
+            _buildHeroTrackingCard(application, resolvedDistrict, isDark),
             const SizedBox(height: 18),
 
-            // Assigned Advocate Section or Fallback
+            // ── 2. Interactive Delivery-Style Milestone & Timeline ───
+            _buildInteractiveTimelineCard(context, application, isDark),
+            const SizedBox(height: 18),
+
+            // ── 3. Assigned Advocate Section (if allocated or in progress) ──
             _buildAdvocateSection(context, application, isDark),
-            const SizedBox(height: 18),
+            if (application.assignedAdvocate != null ||
+                (application.assignedAdvocateName != null &&
+                    application.assignedAdvocateName!.trim().isNotEmpty) ||
+                application.status.toUpperCase() == 'ADVOCATE_ASSIGNED')
+              const SizedBox(height: 18),
 
-            // Status Timeline History Section
-            _buildTimelineCard(context, isDark),
-            const SizedBox(height: 18),
-
-            // Section 1: Applicant Info
+            // ── 4. Applicant Details Card ────────────────────────────
             _buildDetailCard(
               context,
               title: "1. APPLICANT DETAILS",
+              icon: Icons.person_outline_rounded,
+              isDark: isDark,
               children: [
-                _buildRow("Full Name", applicant.fullName.isNotEmpty ? applicant.fullName : application.applicantFullName),
-                _buildRow("Gender", applicant.gender.isNotEmpty ? applicant.gender : application.applicantGender),
+                _buildRow(
+                  "Full Name",
+                  applicant.fullName.isNotEmpty
+                      ? applicant.fullName
+                      : application.applicantFullName,
+                ),
+                _buildRow(
+                  "Gender",
+                  applicant.gender.isNotEmpty
+                      ? applicant.gender
+                      : application.applicantGender,
+                ),
                 _buildRow(
                   "Date of Birth",
-                  applicant.dateOfBirth != null && applicant.dateOfBirth!.isNotEmpty
+                  applicant.dateOfBirth != null &&
+                          applicant.dateOfBirth!.isNotEmpty
                       ? applicant.dateOfBirth!
-                      : (application.applicantDob.isNotEmpty ? application.applicantDob : 'N/A'),
+                      : (application.applicantDob.isNotEmpty
+                            ? application.applicantDob
+                            : 'N/A'),
                 ),
                 _buildRow(
                   "Village / Town",
@@ -351,33 +421,52 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                       ? applicant.villageOrTown
                       : (application.villageOrTown ?? 'N/A'),
                 ),
-                _buildRow("District", application.districtName ?? application.applicantDistrictId),
+                _buildRow("District", resolvedDistrict),
                 _buildRow(
-                  "Phone",
-                  applicant.phoneNumber.isNotEmpty ? applicant.phoneNumber : application.applicantPhoneNumber,
+                  "Phone Number",
+                  applicant.phoneNumber.isNotEmpty
+                      ? applicant.phoneNumber
+                      : application.applicantPhoneNumber,
                 ),
-                if (applicant.email != null && applicant.email!.isNotEmpty) _buildRow("Email", applicant.email!),
+                if (applicant.email != null && applicant.email!.isNotEmpty)
+                  _buildRow("Email", applicant.email!),
               ],
             ),
             const SizedBox(height: 18),
 
-            // Section 2: Case Details
+            // ── 5. Case & Legal Aid Information Card ─────────────────
             _buildDetailCard(
               context,
-              title: "2. CASE & CATEGORY INFORMATION",
+              title: "2. CASE & GRIEVANCE INFORMATION",
+              icon: Icons.gavel_rounded,
+              isDark: isDark,
               children: [
-                _buildRow("Category", application.categoryName ?? 'Legal Aid Category'),
-                _buildRow("Case Type", application.caseTypeName ?? 'General Dispute'),
                 _buildRow(
-                  "Case Details",
+                  "Category",
+                  application.categoryName ?? 'Free Legal Aid',
+                ),
+                _buildRow(
+                  "Case Type",
+                  application.caseTypeName ?? 'General Legal Dispute',
+                ),
+                _buildRow(
+                  "Summary of Grievance",
                   application.caseDetails.isNotEmpty
                       ? application.caseDetails
-                      : (application.summaryOfGrievance.isNotEmpty ? application.summaryOfGrievance : 'N/A'),
+                      : (application.summaryOfGrievance.isNotEmpty
+                            ? application.summaryOfGrievance
+                            : 'N/A'),
                 ),
-                if (application.reliefSought != null && application.reliefSought!.isNotEmpty)
+                if (application.reliefSought != null &&
+                    application.reliefSought!.isNotEmpty)
                   _buildRow("Relief Sought", application.reliefSought!),
-                _buildRow("Filed Date", application.createdAt.split('T')[0]),
-                if (application.withdrawalReason != null && application.withdrawalReason!.isNotEmpty)
+                _buildRow("Filed On", _formatDateOnly(application.createdAt)),
+                _buildRow(
+                  "Last Updated",
+                  _formatDateTime(application.updatedAt),
+                ),
+                if (application.withdrawalReason != null &&
+                    application.withdrawalReason!.isNotEmpty)
                   _buildRow("Withdrawal Reason", application.withdrawalReason!),
               ],
             ),
@@ -387,128 +476,760 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     );
   }
 
-  Widget _buildTimelineCard(BuildContext context, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-      ),
+  // ──────────────────────────────────────────────────────────────────────────
+  // Hero Header Tracking Card (Overflow-free & Responsive)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildHeroTrackingCard(
+    LegalAidApplication application,
+    String resolvedDistrict,
+    bool isDark,
+  ) {
+    final trackingId = application.trackingNumber.isNotEmpty
+        ? application.trackingNumber
+        : (application.id.isNotEmpty
+              ? 'ID: ${application.id.substring(0, 10)}...'
+              : 'Submitted');
+
+    final categoryText = application.categoryName ?? 'Legal Aid';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Row 1: Label + Status Badge (Protected with Expanded)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "STATUS TIMELINE",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue),
+              const Expanded(
+                child: Text(
+                  "TRACKING NO.",
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              if (_isLoadingHistory)
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
+              const SizedBox(width: 8),
+              StatusBadge(status: application.status),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Row 2: Prominent Tracking ID with inline Copy button
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(
+              left: 14,
+              right: 6,
+              top: 6,
+              bottom: 6,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? AppColors.borderDark : const Color(0xFFCBD5E1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    trackingId,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16.5,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+                Material(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () =>
+                        _copyToClipboard(context, trackingId, "Tracking ID"),
+                    child: const Padding(
+                      padding: EdgeInsets.all(7),
+                      child: Icon(
+                        Icons.copy_rounded,
+                        size: 16,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Row 3: Date Applied & District in a single row (above the divider)
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 14,
+                color: AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  _formatDateOnly(application.createdAt),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Icon(
+                Icons.location_on_rounded,
+                size: 14,
+                color: AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  resolvedDistrict,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Row 4: Legal Aid Category & Case Type badges
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoBadge(
+                icon: Icons.category_rounded,
+                label: categoryText,
+                color: AppColors.successGreen,
+                isDark: isDark,
+              ),
+              if (application.caseTypeName != null &&
+                  application.caseTypeName!.trim().isNotEmpty)
+                _buildInfoBadge(
+                  icon: Icons.gavel_rounded,
+                  label: application.caseTypeName!,
+                  color: AppColors.primaryBlue,
+                  isDark: isDark,
                 ),
             ],
           ),
-          const Divider(height: 20),
-          if (_statusHistory.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryBlue,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Application Status: ${_application?.status.replaceAll('_', ' ') ?? 'Submitted'}",
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _statusHistory.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = _statusHistory[index];
-                final status = (item['new_status'] ?? '').toString().replaceAll('_', ' ');
-                final createdAt = item['created_at']?.toString();
-                final remarks = item['remarks']?.toString();
-                final isLatest = index == 0;
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: isLatest ? AppColors.primaryBlue : Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            status.isNotEmpty ? status : 'Status Updated',
-                            style: TextStyle(
-                              fontWeight: isLatest ? FontWeight.bold : FontWeight.w600,
-                              fontSize: 13,
-                              color: isLatest ? AppColors.primaryBlue : null,
-                            ),
-                          ),
-                          if (remarks != null && remarks.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2.0),
-                              child: Text(
-                                remarks,
-                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                              ),
-                            ),
-                          if (createdAt != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2.0),
-                              child: Text(
-                                _formatDateTime(createdAt),
-                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildAdvocateSection(BuildContext context, LegalAidApplication application, bool isDark) {
-    final bool hasAdvocate = application.assignedAdvocate != null ||
-        (application.assignedAdvocateName != null && application.assignedAdvocateName!.trim().isNotEmpty);
-    final bool isAdvocateAssignedStatus = application.status.toUpperCase() == 'ADVOCATE_ASSIGNED';
+  Widget _buildInfoBadge({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Interactive Product / Logistics-Style Stepper & Status Timeline
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildInteractiveTimelineCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline Header (Protected with Expanded)
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.route_rounded,
+                  size: 16,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  "STATUS PROGRESS & TIMELINE",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                    letterSpacing: 0.5,
+                    color: AppColors.primaryBlue,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (_isLoadingHistory)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 1.8),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── Lifecycle Stepper Progress Bar (Milestones with Animated Glow) ──
+          // RepaintBoundary isolates the per-frame glow animation repaints so
+          // the rest of the timeline card is not repainted every frame.
+          RepaintBoundary(child: _buildMilestoneTracker(application.status, isDark)),
+          const SizedBox(height: 20),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+
+          // ── Detailed Event Log (Vertical Track) ───────────────────
+          const Text(
+            "Activity & Status History Log",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          if (_statusHistory.isEmpty) ...[
+            _buildSingleHistoryNode(
+              title: application.status.replaceAll('_', ' '),
+              statusKey: application.status,
+              remarks:
+                  "Your application was registered with Sikkim SLSA and is currently active.",
+              dateTime: _formatDateTime(application.createdAt),
+              isFirst: true,
+              isLast: true,
+              isDark: isDark,
+            ),
+          ] else ...[
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _statusHistory.length,
+              itemBuilder: (context, index) {
+                final item = _statusHistory[index];
+                final rawStatus = (item['new_status'] ?? '').toString();
+                final statusTitle = rawStatus
+                    .replaceAll('_', ' ')
+                    .toUpperCase();
+                final createdAt = item['created_at']?.toString();
+                final remarks = item['remarks']?.toString();
+                final isFirst = index == 0;
+                final isLast = index == _statusHistory.length - 1;
+
+                return _buildSingleHistoryNode(
+                  title: statusTitle.isNotEmpty
+                      ? statusTitle
+                      : 'STATUS UPDATED',
+                  statusKey: rawStatus,
+                  remarks: remarks,
+                  dateTime: _formatDateTime(createdAt),
+                  isFirst: isFirst,
+                  isLast: isLast,
+                  isDark: isDark,
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Multi-stage Milestone Progress Bar with Glow Animation ───────────────
+  Widget _buildMilestoneTracker(String status, bool isDark) {
+    int currentStage = 1;
+    final upperStatus = status.toUpperCase();
+
+    if (upperStatus == 'SUBMITTED') {
+      currentStage = 1;
+    } else if (upperStatus == 'UNDER_REVIEW' ||
+        upperStatus == 'UNDER_SCRUTINY') {
+      currentStage = 2;
+    } else if (upperStatus == 'ADVOCATE_ASSIGNED' ||
+        upperStatus == 'ADVOCATE_ACCEPTED') {
+      currentStage = 3;
+    } else if (upperStatus == 'HEARING_SCHEDULED' ||
+        upperStatus == 'IN_PROGRESS' ||
+        upperStatus == 'ACTION_TAKEN') {
+      currentStage = 4;
+    } else if (upperStatus == 'RESOLVED' || upperStatus == 'DISPOSED') {
+      currentStage = 5;
+    } else if (upperStatus == 'REJECTED' || upperStatus == 'WITHDRAWN') {
+      currentStage = 2;
+    }
+
+    final isRejected = upperStatus == 'REJECTED';
+    final isWithdrawn = upperStatus == 'WITHDRAWN';
+
+    final stages = [
+      {'title': 'Applied', 'icon': Icons.assignment_turned_in_rounded},
+      {'title': 'Scrutiny', 'icon': Icons.fact_check_rounded},
+      {'title': 'Advocate', 'icon': Icons.shield_rounded},
+      {'title': 'Action', 'icon': Icons.gavel_rounded},
+      {'title': 'Resolved', 'icon': Icons.verified_rounded},
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: List.generate(stages.length, (idx) {
+            final stageIndex = idx + 1;
+            final isCompleted = stageIndex < currentStage;
+            final isCurrent =
+                stageIndex == currentStage && !isRejected && !isWithdrawn;
+            Color nodeColor;
+            Color iconColor;
+            if (isCompleted) {
+              nodeColor = AppColors.successGreen;
+              iconColor = Colors.white;
+            } else if (isCurrent) {
+              nodeColor = AppColors.primaryBlue;
+              iconColor = Colors.white;
+            } else if (isRejected && stageIndex == currentStage) {
+              nodeColor = AppColors.dangerRed;
+              iconColor = Colors.white;
+            } else if (isWithdrawn && stageIndex == currentStage) {
+              nodeColor = Colors.blueGrey;
+              iconColor = Colors.white;
+            } else {
+              nodeColor = isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFE2E8F0);
+              iconColor = isDark
+                  ? Colors.blueGrey.shade400
+                  : Colors.blueGrey.shade400;
+            }
+
+            return Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 32,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // 1. Connecting horizontal lines (Positioned.fill ensures full width)
+                        Positioned.fill(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 2.5,
+                                  color: idx == 0
+                                      ? Colors.transparent
+                                      : (stageIndex <= currentStage
+                                            ? AppColors.successGreen
+                                            : (isDark
+                                                  ? Colors.white12
+                                                  : const Color(0xFFE2E8F0))),
+                                ),
+                              ),
+                              Expanded(
+                                child: Container(
+                                  height: 2.5,
+                                  color: idx == stages.length - 1
+                                      ? Colors.transparent
+                                      : (stageIndex < currentStage
+                                            ? AppColors.successGreen
+                                            : (isDark
+                                                  ? Colors.white12
+                                                  : const Color(0xFFE2E8F0))),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 2. Animated Glow Shadow (behind the node bubble)
+                        if (isCurrent)
+                          AnimatedBuilder(
+                            animation: _glowController,
+                            builder: (context, child) {
+                              final glowVal = _glowController.value;
+                              return Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primaryBlue.withValues(
+                                        alpha: 0.3 + 0.35 * glowVal,
+                                      ),
+                                      blurRadius: 6 + 8 * glowVal,
+                                      spreadRadius: 1 + 2.5 * glowVal,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+
+                        // 3. Node Bubble
+                        isCurrent
+                            ? Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: nodeColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    stages[idx]['icon'] as IconData,
+                                    size: 15,
+                                    color: iconColor,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: nodeColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isCompleted
+                                        ? AppColors.successGreen
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    isCompleted
+                                        ? Icons.check_rounded
+                                        : (stages[idx]['icon'] as IconData),
+                                    size: 14,
+                                    color: iconColor,
+                                  ),
+                                ),
+                              ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    stages[idx]['title'] as String,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: (isCurrent || isCompleted)
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                      color: isCurrent
+                          ? AppColors.primaryBlue
+                          : (isCompleted
+                                ? AppColors.successGreen
+                                : (isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight)),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  // ── Single Vertical Track Node ────────────────────────────────────────────
+  Widget _buildSingleHistoryNode({
+    required String title,
+    required String statusKey,
+    required String? remarks,
+    required String dateTime,
+    required bool isFirst,
+    required bool isLast,
+    required bool isDark,
+  }) {
+    Color statusColor = AppColors.primaryBlue;
+    IconData statusIcon = Icons.update_rounded;
+
+    final key = statusKey.toUpperCase();
+    if (key.contains('SUBMITTED')) {
+      statusColor = AppColors.primaryBlue;
+      statusIcon = Icons.assignment_turned_in_rounded;
+    } else if (key.contains('REVIEW') || key.contains('SCRUTINY')) {
+      statusColor = const Color(0xFFF59E0B);
+      statusIcon = Icons.fact_check_rounded;
+    } else if (key.contains('ADVOCATE') || key.contains('ASSIGNED')) {
+      statusColor = AppColors.successGreen;
+      statusIcon = Icons.shield_rounded;
+    } else if (key.contains('RESOLVED') || key.contains('COMPLETED')) {
+      statusColor = const Color(0xFF10B981);
+      statusIcon = Icons.verified_rounded;
+    } else if (key.contains('REJECTED')) {
+      statusColor = AppColors.dangerRed;
+      statusIcon = Icons.cancel_rounded;
+    } else if (key.contains('WITHDRAWN')) {
+      statusColor = Colors.blueGrey;
+      statusIcon = Icons.remove_circle_outline_rounded;
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left track with node icon + vertical connector
+          Column(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: isFirst
+                      ? statusColor
+                      : statusColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: statusColor,
+                    width: isFirst ? 2 : 1.5,
+                  ),
+                ),
+                child: Icon(
+                  statusIcon,
+                  size: 14,
+                  color: isFirst ? Colors.white : statusColor,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: isDark ? Colors.white12 : const Color(0xFFCBD5E1),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 14),
+
+          // Right Content Box
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isFirst
+                      ? statusColor.withValues(alpha: 0.3)
+                      : (isDark
+                            ? AppColors.borderDark
+                            : const Color(0xFFE2E8F0)),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isFirst
+                                ? statusColor
+                                : (isDark
+                                      ? Colors.white
+                                      : AppColors.primaryDark),
+                          ),
+                        ),
+                      ),
+                      if (isFirst)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            "Latest",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 12,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateTime,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (remarks != null && remarks.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white10
+                              : const Color(0xFFBFDBFE),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 13,
+                            color: isDark
+                                ? Colors.blue.shade300
+                                : AppColors.primaryBlue,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              remarks.trim(),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                height: 1.35,
+                                color: isDark
+                                    ? Colors.blue.shade100
+                                    : const Color(0xFF1E3A8A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Advocate Section
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildAdvocateSection(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
+    final bool hasAdvocate =
+        application.assignedAdvocate != null ||
+        (application.assignedAdvocateName != null &&
+            application.assignedAdvocateName!.trim().isNotEmpty);
+    final bool isAdvocateAssignedStatus =
+        application.status.toUpperCase() == 'ADVOCATE_ASSIGNED';
 
     if (hasAdvocate) {
       return _buildAssignedAdvocateCard(context, application, isDark);
@@ -519,10 +1240,18 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildAssignedAdvocateCard(BuildContext context, LegalAidApplication application, bool isDark) {
+  Widget _buildAssignedAdvocateCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
     final advocate = application.assignedAdvocate;
-    final String advocateName = advocate?.fullName ?? application.assignedAdvocateName ?? 'Assigned Panel Advocate';
-    final String enrollmentNumber = advocate?.enrollmentNumber.isNotEmpty == true
+    final String advocateName =
+        advocate?.fullName ??
+        application.assignedAdvocateName ??
+        'Assigned Panel Advocate';
+    final String enrollmentNumber =
+        advocate?.enrollmentNumber.isNotEmpty == true
         ? advocate!.enrollmentNumber
         : 'Sikkim State Bar Council Panel';
     final String? primaryPhone = advocate?.primaryPhoneNumber;
@@ -531,16 +1260,20 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     final String? officeAddress = advocate?.officeAddress;
     final int experience = advocate?.experienceYears ?? 0;
 
-    // Generate initials for avatar
-    final nameParts = advocateName.replaceAll(RegExp(r'^Adv\.?\s*', caseSensitive: false), '').trim().split(' ');
+    final nameParts = advocateName
+        .replaceAll(RegExp(r'^Adv\.?\s*', caseSensitive: false), '')
+        .trim()
+        .split(' ');
     final initials = nameParts.length > 1
         ? '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase()
-        : (nameParts.isNotEmpty && nameParts[0].isNotEmpty ? nameParts[0][0].toUpperCase() : 'A');
+        : (nameParts.isNotEmpty && nameParts[0].isNotEmpty
+              ? nameParts[0][0].toUpperCase()
+              : 'A');
 
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: AppColors.successGreen.withValues(alpha: isDark ? 0.4 : 0.6),
           width: 1.5,
@@ -556,19 +1289,24 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Banner
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.successGreen.withValues(alpha: isDark ? 0.2 : 0.1),
+              color: AppColors.successGreen.withValues(
+                alpha: isDark ? 0.2 : 0.1,
+              ),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+                topLeft: Radius.circular(17),
+                topRight: Radius.circular(17),
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.shield_rounded, color: AppColors.successGreen, size: 20),
+                const Icon(
+                  Icons.shield_rounded,
+                  color: AppColors.successGreen,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -582,14 +1320,21 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.successGreen,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
                     "Free Legal Aid",
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -601,13 +1346,14 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Profile & Credentials
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
                       radius: 26,
-                      backgroundColor: AppColors.primaryBlue.withValues(alpha: isDark ? 0.3 : 0.15),
+                      backgroundColor: AppColors.primaryBlue.withValues(
+                        alpha: isDark ? 0.3 : 0.15,
+                      ),
                       child: Text(
                         initials,
                         style: const TextStyle(
@@ -623,7 +1369,9 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            advocateName.toLowerCase().startsWith('adv') ? advocateName : "Adv. $advocateName",
+                            advocateName.toLowerCase().startsWith('adv')
+                                ? advocateName
+                                : "Adv. $advocateName",
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -632,12 +1380,19 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              const Icon(Icons.badge_outlined, size: 14, color: AppColors.textSecondaryLight),
+                              const Icon(
+                                Icons.badge_outlined,
+                                size: 14,
+                                color: AppColors.textSecondaryLight,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   "Bar Reg: $enrollmentNumber",
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondaryLight,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -647,11 +1402,18 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const Icon(Icons.workspace_premium_outlined, size: 14, color: AppColors.textSecondaryLight),
+                                const Icon(
+                                  Icons.workspace_premium_outlined,
+                                  size: 14,
+                                  color: AppColors.textSecondaryLight,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "$experience Years Bar Experience",
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondaryLight,
+                                  ),
                                 ),
                               ],
                             ),
@@ -666,10 +1428,13 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                 const Divider(height: 1),
                 const SizedBox(height: 14),
 
-                // Contact Section Title
                 const Text(
                   "Connect with your Advocate",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryBlue,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
@@ -744,18 +1509,25 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
                 const SizedBox(height: 14),
 
-                // Guidance Box
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.blue.withValues(alpha: 0.1) : const Color(0xFFF0F7FF),
+                    color: isDark
+                        ? Colors.blue.withValues(alpha: 0.1)
+                        : const Color(0xFFF0F7FF),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.blue.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primaryBlue),
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: AppColors.primaryBlue,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -763,7 +1535,9 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                           style: TextStyle(
                             fontSize: 11.5,
                             height: 1.4,
-                            color: isDark ? Colors.blue.shade100 : const Color(0xFF1E3A8A),
+                            color: isDark
+                                ? Colors.blue.shade100
+                                : const Color(0xFF1E3A8A),
                           ),
                         ),
                       ),
@@ -773,21 +1547,28 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
                 const SizedBox(height: 14),
 
-                // Action Buttons
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          final details = "Advocate: $advocateName\n"
+                          final details =
+                              "Advocate: $advocateName\n"
                               "Bar Reg: $enrollmentNumber\n"
                               "${primaryPhone != null ? 'Phone: $primaryPhone\n' : ''}"
                               "${email != null ? 'Email: $email\n' : ''}"
                               "Case Ref: #${application.trackingNumber}";
-                          _copyToClipboard(context, details, "Advocate contact info");
+                          _copyToClipboard(
+                            context,
+                            details,
+                            "Advocate contact info",
+                          );
                         },
                         icon: const Icon(Icons.copy_rounded, size: 15),
-                        label: const Text("Copy Details", style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          "Copy Details",
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -799,13 +1580,20 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => _showAdvocateChangeDialog(context),
                         icon: const Icon(Icons.swap_horiz, size: 16),
-                        label: const Text("Change Request", style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          "Change Request",
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          foregroundColor: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                          foregroundColor: isDark
+                              ? Colors.amber.shade300
+                              : Colors.amber.shade900,
                           side: BorderSide(
-                            color: isDark ? Colors.amber.withValues(alpha: 0.4) : Colors.amber.shade300,
+                            color: isDark
+                                ? Colors.amber.withValues(alpha: 0.4)
+                                : Colors.amber.shade300,
                           ),
                         ),
                       ),
@@ -820,11 +1608,15 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     );
   }
 
-  Widget _buildAdvocateFallbackCard(BuildContext context, LegalAidApplication application, bool isDark) {
+  Widget _buildAdvocateFallbackCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: Colors.amber.shade600.withValues(alpha: isDark ? 0.4 : 0.5),
           width: 1.5,
@@ -840,19 +1632,22 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Banner
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+                topLeft: Radius.circular(17),
+                topRight: Radius.circular(17),
               ),
             ),
             child: Row(
               children: [
-                Icon(Icons.hourglass_top_rounded, color: Colors.amber.shade700, size: 20),
+                Icon(
+                  Icons.hourglass_top_rounded,
+                  color: Colors.amber.shade700,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -866,14 +1661,21 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade700,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
                     "Authority Processing",
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -891,10 +1693,16 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: isDark ? 0.2 : 0.1),
+                        color: Colors.amber.withValues(
+                          alpha: isDark ? 0.2 : 0.1,
+                        ),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.assignment_ind_outlined, color: Colors.amber.shade700, size: 28),
+                      child: Icon(
+                        Icons.assignment_ind_outlined,
+                        color: Colors.amber.shade700,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     const Expanded(
@@ -903,62 +1711,84 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                         children: [
                           Text(
                             "Panel Advocate Allocation in Progress",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           SizedBox(height: 4),
                           Text(
                             "Your application has been approved for free legal aid. The Sikkim State Legal Services Authority (SLSA) is assigning a designated panel advocate to your case.",
-                            style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight, height: 1.4),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.textSecondaryLight,
+                              height: 1.4,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 14),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
 
-                // Reassuring bullets
                 _buildFallbackBullet(
                   icon: Icons.check_circle_outline_rounded,
-                  text: "The advocate's name, phone number, and contact info will appear here once finalized.",
+                  text:
+                      "The advocate's name, phone number, and contact info will appear here once finalized.",
                   isDark: isDark,
                 ),
                 const SizedBox(height: 6),
                 _buildFallbackBullet(
                   icon: Icons.notifications_none_rounded,
-                  text: "You will also receive an automatic update as soon as the lawyer is allocated.",
+                  text:
+                      "You will also receive an automatic update as soon as the lawyer is allocated.",
                   isDark: isDark,
                 ),
-
                 const SizedBox(height: 14),
 
-                // Helpline Container
+                // Helpline
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : const Color(0xFFF9FAFB),
+                    color: isDark
+                        ? AppColors.darkSurface
+                        : const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                    border: Border.all(
+                      color: isDark
+                          ? AppColors.borderDark
+                          : AppColors.borderLight,
+                    ),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(Icons.support_agent_rounded, size: 20, color: AppColors.primaryBlue),
-                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.support_agent_rounded,
+                        size: 20,
+                        color: AppColors.primaryBlue,
+                      ),
+                      SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
                               "Need urgent legal assistance?",
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             SizedBox(height: 2),
                             Text(
                               "Call Sikkim SLSA Helpline: 15100 (Toll-Free) / 03592-202695",
-                              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.textSecondaryLight,
+                              ),
                             ),
                           ],
                         ),
@@ -966,17 +1796,18 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 14),
 
-                // Action row
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _handleRefresh,
                         icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text("Check for Updates", style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          "Check for Updates",
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: ElevatedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -985,12 +1816,22 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                     ),
                     const SizedBox(width: 10),
                     OutlinedButton.icon(
-                      onPressed: () => _copyToClipboard(context, "15100", "SLSA Helpline Number"),
+                      onPressed: () => _copyToClipboard(
+                        context,
+                        "15100",
+                        "SLSA Helpline Number",
+                      ),
                       icon: const Icon(Icons.phone_outlined, size: 15),
-                      label: const Text("Helpline", style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        "Helpline",
+                        style: TextStyle(fontSize: 12),
+                      ),
                       style: OutlinedButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -1016,9 +1857,13 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Row(
         children: [
@@ -1030,19 +1875,30 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primaryBlue),
+            icon: const Icon(
+              Icons.copy_rounded,
+              size: 16,
+              color: AppColors.primaryBlue,
+            ),
             tooltip: "Copy $copyLabel",
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
@@ -1053,7 +1909,11 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     );
   }
 
-  Widget _buildFallbackBullet({required IconData icon, required String text, required bool isDark}) {
+  Widget _buildFallbackBullet({
+    required IconData icon,
+    required String text,
+    required bool isDark,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1062,38 +1922,73 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.35),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondaryLight,
+              height: 1.35,
+            ),
           ),
         ),
       ],
     );
   }
 
-  void _copyToClipboard(BuildContext context, String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  Widget _buildDetailCard(BuildContext context, {required String title, required List<Widget> children}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  // ──────────────────────────────────────────────────────────────────────────
+  // Reusable Detail Card
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildDetailCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required bool isDark,
+    required List<Widget> children,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue)),
-          const Divider(height: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 16, color: AppColors.primaryBlue),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                    color: AppColors.primaryBlue,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
           ...children,
         ],
       ),
@@ -1102,12 +1997,30 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
   Widget _buildRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondaryLight,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1121,21 +2034,32 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text("Request Advocate Change", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text(
+            "Request Advocate Change",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 "Please state your reason for requesting a change of assigned panel advocate. Your request will be reviewed by the Member Secretary, Sikkim SLSA.",
-                style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight, height: 1.4),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondaryLight,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: reasonController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText: "State your reasons clearly (e.g. communication issue, conflict of interest)...",
+                  hintText:
+                      "State your reasons clearly (e.g. communication issue, conflict of interest)...",
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1153,7 +2077,11 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Please enter a reason for advocate change")),
+                          const SnackBar(
+                            content: Text(
+                              "Please enter a reason for advocate change",
+                            ),
+                          ),
                         );
                         return;
                       }
@@ -1172,9 +2100,11 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(success
-                                ? "Advocate change request submitted successfully to SLSA."
-                                : "Request submitted. SLSA admin will review your case."),
+                            content: Text(
+                              success
+                                  ? "Advocate change request submitted successfully to SLSA."
+                                  : "Request submitted. SLSA admin will review your case.",
+                            ),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -1184,7 +2114,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text("Submit Request"),
             ),
@@ -1194,4 +2127,3 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     );
   }
 }
-

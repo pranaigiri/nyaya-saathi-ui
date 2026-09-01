@@ -68,12 +68,18 @@ class HiveDraftService {
     }
   }
 
-  static Future<DraftApplicationModel> createOrGetDraft() async {
+  static Future<DraftApplicationModel> createOrGetDraft({bool persist = false}) async {
     final existing = await getDraft();
     if (existing != null) return existing;
 
     final newDraft = DraftApplicationModel(draftUuid: const Uuid().v4());
-    await saveDraft(newDraft);
+    // NOTE: a brand-new empty draft is kept in memory only. It is persisted
+    // automatically the first time the user actually enters data (category,
+    // details, case type...), so pressing "back" on Step 1 without selecting
+    // anything must NOT produce a resumable draft.
+    if (persist) {
+      await saveDraft(newDraft);
+    }
     return newDraft;
   }
 

@@ -8,6 +8,7 @@ import 'document_scanner_modal.dart';
 class DocumentPickerTile extends StatefulWidget {
   final DocumentMaster doc;
   final String? uploadedPath;
+  final List<String> requiredByLabels;
   final Function(String docCode, String fileName, List<int> bytes) onFilePicked;
   final Function(String docCode)? onFileRemoved;
 
@@ -15,6 +16,7 @@ class DocumentPickerTile extends StatefulWidget {
     super.key,
     required this.doc,
     this.uploadedPath,
+    this.requiredByLabels = const [],
     required this.onFilePicked,
     this.onFileRemoved,
   });
@@ -118,9 +120,26 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
     final isUploaded = widget.uploadedPath != null && widget.uploadedPath!.isNotEmpty;
     final cachedName = _localFileNameCache[widget.doc.documentCode];
 
-    return Container(
+    // Corner badges: identity doc is always mandatory; others show the
+    // eligibility category / case type that asked for this document.
+    final badges = <_CornerBadgeData>[
+      ...widget.requiredByLabels.map(
+        (label) => _CornerBadgeData(
+          label: label,
+          gradient: isUploaded
+              ? const [Color(0xFF43A047), Color(0xFF1B5E20)]
+              : const [Color(0xFF1E88E5), Color(0xFF0D47A1)],
+        ),
+      ),
+    ];
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Stack(
+        children: [
+          Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.fromLTRB(14, badges.isNotEmpty ? 14 + badges.length * 26 : 14, 14, 14),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -156,38 +175,22 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.doc.documentName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    if (widget.doc.description != null && widget.doc.description!.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        widget.doc.description!,
-                        style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                        widget.doc.documentName,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
+                      if (widget.doc.description != null && widget.doc.description!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.doc.description!,
+                          style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
+                  ),
               ),
-              if (widget.doc.isMandatoryDefault)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: (isUploaded ? AppColors.successGreen : AppColors.dangerRed).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    isUploaded ? "Uploaded ✓" : "Required",
-                    style: TextStyle(
-                      color: isUploaded ? AppColors.successGreen : AppColors.dangerRed,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -341,8 +344,53 @@ class _DocumentPickerTileState extends State<DocumentPickerTile> {
           ),
         ],
       ),
+          ),
+
+          // Corner badges pinned to the top-right, flush with the card corner
+          if (badges.isNotEmpty)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final badge in badges)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: badge.gradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        badge.label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
+}
+
+class _CornerBadgeData {
+  final String label;
+  final List<Color> gradient;
+
+  const _CornerBadgeData({required this.label, required this.gradient});
 }
 
 class _DocumentPreviewDialog extends StatelessWidget {

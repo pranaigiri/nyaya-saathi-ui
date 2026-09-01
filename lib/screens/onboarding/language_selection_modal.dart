@@ -214,6 +214,8 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
               width: 72,
               height: 72,
               fit: BoxFit.cover,
+              // 1MB source shown at 72px – decode small.
+              cacheWidth: 216,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.account_balance_rounded,
                 size: 60,

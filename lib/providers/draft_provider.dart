@@ -40,6 +40,14 @@ class DraftProvider extends ChangeNotifier {
 
     _draft = await HiveDraftService.getDraft();
 
+    // Purge drafts that contain no user-entered data (e.g. the user opened
+    // the wizard, selected nothing and pressed back). These should never
+    // trigger a "Resume Draft Application?" prompt.
+    if (_draft != null && !_draft!.hasMeaningfulData) {
+      await HiveDraftService.clearDraft();
+      _draft = null;
+    }
+
     if (_draft != null && _draft!.categoryId != null && _draft!.caseTypeId != null) {
       await updateRequiredDocuments();
     }

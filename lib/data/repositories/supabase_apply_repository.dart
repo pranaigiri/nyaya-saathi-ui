@@ -84,14 +84,24 @@ class SupabaseApplyRepository implements ApplyRepository {
         .select('document_id, is_required, document_master(id, document_code, document_name, description, is_active)')
         .eq('case_type_id', caseTypeId);
 
-    // Union of both sets, deduplicated by document id
+    // Union of both sets, deduplicated by document id, tracking why each
+    // document was asked (eligibility category and/or case type).
     final docMap = <String, DocumentMaster>{};
 
     for (final row in catDocs) {
       final doc = row['document_master'];
       if (doc != null && doc is Map<String, dynamic>) {
         final dm = DocumentMaster.fromJson(doc);
-        if (dm.isActive) docMap[dm.id] = dm;
+        if (dm.isActive) {
+          docMap[dm.id] = DocumentMaster(
+            id: dm.id,
+            documentCode: dm.documentCode,
+            documentName: dm.documentName,
+            description: dm.description,
+            isActive: dm.isActive,
+            sources: <String>{...docMap[dm.id]?.sources ?? const <String>[], 'category'}.toList(),
+          );
+        }
       }
     }
 
@@ -99,7 +109,16 @@ class SupabaseApplyRepository implements ApplyRepository {
       final doc = row['document_master'];
       if (doc != null && doc is Map<String, dynamic>) {
         final dm = DocumentMaster.fromJson(doc);
-        if (dm.isActive) docMap[dm.id] = dm;
+        if (dm.isActive) {
+          docMap[dm.id] = DocumentMaster(
+            id: dm.id,
+            documentCode: dm.documentCode,
+            documentName: dm.documentName,
+            description: dm.description,
+            isActive: dm.isActive,
+            sources: <String>{...docMap[dm.id]?.sources ?? const <String>[], 'case_type'}.toList(),
+          );
+        }
       }
     }
 

@@ -39,6 +39,8 @@ class SlsaInfoModal extends StatelessWidget {
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
+                        // 1MB source shown at 80px – decode small.
+                        cacheWidth: 240,
                       ),
                     ),
                     const SizedBox(height: 12),

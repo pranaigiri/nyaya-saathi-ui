@@ -49,6 +49,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSaving = false;
   bool _isInitialized = false;
 
+  /// Cached field-completeness score used to throttle setState calls.
+  int _lastFieldScore = -1;
+
   static final List<int> _years = List<int>.generate(
     DateTime.now().year - 1919,
     (i) => 1920 + i,
@@ -125,8 +128,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Only rebuilds when a field actually crosses its "filled" threshold.
+  /// Previously this called setState() on every keystroke, rebuilding the
+  /// entire profile form ~60x per second of typing.
   void _onFieldChanged() {
-    setState(() {});
+    final score = _completedFieldsCount;
+    if (score != _lastFieldScore) {
+      _lastFieldScore = score;
+      setState(() {});
+    }
   }
 
   @override
@@ -441,7 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 48 + MediaQuery.of(context).padding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

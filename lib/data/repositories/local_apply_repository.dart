@@ -108,8 +108,19 @@ class LocalApplyRepository implements ApplyRepository {
   Future<List<DocumentMaster>> getRequiredDocuments({
     required String categoryId,
     required String caseTypeId,
-  }) async {
-    return getDocumentTypes();
+  }) {
+    return getDocumentTypes().then(
+      (docs) => docs
+          .map((d) => DocumentMaster(
+                id: d.id,
+                documentCode: d.documentCode,
+                documentName: d.documentName,
+                description: d.description,
+                isActive: d.isActive,
+                sources: const ['category', 'case_type'],
+              ))
+          .toList(),
+    );
   }
 
   @override

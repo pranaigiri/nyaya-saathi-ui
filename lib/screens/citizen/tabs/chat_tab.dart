@@ -80,6 +80,8 @@ class _ChatTabState extends State<ChatTab> {
                         width: 28,
                         height: 28,
                         fit: BoxFit.cover,
+                        // 1MB source shown at 28px – decode small.
+                        cacheWidth: 112,
                         errorBuilder: (context, error, stackTrace) => Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(

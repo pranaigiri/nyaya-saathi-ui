@@ -8,6 +8,7 @@ import '../../../widgets/draft_resumption_card.dart';
 import '../../../widgets/stat_card.dart';
 import '../tracking_screen.dart';
 import '../../../widgets/apply_choice_modal.dart';
+import '../../../widgets/eligibility_check_modal.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -35,7 +36,7 @@ class _HomeTabState extends State<HomeTab> {
     final resolvedCount = apps.where((a) => a.status == 'RESOLVED').length;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 36 + MediaQuery.of(context).padding.bottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -63,13 +64,25 @@ class _HomeTabState extends State<HomeTab> {
           ),
           const SizedBox(height: 24),
 
-          // Resume Draft Banner if present
-          if (draftProvider.draft != null) ...[
+          // Resume Draft Banner if present (only for drafts with actual data)
+          if (draftProvider.draft?.hasMeaningfulData == true) ...[
             const DraftResumptionCard(showDiscardButton: true),
             const SizedBox(height: 24),
           ],
 
-          // 2 Primary Action Cards
+          // One Tap Eligibility Check (outlined, compact)
+          _buildActionCard(
+            context,
+            title: context.tr("one_tap_eligibility_check"),
+            subtitle: "Quick 1-minute check to see if you qualify for free legal aid",
+            icon: Icons.fact_check_rounded,
+            gradientColors: [const Color(0xFF0F9D78), const Color(0xFF34D399)],
+            outlinedColor: const Color(0xFF0F9D78),
+            onTap: () {
+              EligibilityCheckModal.show(context);
+            },
+          ),
+          const SizedBox(height: 16),
           _buildActionCard(
             context,
             title: context.tr("apply_for_legal_aid"),
@@ -86,7 +99,7 @@ class _HomeTabState extends State<HomeTab> {
             title: context.tr("track_application"),
             subtitle: "Instant status check using Application Number & Phone",
             icon: Icons.location_searching_rounded,
-            gradientColors: [const Color(0xFF0F766E), const Color(0xFF0D9488)],
+            gradientColors: [const Color(0xFF6750C8), const Color(0xFF8B7CE0)],
             onTap: () {
               Navigator.push(
                 context,
@@ -106,7 +119,58 @@ class _HomeTabState extends State<HomeTab> {
     required IconData icon,
     required List<Color> gradientColors,
     required VoidCallback onTap,
+    Color? outlinedColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (outlinedColor != null) {
+      // Compact outlined variant for secondary actions
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: outlinedColor, width: 1.5),
+            color: outlinedColor.withValues(alpha: isDark ? 0.12 : 0.06),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: outlinedColor, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: outlinedColor,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, color: outlinedColor, size: 13),
+            ],
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),

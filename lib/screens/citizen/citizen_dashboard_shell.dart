@@ -37,6 +37,7 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
                 width: 28,
                 height: 28,
                 fit: BoxFit.cover,
+                cacheWidth: 96,
                 errorBuilder: (context, error, stackTrace) => Container(
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
@@ -92,7 +93,12 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
           const SizedBox(width: 8),
         ],
       ),
-      body: _tabs[_currentIndex],
+      body: IndexedStack(
+        // Keeps every tab's State alive so switching tabs is instant and does
+        // not re-run initState (which previously refetched data each time).
+        index: _currentIndex,
+        children: _tabs,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
