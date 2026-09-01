@@ -84,6 +84,21 @@ class _Step2ApplicantDetailsScreenState
   String get _dobDisplay =>
       '$_dobYear-${_dobMonth.toString().padLeft(2, '0')}-${_dobDay.toString().padLeft(2, '0')}';
 
+  // ── Women & Children eligibility → gender locked to Female ──
+  /// True when the draft's eligibility category is Women & Children. Read
+  /// live from the draft (not cached in initState) so the lock stays correct
+  /// even if the user navigates back to Step 1 and changes the category.
+  bool get _genderLocked {
+    final code =
+        Provider.of<DraftProvider>(context, listen: false).draft?.categoryCode;
+    return code == 'WOMAN' || code == 'CAT_WOMEN';
+  }
+
+  /// Gender shown/used by the form — forced to Female when the eligibility
+  /// category is Women & Children (gender is part of that category's
+  /// eligibility criteria under Sec 12(c)).
+  String get _effectiveGender => _genderLocked ? 'Female' : _gender;
+
   // ─────────────────────────────────────────────────────
   //  Lifecycle
   // ─────────────────────────────────────────────────────
@@ -149,7 +164,7 @@ class _Step2ApplicantDetailsScreenState
 
     Provider.of<DraftProvider>(context, listen: false).updateApplicantDetails(
       fullName: _fullNameController.text.trim(),
-      gender: _gender,
+      gender: _effectiveGender,
       dob: _dobSelected ? _dobDisplay : null,
       villageTown: _villageTownController.text.trim(),
       districtId: _districtId ?? '',
@@ -580,14 +595,34 @@ class _Step2ApplicantDetailsScreenState
                         return const Text('No gender options available');
                       }
                       return _GenderPillSelector(
-                        selected: _gender,
+                        selected: _effectiveGender,
                         isDark: isDark,
                         options: options,
+                        locked: _genderLocked,
                         resolveIcon: Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon,
                         onChanged: (val) => setState(() => _gender = val),
                       );
                     },
                   ),
+                  if (_genderLocked) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          size: 13,
+                          color: secondTxt,
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            'Gender is auto-selected as Female based on your eligibility (Women & Children category).',
+                            style: TextStyle(fontSize: 11, color: secondTxt),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 20),
 
                   // ── Date of Birth ─────────────────────────────
@@ -737,6 +772,7 @@ class _GenderPillSelector extends StatelessWidget {
     required this.options,
     required this.resolveIcon,
     required this.onChanged,
+    this.locked = false,
   });
 
   final String selected;
@@ -744,6 +780,10 @@ class _GenderPillSelector extends StatelessWidget {
   final List<GenderOption> options;
   final IconData? Function(String) resolveIcon;
   final ValueChanged<String> onChanged;
+
+  /// When true the selection cannot be changed (e.g. Women & Children
+  /// eligibility forces the gender to Female).
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -760,7 +800,7 @@ class _GenderPillSelector extends StatelessWidget {
               isActive: opt.value == selected,
               isDark: isDark,
               resolveIcon: resolveIcon,
-              onTap: () => onChanged(opt.value),
+              onTap: locked ? null : () => onChanged(opt.value),
             ),
           ),
         );
@@ -782,7 +822,7 @@ class _GenderPill extends StatelessWidget {
   final bool isActive;
   final bool isDark;
   final IconData? Function(String) resolveIcon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

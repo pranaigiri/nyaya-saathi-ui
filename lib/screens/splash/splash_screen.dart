@@ -134,7 +134,7 @@ class _SplashScreenState extends State<SplashScreen>
       // Widget was disposed mid-animation – nothing to wait for.
     }
 
-    const minSplashDuration = Duration(seconds: 5);
+    const minSplashDuration = Duration(seconds: 8);
     final elapsed = DateTime.now().difference(_splashStartTime);
     final remaining = minSplashDuration - elapsed;
     if (remaining > Duration.zero) {

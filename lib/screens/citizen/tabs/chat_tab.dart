@@ -13,22 +13,42 @@ class _ChatTabState extends State<ChatTab> {
     {
       'q': 'Who is eligible for free Legal Aid in Sikkim?',
       'a':
-          'Under Section 12 of the Legal Services Authorities Act, 1987, women, children, SC/ST members, victims of disasters, mentally ill/disabled persons, and citizens with annual income < ₹3,00,000 are eligible.',
+          'Under Section 12 of the Legal Services Authorities Act, 1987, eligible persons include women, children, SC/ST members, industrial workmen, persons in custody/juvenile homes, victims of mass disasters/violence, mentally ill or disabled persons, trafficking victims, and citizens with annual income < ₹3,00,000.',
+    },
+    {
+      'q': 'Are all legal aid services 100% free through Nyaya Saathi?',
+      'a':
+          'Yes! All services provided under SLSA—including advocate representation, court fees, drafting legal documents, typing/copying fees, process fees, and witness expenses—are completely free of cost.',
     },
     {
       'q': 'How long does application processing take?',
       'a':
-          'Initial scrutiny by DLSA is completed within 3-5 working days. Upon approval, an advocate is assigned immediately.',
+          'Initial scrutiny by the respective DLSA or SLSA is completed within 3-5 working days. Upon approval, a panel advocate is assigned immediately.',
     },
     {
-      'q': 'Can I apply on behalf of someone else?',
+      'q': 'Can I apply on behalf of someone else using the app?',
       'a':
-          'Yes! Select "Other" under "Applying For" in Step 2 and mention your relation to the applicant.',
+          'Yes! You can apply on behalf of another person. Select "Other" under "Applying For" during Step 2 of the application wizard and specify your relationship to the applicant.',
     },
     {
-      'q': 'Are legal aid services 100% free?',
+      'q': 'Are there any types of cases where free legal aid is NOT provided?',
       'a':
-          'Yes, all services including advocate representation, court fees, and paper filing provided by SLSA are completely free.',
+          'Yes. Free legal aid is not provided in proceedings relating to defamation, malicious prosecution, elections, economic offenses, and offenses against social laws (such as Protection of Civil Rights Act).',
+    },
+    {
+      'q': 'Can I get free legal aid for criminal cases or bail applications?',
+      'a':
+          'Yes! Legal aid applies to both civil and criminal cases, including bail applications. Remand Advocates appointed by Sikkim SLSA are available in criminal courts to assist persons in custody who do not have a private lawyer.',
+    },
+    {
+      'q': 'What if the applicant is illiterate or unable to fill out forms?',
+      'a':
+          'Applicants can seek assistance from the Secretary of DLSA/TLSC, panel advocates, or Para Legal Volunteers (PLVs) stationed in local villages who can fill out the details on their behalf.',
+    },
+    {
+      'q': 'What is a Lok Adalat and how does it help?',
+      'a':
+          'Lok Adalat is an alternative dispute resolution forum where civil disputes and compoundable criminal cases are settled amicably without court fees. Awards passed by Lok Adalats have the same status as a Civil Court decree and are final.',
     },
   ];
 

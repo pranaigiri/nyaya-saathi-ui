@@ -17,8 +17,12 @@ class SupabaseApplyRepository implements ApplyRepository {
     final res = await _client
         .from('legal_aid_category')
         .select('id, category_code, category_name, description, display_order, icon_url')
-        .order('display_order');
-    return (res as List).map((x) => LegalAidCategory.fromJson(x)).toList();
+        .order('display_order', ascending: true);
+    // Sort client-side as well so the Step 1 "Eligibility Criteria" order is
+    // always deterministic and matches the DB's display_order, even if the
+    // server-side ordering is ever lost.
+    return ((res as List).map((x) => LegalAidCategory.fromJson(x)).toList()
+      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder)));
   }
 
   @override

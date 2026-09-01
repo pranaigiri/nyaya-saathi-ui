@@ -38,11 +38,30 @@ class ApplicationRepository {
     print('[ApplicationRepository] Submitting application (applicant: $effectiveApplicantId)');
 
     try {
-      final res = await _client
-          .from('legal_aid_application')
-          .insert(insertData)
-          .select(_applicationSelectFields)
-          .single();
+      final Map<String, dynamic> res;
+      if (effectiveApplicantId == null) {
+        // Anonymous (not logged in) submission.
+        //
+        // `.insert(...).select(...)` cannot be used here: PostgreSQL applies
+        // the table's SELECT policies to rows returned by INSERT ... RETURNING,
+        // and anonymous applications (applicant_id IS NULL) match no SELECT
+        // policy on legal_aid_application, so the request fails with
+        // 42501 "new row violates row-level security policy".
+        //
+        // Instead, call the SECURITY DEFINER RPC which performs the insert and
+        // returns the created row to the caller that created it.
+        final dynamic rpcRes = await _client.rpc(
+          'submit_legal_aid_application',
+          params: {'p_application': insertData},
+        );
+        res = Map<String, dynamic>.from(rpcRes as Map);
+      } else {
+        res = await _client
+            .from('legal_aid_application')
+            .insert(insertData)
+            .select(_applicationSelectFields)
+            .single();
+      }
 
       final application = LegalAidApplication.fromJson(res);
 

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants/app_colors.dart';
 import '../providers/apply_data_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/draft_provider.dart';
 import '../models/legal_aid_category.dart';
+import '../screens/apply_flow/apply_wizard_screen.dart';
 import 'apply_choice_modal.dart';
 
 class _EligibilityQuestion {
@@ -40,12 +43,6 @@ class EligibilityCheckModal extends StatefulWidget {
 class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
   static const List<_EligibilityQuestion> _questions = [
     _EligibilityQuestion(
-      question: 'Is your annual household income below ₹3,00,000?',
-      hint: 'As per Sec 12(h) of the Legal Services Authorities Act, 1987',
-      categoryCode: 'GENERAL',
-      categoryLabel: 'General – Annual income below ₹3 Lakh',
-    ),
-    _EligibilityQuestion(
       question: 'Are you a woman?',
       hint: 'All women are eligible regardless of income under Sec 12(c)',
       categoryCode: 'WOMAN',
@@ -62,6 +59,12 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
       hint: 'SC/ST members under Sec 12(a)',
       categoryCode: 'SC_ST',
       categoryLabel: 'Scheduled Caste or Scheduled Tribe',
+    ),
+    _EligibilityQuestion(
+      question: 'Is your annual household income below ₹3,00,000?',
+      hint: 'As per Sec 12(h) of the Legal Services Authorities Act, 1987',
+      categoryCode: 'GENERAL',
+      categoryLabel: 'General – Annual income below ₹3 Lakh',
     ),
     _EligibilityQuestion(
       question: 'Do you have a mental illness or a physical disability?',
@@ -109,8 +112,10 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
 
   Future<void> _loadCategories() async {
     try {
-      final cats =
-          await Provider.of<ApplyDataProvider>(context, listen: false).getLegalAidCategories();
+      final cats = await Provider.of<ApplyDataProvider>(
+        context,
+        listen: false,
+      ).getLegalAidCategories();
       if (mounted) setState(() => _categories = cats);
     } catch (_) {}
   }
@@ -155,7 +160,25 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
     // context becomes deactivated and can no longer be used to open the next
     // modal (otherwise the "Apply for Legal Aid" sheet would silently fail).
     final navigator = Navigator.of(context);
-    navigator.pop();
+
+    // Logged-out users never see the Self/Others chooser — the "Self" option
+    // auto-fills from a profile they don't have. Instead, go straight to
+    // Step 2 (Applicant Details) with a blank form and the eligibility
+    // result preselected as the Step 1 category.
+    final isAuthenticated = Provider.of<AuthProvider>(
+      context,
+      listen: false,
+    ).isAuthenticated;
+    if (!isAuthenticated) {
+      _startGuestApplication(
+        navigator,
+        categoryId: cat?.id,
+        categoryCode: cat?.categoryCode ?? q.categoryCode,
+        categoryName: cat?.categoryName ?? q.categoryLabel,
+      );
+      return;
+    }
+
     ApplyChoiceModal.show(
       navigator.context,
       preselectedCategoryId: cat?.id,
@@ -165,15 +188,62 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
     );
   }
 
+  /// Guest flow: closes this sheet, prepares a blank draft with the
+  /// eligibility-derived category preselected, and opens the wizard
+  /// directly on Step 2 (Applicant Details).
+  Future<void> _startGuestApplication(
+    NavigatorState navigator, {
+    dynamic categoryId,
+    String? categoryCode,
+    String? categoryName,
+  }) async {
+    final draftProvider = Provider.of<DraftProvider>(context, listen: false);
+    try {
+      // Blank form — no profile is available for guests.
+      await draftProvider.startNewDraft();
+
+      // Automatically "select" the eligibility result in Step 1 and persist
+      // the wizard's starting step so it opens on Step 2.
+      if (categoryId != null && categoryCode != null) {
+        await draftProvider.updateCategory(
+          categoryId,
+          categoryCode,
+          categoryName ?? categoryCode,
+        );
+      }
+      await draftProvider.setStepIndex(1);
+    } catch (_) {
+      // Draft preparation failed — still open the wizard at Step 2; the
+      // user can pick the category manually there.
+    }
+
+    if (!mounted) return;
+    navigator.pop(); // Close the eligibility sheet after async work
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) => const ApplyWizardScreen(initialStep: 1),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.darkSurface : Colors.white;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        24 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -249,8 +319,12 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                 child: _isEligible == null
                     ? _buildQuestionFlow(isDark, textPrimary, textSecondary)
                     : _isEligible!
-                        ? _buildEligibleResult(isDark, textPrimary, textSecondary)
-                        : _buildNotEligibleResult(isDark, textPrimary, textSecondary),
+                    ? _buildEligibleResult(isDark, textPrimary, textSecondary)
+                    : _buildNotEligibleResult(
+                        isDark,
+                        textPrimary,
+                        textSecondary,
+                      ),
               ),
             ),
           ),
@@ -262,7 +336,11 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
 
   // ---------- Question flow ----------
 
-  Widget _buildQuestionFlow(bool isDark, Color textPrimary, Color textSecondary) {
+  Widget _buildQuestionFlow(
+    bool isDark,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     final q = _questions[_currentIndex];
     return Column(
       key: ValueKey('q_$_currentIndex'),
@@ -277,8 +355,12 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                 child: LinearProgressIndicator(
                   value: (_currentIndex) / _questions.length,
                   minHeight: 5,
-                  backgroundColor: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0D9488)),
+                  backgroundColor: isDark
+                      ? AppColors.borderDark
+                      : AppColors.borderLight,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF0D9488),
+                  ),
                 ),
               ),
             ),
@@ -341,7 +423,10 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               label: const Text('Previous Question'),
               style: TextButton.styleFrom(
                 foregroundColor: textSecondary,
-                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -369,14 +454,20 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
   }
   // ---------- Eligible result ----------
 
-  Widget _buildEligibleResult(bool isDark, Color textPrimary, Color textSecondary) {
+  Widget _buildEligibleResult(
+    bool isDark,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     final q = _matchedQuestion!;
     final cat = _resolveCategory(q);
     return Column(
@@ -387,16 +478,24 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.successGreen.withValues(alpha: isDark ? 0.15 : 0.1),
+            color: AppColors.successGreen.withValues(
+              alpha: isDark ? 0.15 : 0.1,
+            ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.successGreen.withValues(alpha: 0.4)),
+            border: Border.all(
+              color: AppColors.successGreen.withValues(alpha: 0.4),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Row(
                 children: [
-                  Icon(Icons.verified_rounded, color: AppColors.successGreen, size: 28),
+                  Icon(
+                    Icons.verified_rounded,
+                    color: AppColors.successGreen,
+                    size: 28,
+                  ),
                   SizedBox(width: 10),
                   Text(
                     'You are Eligible!',
@@ -411,7 +510,11 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               const SizedBox(height: 10),
               Text(
                 'Based on your answers, you qualify for free legal aid under the category:',
-                style: TextStyle(fontSize: 13, color: textSecondary, height: 1.4),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textSecondary,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -439,7 +542,9 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),
@@ -458,7 +563,11 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
   }
   // ---------- Not eligible result ----------
 
-  Widget _buildNotEligibleResult(bool isDark, Color textPrimary, Color textSecondary) {
+  Widget _buildNotEligibleResult(
+    bool isDark,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     return Column(
       key: const ValueKey('not_eligible'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,16 +576,24 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFFF97316).withValues(alpha: isDark ? 0.15 : 0.1),
+            color: const Color(
+              0xFFF97316,
+            ).withValues(alpha: isDark ? 0.15 : 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFF97316).withValues(alpha: 0.4)),
+            border: Border.all(
+              color: const Color(0xFFF97316).withValues(alpha: 0.4),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: Color(0xFFF97316), size: 28),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: Color(0xFFF97316),
+                    size: 28,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -493,7 +610,11 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               const SizedBox(height: 10),
               Text(
                 'You did not select any of the qualifying criteria under the Legal Services Authorities Act, 1987. You may still contact Sikkim SLSA for guidance — a legal aid authority can review special circumstances.',
-                style: TextStyle(fontSize: 13, color: textSecondary, height: 1.5),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textSecondary,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
@@ -512,7 +633,9 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),

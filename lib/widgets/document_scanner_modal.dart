@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import '../core/constants/app_colors.dart';
+import '../core/theme/app_theme.dart';
 import 'image_crop_editor.dart';
 
 enum DocumentFrameMode {
@@ -212,7 +213,10 @@ class _DocumentScannerModalState extends State<DocumentScannerModal>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Captured & cropped '$filename' successfully"),
+            content: Text(
+              "Captured & cropped '$filename' successfully",
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppColors.successGreen,
           ),
         );
@@ -221,7 +225,10 @@ class _DocumentScannerModalState extends State<DocumentScannerModal>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error capturing scan: $e"),
+            content: Text(
+              "Error capturing scan: $e",
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -282,330 +289,338 @@ class _DocumentScannerModalState extends State<DocumentScannerModal>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog.fullscreen(
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF0D0E15),
-          elevation: 0,
-          title: Text(
-            "Scan: ${widget.documentTitle}",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+    // The scanner is an immersive dark capture surface: pin it to the
+    // dedicated camera theme so it renders identically in light & dark modes.
+    return Theme(
+      data: AppTheme.cameraTheme(),
+      child: Dialog.fullscreen(
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF0D0E15),
+            elevation: 0,
+            title: Text(
+              "Scan: ${widget.documentTitle}",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          actions: [
-            if (_cameras.length > 1)
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              if (_cameras.length > 1)
+                IconButton(
+                  icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+                  tooltip: "Switch Camera",
+                  onPressed: _switchCamera,
+                ),
               IconButton(
-                icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
-                tooltip: "Switch Camera",
-                onPressed: _switchCamera,
+                icon: Icon(
+                  _getFlashIcon(),
+                  color: _currentFlashMode != FlashMode.off
+                      ? AppColors.accentGold
+                      : Colors.white70,
+                ),
+                tooltip: "Flash Mode: ${_currentFlashMode.name.toUpperCase()}",
+                onPressed: _toggleFlash,
               ),
-            IconButton(
-              icon: Icon(
-                _getFlashIcon(),
-                color: _currentFlashMode != FlashMode.off
-                    ? AppColors.accentGold
-                    : Colors.white70,
-              ),
-              tooltip: "Flash Mode: ${_currentFlashMode.name.toUpperCase()}",
-              onPressed: _toggleFlash,
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Camera Viewfinder Area
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final double maxWidth = constraints.maxWidth;
-                  final double maxHeight = constraints.maxHeight;
+            ],
+          ),
+          body: Column(
+            children: [
+              // Camera Viewfinder Area
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double maxWidth = constraints.maxWidth;
+                    final double maxHeight = constraints.maxHeight;
 
-                  double targetRatio = _frameMode.ratio;
-                  double boxWidth = maxWidth - 40;
-                  double boxHeight = boxWidth / targetRatio;
+                    double targetRatio = _frameMode.ratio;
+                    double boxWidth = maxWidth - 40;
+                    double boxHeight = boxWidth / targetRatio;
 
-                  if (boxHeight > maxHeight - 40) {
-                    boxHeight = maxHeight - 40;
-                    boxWidth = boxHeight * targetRatio;
-                  }
+                    if (boxHeight > maxHeight - 40) {
+                      boxHeight = maxHeight - 40;
+                      boxWidth = boxHeight * targetRatio;
+                    }
 
-                  final double left = (maxWidth - boxWidth) / 2;
-                  final double top = (maxHeight - boxHeight) / 2;
-                  final Rect frameRect = Rect.fromLTWH(
-                    left,
-                    top,
-                    boxWidth,
-                    boxHeight,
-                  );
-                  final RRect frameRRect = RRect.fromRectAndRadius(
-                    frameRect,
-                    const Radius.circular(16),
-                  );
+                    final double left = (maxWidth - boxWidth) / 2;
+                    final double top = (maxHeight - boxHeight) / 2;
+                    final Rect frameRect = Rect.fromLTWH(
+                      left,
+                      top,
+                      boxWidth,
+                      boxHeight,
+                    );
+                    final RRect frameRRect = RRect.fromRectAndRadius(
+                      frameRect,
+                      const Radius.circular(16),
+                    );
 
-                  _viewfinderSize = Size(maxWidth, maxHeight);
-                  _goldenFrameRect = frameRect;
+                    _viewfinderSize = Size(maxWidth, maxHeight);
+                    _goldenFrameRect = frameRect;
 
-                  return Stack(
-                    children: [
-                      // Camera Feed / Fallback (Fitted to cover container cleanly without aspect distortion)
-                      Positioned.fill(
-                        child: _isCameraInitialized && _cameraController != null
-                            ? ClipRect(
-                                child: OverflowBox(
-                                  alignment: Alignment.center,
-                                  child: FittedBox(
-                                    fit: BoxFit.cover,
-                                    child: SizedBox(
-                                      width:
-                                          _cameraController!
-                                              .value
-                                              .previewSize
-                                              ?.height ??
-                                          maxWidth,
-                                      height:
-                                          _cameraController!
-                                              .value
-                                              .previewSize
-                                              ?.width ??
-                                          maxHeight,
-                                      child: CameraPreview(_cameraController!),
+                    return Stack(
+                      children: [
+                        // Camera Feed / Fallback (Fitted to cover container cleanly without aspect distortion)
+                        Positioned.fill(
+                          child:
+                              _isCameraInitialized && _cameraController != null
+                              ? ClipRect(
+                                  child: OverflowBox(
+                                    alignment: Alignment.center,
+                                    child: FittedBox(
+                                      fit: BoxFit.cover,
+                                      child: SizedBox(
+                                        width:
+                                            _cameraController!
+                                                .value
+                                                .previewSize
+                                                ?.height ??
+                                            maxWidth,
+                                        height:
+                                            _cameraController!
+                                                .value
+                                                .previewSize
+                                                ?.width ??
+                                            maxHeight,
+                                        child: CameraPreview(
+                                          _cameraController!,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              )
-                            : Container(
-                                color: const Color(0xFF141722),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _isCameraError
-                                            ? Icons.videocam_off
-                                            : Icons.camera_alt_outlined,
-                                        size: 48,
-                                        color: Colors.white38,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        _isCameraError
-                                            ? _errorMessage
-                                            : "Initializing Camera...",
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 13,
+                                )
+                              : Container(
+                                  color: const Color(0xFF141722),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _isCameraError
+                                              ? Icons.videocam_off
+                                              : Icons.camera_alt_outlined,
+                                          size: 48,
+                                          color: Colors.white38,
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      if (_isCameraError) ...[
                                         const SizedBox(height: 12),
-                                        ElevatedButton.icon(
-                                          onPressed: _initCamera,
-                                          icon: const Icon(
-                                            Icons.refresh,
-                                            size: 16,
+                                        Text(
+                                          _isCameraError
+                                              ? _errorMessage
+                                              : "Initializing Camera...",
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13,
                                           ),
-                                          label: const Text("Retry Camera"),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                AppColors.primaryBlue,
-                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                      ),
-
-                      // Dark Overlay Mask with Frame Cutout & Golden Border
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: _ScannerFrameOverlayPainter(
-                            frameRRect: frameRRect,
-                          ),
-                        ),
-                      ),
-
-                      // Frame Corner Guides & Laser Scanner Line
-                      Positioned.fromRect(
-                        rect: frameRect,
-                        child: IgnorePointer(
-                          child: Stack(
-                            children: [
-                              // Corner Guides
-                              Positioned(
-                                top: 8,
-                                left: 8,
-                                child: _cornerBracket(0),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: _cornerBracket(1),
-                              ),
-                              Positioned(
-                                bottom: 8,
-                                left: 8,
-                                child: _cornerBracket(2),
-                              ),
-                              Positioned(
-                                bottom: 8,
-                                right: 8,
-                                child: _cornerBracket(3),
-                              ),
-
-                              // Laser Scanning Line
-                              AnimatedBuilder(
-                                animation: _scanLineAnimation,
-                                builder: (context, child) {
-                                  return Align(
-                                    alignment: FractionalOffset(
-                                      0.5,
-                                      _scanLineAnimation.value,
-                                    ),
-                                    child: Container(
-                                      height: 3,
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.accentGold,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.accentGold
-                                                .withValues(alpha: 0.9),
-                                            blurRadius: 12,
-                                            spreadRadius: 3,
+                                        if (_isCameraError) ...[
+                                          const SizedBox(height: 12),
+                                          ElevatedButton.icon(
+                                            onPressed: _initCamera,
+                                            icon: const Icon(
+                                              Icons.refresh,
+                                              size: 16,
+                                            ),
+                                            label: const Text("Retry Camera"),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.primaryBlue,
+                                            ),
                                           ),
                                         ],
-                                      ),
+                                      ],
                                     ),
-                                  );
-                                },
+                                  ),
+                                ),
+                        ),
+
+                        // Dark Overlay Mask with Frame Cutout & Golden Border
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _ScannerFrameOverlayPainter(
+                              frameRRect: frameRRect,
+                            ),
+                          ),
+                        ),
+
+                        // Frame Corner Guides & Laser Scanner Line
+                        Positioned.fromRect(
+                          rect: frameRect,
+                          child: IgnorePointer(
+                            child: Stack(
+                              children: [
+                                // Corner Guides
+                                Positioned(
+                                  top: 8,
+                                  left: 8,
+                                  child: _cornerBracket(0),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: _cornerBracket(1),
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  left: 8,
+                                  child: _cornerBracket(2),
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: _cornerBracket(3),
+                                ),
+
+                                // Laser Scanning Line
+                                AnimatedBuilder(
+                                  animation: _scanLineAnimation,
+                                  builder: (context, child) {
+                                    return Align(
+                                      alignment: FractionalOffset(
+                                        0.5,
+                                        _scanLineAnimation.value,
+                                      ),
+                                      child: Container(
+                                        height: 3,
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentGold,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.accentGold
+                                                  .withValues(alpha: 0.9),
+                                              blurRadius: 12,
+                                              spreadRadius: 3,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
+              // Bottom Shutter Control Bar
+              Container(
+                color: const Color(0xFF0D0E15),
+                padding: const EdgeInsets.only(bottom: 24, top: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Change Orientation Button (Cycles between 16:9, 9:16, 1:1)
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          switch (_frameMode) {
+                            case DocumentFrameMode.landscape16x9:
+                              _frameMode = DocumentFrameMode.portrait9x16;
+                              break;
+                            case DocumentFrameMode.portrait9x16:
+                              _frameMode = DocumentFrameMode.square1x1;
+                              break;
+                            case DocumentFrameMode.square1x1:
+                              _frameMode = DocumentFrameMode.landscape16x9;
+                              break;
+                          }
+                        });
+                      },
+                      icon: Icon(
+                        _frameMode.icon,
+                        size: 16,
+                        color: AppColors.accentGold,
+                      ),
+                      label: Text(
+                        "Change Frame: ${_frameMode.label}",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: AppColors.accentGold,
+                          width: 1.2,
+                        ),
+                        backgroundColor: const Color(0xFF252A40),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    if (_isCapturing) ...[
+                      const CircularProgressIndicator(
+                        color: AppColors.accentGold,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Capturing High-Res Scan...",
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ] else ...[
+                      GestureDetector(
+                        onTap: _captureAndProceed,
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                            color: AppColors.primaryBlue,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primaryBlue.withValues(
+                                  alpha: 0.6,
+                                ),
+                                blurRadius: 15,
+                                spreadRadius: 2,
                               ),
                             ],
                           ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 34,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Tap to Capture & Crop Document",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
-
-            // Bottom Shutter Control Bar
-            Container(
-              color: const Color(0xFF0D0E15),
-              padding: const EdgeInsets.only(bottom: 24, top: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Change Orientation Button (Cycles between 16:9, 9:16, 1:1)
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        switch (_frameMode) {
-                          case DocumentFrameMode.landscape16x9:
-                            _frameMode = DocumentFrameMode.portrait9x16;
-                            break;
-                          case DocumentFrameMode.portrait9x16:
-                            _frameMode = DocumentFrameMode.square1x1;
-                            break;
-                          case DocumentFrameMode.square1x1:
-                            _frameMode = DocumentFrameMode.landscape16x9;
-                            break;
-                        }
-                      });
-                    },
-                    icon: Icon(
-                      _frameMode.icon,
-                      size: 16,
-                      color: AppColors.accentGold,
-                    ),
-                    label: Text(
-                      "Change Frame: ${_frameMode.label}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: AppColors.accentGold,
-                        width: 1.2,
-                      ),
-                      backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  if (_isCapturing) ...[
-                    const CircularProgressIndicator(
-                      color: AppColors.accentGold,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      "Capturing High-Res Scan...",
-                      style: TextStyle(color: Colors.white, fontSize: 13),
-                    ),
-                  ] else ...[
-                    GestureDetector(
-                      onTap: _captureAndProceed,
-                      child: Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 4),
-                          color: AppColors.primaryBlue,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryBlue.withValues(
-                                alpha: 0.6,
-                              ),
-                              blurRadius: 15,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 34,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Tap to Capture & Crop Document",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

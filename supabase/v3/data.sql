@@ -508,15 +508,15 @@ aa0bd8fb-c54f-472f-ab2b-9d0361cd0392	OTHER	Other	\N	17	t	2026-08-14 11:05:55.727
 --
 
 COPY "public"."legal_aid_category" ("id", "category_code", "category_name", "description", "display_order", "icon_url", "created_at") FROM stdin;
-5793c5e6-9236-4dfd-8b82-fbb3d82dc092	SC_ST	Scheduled Caste or Scheduled Tribe	Members of Scheduled Caste or Scheduled Tribe communities under Sec 12(a)	1	\N	2026-08-14 11:05:55.727665+00
-196987de-5894-4a5a-9e0f-ddf23f50df12	TRAFFICKING_VICTIM	Victim of Trafficking	Victims of human trafficking or forced labor under Article 23 of the Constitution	2	\N	2026-08-14 11:05:55.727665+00
-c8211997-2ac3-44cf-873b-949c2a44f431	BEGGARY_VICTIM	Victim of Beggary	Victims of forced begging as referred to in Article 23 of the Constitution	3	\N	2026-08-14 11:05:55.727665+00
-837cce7d-b165-42d1-b6c8-7bcbcce502d1	WOMAN	Woman	All women are eligible regardless of income under Sec 12(c)	4	\N	2026-08-14 11:05:55.727665+00
-37dbfb26-af99-4ea8-a756-c668bf7abe2a	CHILDREN	Children	All children are eligible under Sec 12(c)	5	\N	2026-08-14 11:05:55.727665+00
-6d4367bd-b8ba-4509-935a-d56e3501ed6d	DISABLED_PERSON	Mentally Ill or Disabled Person	Persons with mental illness or physical disabilities under Sec 12(d)	6	\N	2026-08-14 11:05:55.727665+00
-ec9e7d1a-b486-4a33-afc6-1b3cb465c6cc	DISASTER_VICTIM	Victim of Disaster or Atrocity	Victims of mass disasters, ethnic violence, caste atrocities, floods, earthquakes, or industrial disasters under Sec 12(e)	7	\N	2026-08-14 11:05:55.727665+00
-777165d6-14a6-4f91-92a6-34714498c49f	INDUSTRIAL_WORKMAN	Industrial Workman	Industrial workers under Sec 12(f)	8	\N	2026-08-14 11:05:55.727665+00
-f3595cfc-9d99-4e1f-89be-b0186267de66	GENERAL	General – Annual income below ₹3 Lakh	Individuals with annual household income less than 3 Lakh Rupees under Sec 12(h)	9	\N	2026-08-14 11:05:55.727665+00
+5793c5e6-9236-4dfd-8b82-fbb3d82dc092	SC_ST	Scheduled Caste or Scheduled Tribe	Members of Scheduled Caste or Scheduled Tribe communities under Sec 12(a)	3	\N	2026-08-14 11:05:55.727665+00
+196987de-5894-4a5a-9e0f-ddf23f50df12	TRAFFICKING_VICTIM	Victim of Trafficking	Victims of human trafficking or forced labor under Article 23 of the Constitution	5	\N	2026-08-14 11:05:55.727665+00
+c8211997-2ac3-44cf-873b-949c2a44f431	BEGGARY_VICTIM	Victim of Beggary	Victims of forced begging as referred to in Article 23 of the Constitution	6	\N	2026-08-14 11:05:55.727665+00
+837cce7d-b165-42d1-b6c8-7bcbcce502d1	WOMAN	Woman	All women are eligible regardless of income under Sec 12(c)	1	\N	2026-08-14 11:05:55.727665+00
+37dbfb26-af99-4ea8-a756-c668bf7abe2a	CHILDREN	Children	All children are eligible under Sec 12(c)	2	\N	2026-08-14 11:05:55.727665+00
+6d4367bd-b8ba-4509-935a-d56e3501ed6d	DISABLED_PERSON	Mentally Ill or Disabled Person	Persons with mental illness or physical disabilities under Sec 12(d)	7	\N	2026-08-14 11:05:55.727665+00
+ec9e7d1a-b486-4a33-afc6-1b3cb465c6cc	DISASTER_VICTIM	Victim of Disaster or Atrocity	Victims of mass disasters, ethnic violence, caste atrocities, floods, earthquakes, or industrial disasters under Sec 12(e)	8	\N	2026-08-14 11:05:55.727665+00
+777165d6-14a6-4f91-92a6-34714498c49f	INDUSTRIAL_WORKMAN	Industrial Workman	Industrial workers under Sec 12(f)	9	\N	2026-08-14 11:05:55.727665+00
+f3595cfc-9d99-4e1f-89be-b0186267de66	GENERAL	General – Annual income below ₹3 Lakh	Individuals with annual household income less than 3 Lakh Rupees under Sec 12(h)	4	\N	2026-08-14 11:05:55.727665+00
 \.
 
 

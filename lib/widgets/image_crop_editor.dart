@@ -4,14 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import '../core/constants/app_colors.dart';
+import '../core/theme/app_theme.dart';
 
-enum CropAspectRatio {
-  free,
-  ratio16x9,
-  ratio3x4,
-  ratio1x1,
-  original,
-}
+enum CropAspectRatio { free, ratio16x9, ratio3x4, ratio1x1, original }
 
 class ImageCropEditor extends StatefulWidget {
   final Uint8List imageBytes;
@@ -123,7 +118,12 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
       final resultBytes = await compute(_processImageIsolate, {
         'bytes': inputBytes,
         'rotation': degrees,
-        'cropRect': [cropRect.left, cropRect.top, cropRect.width, cropRect.height],
+        'cropRect': [
+          cropRect.left,
+          cropRect.top,
+          cropRect.width,
+          cropRect.height,
+        ],
       });
 
       if (mounted) {
@@ -133,7 +133,13 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
       if (mounted) {
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error processing image: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(
+              "Error processing image: $e",
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -141,215 +147,310 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF161925),
-        elevation: 0,
-        title: Text(
-          "Crop & Adjust: ${widget.title}",
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.rotate_right, color: Colors.white),
-            tooltip: "Rotate 90°",
-            onPressed: _rotateClockwise,
+    // The crop editor is an immersive dark capture surface: pin it to the
+    // dedicated camera theme so it renders identically in light & dark modes.
+    return Theme(
+      data: AppTheme.cameraTheme(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0D0E15),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF161925),
+          elevation: 0,
+          title: Text(
+            "Crop & Adjust: ${widget.title}",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.restart_alt, color: Colors.white70),
-            tooltip: "Reset Crop",
-            onPressed: _resetCropRect,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
           ),
-        ],
-      ),
-      body: _isProcessing
-          ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: AppColors.accentGold),
-                  SizedBox(height: 16),
-                  Text("Cropping Document...", style: TextStyle(color: Colors.white70, fontSize: 14)),
-                ],
-              ),
-            )
-          : Column(
-              children: [
-                // Top Indicator Info
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: Colors.black.withValues(alpha: 0.4),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.crop, color: AppColors.accentGold, size: 16),
-                      SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          "Drag corners to adjust crop boundaries",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Interactive Crop Workspace
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        if (_imageWidth == null || _imageHeight == null) {
-                          return const Center(child: CircularProgressIndicator(color: AppColors.accentGold));
-                        }
-
-                        final bool isRotatedVertical = (_rotationDegrees % 180 != 0);
-                        final double rawW = isRotatedVertical ? _imageHeight!.toDouble() : _imageWidth!.toDouble();
-                        final double rawH = isRotatedVertical ? _imageWidth!.toDouble() : _imageHeight!.toDouble();
-
-                        final double imgRatio = rawW / rawH;
-                        final double containerW = constraints.maxWidth;
-                        final double containerH = constraints.maxHeight;
-
-                        double fittedW = containerW;
-                        double fittedH = fittedW / imgRatio;
-
-                        if (fittedH > containerH) {
-                          fittedH = containerH;
-                          fittedW = fittedH * imgRatio;
-                        }
-
-                        return Center(
-                          child: SizedBox(
-                            width: fittedW,
-                            height: fittedH,
-                            child: Stack(
-                              children: [
-                                // Rotated Image inside exact fitted bounds
-                                Positioned.fill(
-                                  child: Transform.rotate(
-                                    angle: _rotationDegrees * (math.pi / 180),
-                                    child: FittedBox(
-                                      fit: BoxFit.cover,
-                                      child: SizedBox(
-                                        width: _imageWidth!.toDouble(),
-                                        height: _imageHeight!.toDouble(),
-                                        child: Image.memory(
-                                          _currentBytes,
-                                          fit: BoxFit.fill,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Interactive Crop Overlay bound strictly to fitted image box
-                                Positioned.fill(
-                                  child: _buildInteractiveCropOverlay(fittedW, fittedH),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.rotate_right, color: Colors.white),
+              tooltip: "Rotate 90°",
+              onPressed: _rotateClockwise,
+            ),
+            IconButton(
+              icon: const Icon(Icons.restart_alt, color: Colors.white70),
+              tooltip: "Reset Crop",
+              onPressed: _resetCropRect,
+            ),
+          ],
+        ),
+        body: _isProcessing
+            ? const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: AppColors.accentGold),
+                    SizedBox(height: 16),
+                    Text(
+                      "Cropping Document...",
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
-                  ),
+                  ],
                 ),
-
-                // Aspect Ratio Selector Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  color: const Color(0xFF161925),
-                  child: LayoutBuilder(builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _aspectChip("Full Image", CropAspectRatio.original, Icons.crop_original, constraints.biggest),
-                          const SizedBox(width: 8),
-                          _aspectChip("Free", CropAspectRatio.free, Icons.crop_free, constraints.biggest),
-                          const SizedBox(width: 8),
-                          _aspectChip("Card 16:9", CropAspectRatio.ratio16x9, Icons.badge_outlined, constraints.biggest),
-                          const SizedBox(width: 8),
-                          _aspectChip("Doc 3:4", CropAspectRatio.ratio3x4, Icons.article_outlined, constraints.biggest),
-                          const SizedBox(width: 8),
-                          _aspectChip("Square 1:1", CropAspectRatio.ratio1x1, Icons.crop_square, constraints.biggest),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-
-                // Action Bar
-                SafeArea(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.black,
-                    child: Row(
+              )
+            : Column(
+                children: [
+                  // Top Indicator Info
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: Colors.black.withValues(alpha: 0.4),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.cancel_outlined, color: Colors.white70),
-                            label: const Text("Retake", style: TextStyle(color: Colors.white70)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.white30),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        Icon(Icons.crop, color: AppColors.accentGold, size: 16),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            "Drag corners to adjust crop boundaries",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _exportCroppedImage,
-                            icon: const Icon(Icons.check_circle, color: Colors.white),
-                            label: const Text("Done & Use", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryBlue,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
+
+                  // Interactive Crop Workspace
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (_imageWidth == null || _imageHeight == null) {
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.accentGold,
+                              ),
+                            );
+                          }
+
+                          final bool isRotatedVertical =
+                              (_rotationDegrees % 180 != 0);
+                          final double rawW = isRotatedVertical
+                              ? _imageHeight!.toDouble()
+                              : _imageWidth!.toDouble();
+                          final double rawH = isRotatedVertical
+                              ? _imageWidth!.toDouble()
+                              : _imageHeight!.toDouble();
+
+                          final double imgRatio = rawW / rawH;
+                          final double containerW = constraints.maxWidth;
+                          final double containerH = constraints.maxHeight;
+
+                          double fittedW = containerW;
+                          double fittedH = fittedW / imgRatio;
+
+                          if (fittedH > containerH) {
+                            fittedH = containerH;
+                            fittedW = fittedH * imgRatio;
+                          }
+
+                          return Center(
+                            child: SizedBox(
+                              width: fittedW,
+                              height: fittedH,
+                              child: Stack(
+                                children: [
+                                  // Rotated Image inside exact fitted bounds
+                                  Positioned.fill(
+                                    child: Transform.rotate(
+                                      angle: _rotationDegrees * (math.pi / 180),
+                                      child: FittedBox(
+                                        fit: BoxFit.cover,
+                                        child: SizedBox(
+                                          width: _imageWidth!.toDouble(),
+                                          height: _imageHeight!.toDouble(),
+                                          child: Image.memory(
+                                            _currentBytes,
+                                            fit: BoxFit.fill,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Interactive Crop Overlay bound strictly to fitted image box
+                                  Positioned.fill(
+                                    child: _buildInteractiveCropOverlay(
+                                      fittedW,
+                                      fittedH,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // Aspect Ratio Selector Bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 12,
+                    ),
+                    color: const Color(0xFF161925),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _aspectChip(
+                                "Full Image",
+                                CropAspectRatio.original,
+                                Icons.crop_original,
+                                constraints.biggest,
+                              ),
+                              const SizedBox(width: 8),
+                              _aspectChip(
+                                "Free",
+                                CropAspectRatio.free,
+                                Icons.crop_free,
+                                constraints.biggest,
+                              ),
+                              const SizedBox(width: 8),
+                              _aspectChip(
+                                "Card 16:9",
+                                CropAspectRatio.ratio16x9,
+                                Icons.badge_outlined,
+                                constraints.biggest,
+                              ),
+                              const SizedBox(width: 8),
+                              _aspectChip(
+                                "Doc 3:4",
+                                CropAspectRatio.ratio3x4,
+                                Icons.article_outlined,
+                                constraints.biggest,
+                              ),
+                              const SizedBox(width: 8),
+                              _aspectChip(
+                                "Square 1:1",
+                                CropAspectRatio.ratio1x1,
+                                Icons.crop_square,
+                                constraints.biggest,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Action Bar
+                  SafeArea(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      color: Colors.black,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(
+                                Icons.cancel_outlined,
+                                color: Colors.white70,
+                              ),
+                              label: const Text(
+                                "Retake",
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.white30),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _exportCroppedImage,
+                              icon: const Icon(
+                                Icons.check_circle,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                "Done & Use",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryBlue,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
-  Widget _aspectChip(String label, CropAspectRatio ratio, IconData icon, Size containerSize) {
+  Widget _aspectChip(
+    String label,
+    CropAspectRatio ratio,
+    IconData icon,
+    Size containerSize,
+  ) {
     final isSelected = _selectedRatio == ratio;
     return ChoiceChip(
       showCheckmark: false,
-      avatar: Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.white70),
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: isSelected ? Colors.white : Colors.white70,
+      ),
       label: Text(
         label,
         style: TextStyle(
           fontSize: 12,
-          color: isSelected ? Colors.white : Colors.white70,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: Colors.white,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         ),
       ),
       selected: isSelected,
+      // Explicit high-contrast colors so labels stay readable in both the
+      // app's light and dark modes (the chip bar sits on a dark surface).
       selectedColor: AppColors.primaryBlue,
-      backgroundColor: Colors.white.withValues(alpha: 0.08),
+      backgroundColor: const Color(0xFF252A40),
+      side: BorderSide(
+        color: isSelected ? AppColors.accentGold : Colors.white24,
+        width: isSelected ? 1.4 : 1.0,
+      ),
       onSelected: (selected) {
         if (selected) {
           _applyAspectRatio(ratio, containerSize);
@@ -390,7 +491,11 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
         _cropStartRect = rect;
       },
       onPanUpdate: (details) {
-        if (_activeHandle == null || _dragStartOffset == null || _cropStartRect == null) return;
+        if (_activeHandle == null ||
+            _dragStartOffset == null ||
+            _cropStartRect == null) {
+          return;
+        }
 
         final currentPos = details.localPosition;
         final delta = currentPos - _dragStartOffset!;
@@ -442,9 +547,7 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
       onPanEnd: (_) {
         _activeHandle = null;
       },
-      child: CustomPaint(
-        painter: _CropOverlayPainter(rect: rect),
-      ),
+      child: CustomPaint(painter: _CropOverlayPainter(rect: rect)),
     );
   }
 }
@@ -487,10 +590,26 @@ class _CropOverlayPainter extends CustomPainter {
     double thirdW = rect.width / 3;
     double thirdH = rect.height / 3;
 
-    canvas.drawLine(Offset(rect.left + thirdW, rect.top), Offset(rect.left + thirdW, rect.bottom), gridPaint);
-    canvas.drawLine(Offset(rect.left + 2 * thirdW, rect.top), Offset(rect.left + 2 * thirdW, rect.bottom), gridPaint);
-    canvas.drawLine(Offset(rect.left, rect.top + thirdH), Offset(rect.right, rect.top + thirdH), gridPaint);
-    canvas.drawLine(Offset(rect.left, rect.top + 2 * thirdH), Offset(rect.right, rect.top + 2 * thirdH), gridPaint);
+    canvas.drawLine(
+      Offset(rect.left + thirdW, rect.top),
+      Offset(rect.left + thirdW, rect.bottom),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left + 2 * thirdW, rect.top),
+      Offset(rect.left + 2 * thirdW, rect.bottom),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left, rect.top + thirdH),
+      Offset(rect.right, rect.top + thirdH),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left, rect.top + 2 * thirdH),
+      Offset(rect.right, rect.top + 2 * thirdH),
+      gridPaint,
+    );
 
     // Corner handle circles
     final handleFill = Paint()..color = AppColors.accentGold;
@@ -500,7 +619,12 @@ class _CropOverlayPainter extends CustomPainter {
       ..strokeWidth = 2.0;
 
     const radius = 10.0;
-    for (final corner in [rect.topLeft, rect.topRight, rect.bottomLeft, rect.bottomRight]) {
+    for (final corner in [
+      rect.topLeft,
+      rect.topRight,
+      rect.bottomLeft,
+      rect.bottomRight,
+    ]) {
       canvas.drawCircle(corner, radius, handleFill);
       canvas.drawCircle(corner, radius, handleBorder);
     }
@@ -516,7 +640,8 @@ class _CropOverlayPainter extends CustomPainter {
 Uint8List _processImageIsolate(Map<String, dynamic> params) {
   final Uint8List rawBytes = params['bytes'];
   final int rotation = params['rotation'];
-  final List<double> cropRect = params['cropRect']; // left, top, width, height normalized
+  final List<double> cropRect =
+      params['cropRect']; // left, top, width, height normalized
 
   img.Image? decoded = img.decodeImage(rawBytes);
   if (decoded == null) return rawBytes;
@@ -527,17 +652,35 @@ Uint8List _processImageIsolate(Map<String, dynamic> params) {
   }
 
   // 2. Crop
-  final cropX = (cropRect[0] * decoded.width).clamp(0, decoded.width - 1).toInt();
-  final cropY = (cropRect[1] * decoded.height).clamp(0, decoded.height - 1).toInt();
-  final cropW = (cropRect[2] * decoded.width).clamp(1, decoded.width - cropX).toInt();
-  final cropH = (cropRect[3] * decoded.height).clamp(1, decoded.height - cropY).toInt();
+  final cropX = (cropRect[0] * decoded.width)
+      .clamp(0, decoded.width - 1)
+      .toInt();
+  final cropY = (cropRect[1] * decoded.height)
+      .clamp(0, decoded.height - 1)
+      .toInt();
+  final cropW = (cropRect[2] * decoded.width)
+      .clamp(1, decoded.width - cropX)
+      .toInt();
+  final cropH = (cropRect[3] * decoded.height)
+      .clamp(1, decoded.height - cropY)
+      .toInt();
 
   // If crop covers 100% and no rotation, return input bytes directly
-  if (cropX == 0 && cropY == 0 && cropW == decoded.width && cropH == decoded.height && rotation == 0) {
+  if (cropX == 0 &&
+      cropY == 0 &&
+      cropW == decoded.width &&
+      cropH == decoded.height &&
+      rotation == 0) {
     return rawBytes;
   }
 
-  decoded = img.copyCrop(decoded, x: cropX, y: cropY, width: cropW, height: cropH);
+  decoded = img.copyCrop(
+    decoded,
+    x: cropX,
+    y: cropY,
+    width: cropW,
+    height: cropH,
+  );
 
   // Fast JPEG Encode with 88% quality optimization
   return Uint8List.fromList(img.encodeJpg(decoded, quality: 88));

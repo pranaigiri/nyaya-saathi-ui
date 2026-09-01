@@ -29,14 +29,27 @@ class AppTheme {
         surface: AppColors.lightSurface,
         error: AppColors.dangerRed,
       ),
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.light().textTheme,
-      ).copyWith(
-        displayLarge: GoogleFonts.outfit(fontSize: 32 * scale, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
-        titleLarge: GoogleFonts.outfit(fontSize: 22 * scale, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        bodyLarge: GoogleFonts.inter(fontSize: 16 * scale, color: AppColors.textPrimaryLight),
-        bodyMedium: GoogleFonts.inter(fontSize: 14 * scale, color: AppColors.textSecondaryLight),
-      ),
+      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme)
+          .copyWith(
+            displayLarge: GoogleFonts.outfit(
+              fontSize: 32 * scale,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimaryLight,
+            ),
+            titleLarge: GoogleFonts.outfit(
+              fontSize: 22 * scale,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimaryLight,
+            ),
+            bodyLarge: GoogleFonts.inter(
+              fontSize: 16 * scale,
+              color: AppColors.textPrimaryLight,
+            ),
+            bodyMedium: GoogleFonts.inter(
+              fontSize: 14 * scale,
+              color: AppColors.textSecondaryLight,
+            ),
+          ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: Colors.white,
@@ -52,7 +65,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderLight),
@@ -73,8 +89,13 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.inter(fontSize: 16 * scale, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16 * scale,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -93,14 +114,27 @@ class AppTheme {
         surface: AppColors.darkSurface,
         error: AppColors.dangerRed,
       ),
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.dark().textTheme,
-      ).copyWith(
-        displayLarge: GoogleFonts.outfit(fontSize: 32 * scale, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark),
-        titleLarge: GoogleFonts.outfit(fontSize: 22 * scale, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        bodyLarge: GoogleFonts.inter(fontSize: 16 * scale, color: AppColors.textPrimaryDark),
-        bodyMedium: GoogleFonts.inter(fontSize: 14 * scale, color: AppColors.textSecondaryDark),
-      ),
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme)
+          .copyWith(
+            displayLarge: GoogleFonts.outfit(
+              fontSize: 32 * scale,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimaryDark,
+            ),
+            titleLarge: GoogleFonts.outfit(
+              fontSize: 22 * scale,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimaryDark,
+            ),
+            bodyLarge: GoogleFonts.inter(
+              fontSize: 16 * scale,
+              color: AppColors.textPrimaryDark,
+            ),
+            bodyMedium: GoogleFonts.inter(
+              fontSize: 14 * scale,
+              color: AppColors.textSecondaryDark,
+            ),
+          ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkSurface,
         foregroundColor: Colors.white,
@@ -116,7 +150,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderDark),
@@ -137,9 +174,46 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.inter(fontSize: 16 * scale, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16 * scale,
+            fontWeight: FontWeight.w600,
+          ),
         ),
+      ),
+    );
+  }
+
+  /// Immersive dark theme used by the camera scanner & crop editor so the
+  /// capture UI stays consistent (and readable) regardless of whether the app
+  /// is running in light or dark mode.
+  static ThemeData cameraTheme() {
+    final base = darkTheme(AppFontScale.medium);
+    return base.copyWith(
+      scaffoldBackgroundColor: const Color(0xFF0D0E15),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF161925),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      // High-contrast chips for the crop aspect-ratio selector: solid dark
+      // unselected background with white labels, deep-blue selected state.
+      chipTheme: const ChipThemeData(
+        backgroundColor: Color(0xFF252A40),
+        selectedColor: AppColors.primaryBlue,
+        checkmarkColor: Colors.white,
+        labelStyle: TextStyle(color: Colors.white, fontSize: 12),
+        secondaryLabelStyle: TextStyle(color: Colors.white, fontSize: 12),
+        side: BorderSide(color: Colors.white24),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.darkSurface,
+        contentTextStyle: const TextStyle(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_colors.dart';
 import 'package:provider/provider.dart';
@@ -60,9 +61,34 @@ class ApplicationSuccessScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(
-                          applicationNumber,
-                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: AppColors.primaryDark),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              applicationNumber,
+                              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: AppColors.primaryDark),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () async {
+                                await Clipboard.setData(ClipboardData(text: applicationNumber));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Tracking ID copied to clipboard"),
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.copy_rounded, size: 20, color: AppColors.primaryBlue),
+                              tooltip: "Copy Tracking ID",
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 4),
