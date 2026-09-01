@@ -59,7 +59,10 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
     final bgColor = isDark ? AppColors.darkSurface : Colors.white;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final draftProvider = Provider.of<DraftProvider>(context, listen: false);
-    final applyDataProvider = Provider.of<ApplyDataProvider>(context, listen: false);
+    final applyDataProvider = Provider.of<ApplyDataProvider>(
+      context,
+      listen: false,
+    );
     final profile = authProvider.profile;
     final userName = profile?.fullName.isNotEmpty == true
         ? profile!.fullName
@@ -67,7 +70,10 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
     final initialStep = widget.initialStep;
 
     // Prepare the draft in the background, then open the wizard.
-    Future<void> prepareAndOpen(int option, Future<void> Function() prepare) async {
+    Future<void> prepareAndOpen(
+      int option,
+      Future<void> Function() prepare,
+    ) async {
       if (_loadingOption != null) return; // ignore double-taps
       setState(() => _loadingOption = option);
       try {
@@ -76,7 +82,8 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
         final navigator = Navigator.of(context);
         await prepare();
         await _applyPreselection(draftProvider);
-        navigator.pop(); // Close the choice modal AFTER all async work succeeded
+        navigator
+            .pop(); // Close the choice modal AFTER all async work succeeded
         navigator.push(
           MaterialPageRoute(
             builder: (_) => ApplyWizardScreen(initialStep: initialStep),
@@ -147,7 +154,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                       style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -155,7 +164,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                       'Select who this application is for',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -172,7 +183,7 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
             icon: Icons.person_rounded,
             iconBgColor: AppColors.primaryBlue.withValues(alpha: 0.15),
             iconColor: AppColors.primaryBlue,
-            title: 'Apply for Self',
+            title: 'Self',
             subtitle: 'Auto-fill form using your profile ($userName)',
             badgeText: '1-Click Auto-Fill',
             badgeColor: AppColors.primaryBlue,
@@ -183,7 +194,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
               if (profile?.districtId != null) {
                 try {
                   final districts = await applyDataProvider.getDistricts();
-                  final match = districts.where((d) => d.id == profile!.districtId).firstOrNull;
+                  final match = districts
+                      .where((d) => d.id == profile!.districtId)
+                      .firstOrNull;
                   districtName = match?.districtName;
                 } catch (_) {}
               }
@@ -203,7 +216,7 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
             icon: Icons.group_add_rounded,
             iconBgColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
             iconColor: const Color(0xFF0D9488),
-            title: 'Apply for Others',
+            title: 'Others',
             subtitle: 'Form will be empty to enter another person\'s details',
             badgeText: 'Blank Form',
             badgeColor: const Color(0xFF0D9488),
@@ -221,7 +234,8 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
   /// Applies the category preselected via the eligibility check (if any) and
   /// persists the initial wizard step so the wizard opens on the right step.
   Future<void> _applyPreselection(DraftProvider draftProvider) async {
-    if (widget.preselectedCategoryId != null && widget.preselectedCategoryCode != null) {
+    if (widget.preselectedCategoryId != null &&
+        widget.preselectedCategoryCode != null) {
       await draftProvider.updateCategory(
         widget.preselectedCategoryId,
         widget.preselectedCategoryCode!,
@@ -247,7 +261,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: loading ? null : onTap, // ignore taps while this option is preparing
+      onTap: loading
+          ? null
+          : onTap, // ignore taps while this option is preparing
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -282,13 +298,18 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: badgeColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
@@ -309,7 +330,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
@@ -323,7 +346,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                   )
                 : Icon(
                     Icons.chevron_right_rounded,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
           ],
         ),
