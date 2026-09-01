@@ -26,7 +26,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final appProvider = Provider.of<ApplicationProvider>(context);
 
-    if (appProvider.isLoading) {
+    if (appProvider.isLoading && !appProvider.hasFetched) {
       return const Center(child: CircularProgressIndicator());
     }
 

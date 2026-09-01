@@ -97,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
+                    cacheWidth: 240,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.lock_outline_rounded,
                       color: AppColors.primaryBlue,

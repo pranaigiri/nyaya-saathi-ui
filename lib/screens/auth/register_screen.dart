@@ -171,6 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,
+                        cacheWidth: 216,
                         errorBuilder: (context, error, stackTrace) => const Icon(
                           Icons.person_add_alt_1_rounded,
                           color: AppColors.primaryBlue,

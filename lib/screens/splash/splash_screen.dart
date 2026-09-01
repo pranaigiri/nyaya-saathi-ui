@@ -26,6 +26,9 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _contentFade;
   late final Animation<double> _contentSlide;
 
+  /// When the intro animation started – used to enforce a minimum splash time.
+  late final DateTime _splashStartTime;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +65,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
+    _splashStartTime = DateTime.now();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _navigateToNext();
@@ -73,12 +77,15 @@ class _SplashScreenState extends State<SplashScreen>
     final draftProvider = Provider.of<DraftProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // Run all initialization in parallel
+    // Run all initialization in parallel with the intro animation. The splash
+    // stays visible exactly as long as the animation takes to play (instead of
+    // a fixed artificial delay), so startup is never blocked longer than the
+    // brand animation itself.
     final results = await Future.wait([
       langProvider.init(),
       draftProvider.loadDraft(),
       authProvider.restoreSession(),
-      Future.delayed(const Duration(milliseconds: 2500)),
+      _waitForIntroAnimation(),
     ]);
 
     if (!mounted) return;
@@ -117,6 +124,24 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  /// Completes when the intro animation has fully played AND the splash has
+  /// been visible for at least 2 seconds. If initialization finishes earlier,
+  /// the splash simply holds its finished animation for the remaining time.
+  Future<void> _waitForIntroAnimation() async {
+    try {
+      await _controller.forward().orCancel;
+    } on TickerCanceled {
+      // Widget was disposed mid-animation – nothing to wait for.
+    }
+
+    const minSplashDuration = Duration(seconds: 5);
+    final elapsed = DateTime.now().difference(_splashStartTime);
+    final remaining = minSplashDuration - elapsed;
+    if (remaining > Duration.zero) {
+      await Future.delayed(remaining);
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -131,9 +156,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Theme-based colors matching app palette
     final bgColor = isDark ? AppColors.darkBg : AppColors.lightBg;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final circleOverlayColor = isDark 
-        ? AppColors.primaryBlue.withValues(alpha: 0.15) 
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final circleOverlayColor = isDark
+        ? AppColors.primaryBlue.withValues(alpha: 0.15)
         : AppColors.primaryBlue.withValues(alpha: 0.05);
 
     return Scaffold(
@@ -165,7 +192,9 @@ class _SplashScreenState extends State<SplashScreen>
                 height: size.width * 0.90,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.accentGold.withValues(alpha: isDark ? 0.05 : 0.04),
+                  color: AppColors.accentGold.withValues(
+                    alpha: isDark ? 0.05 : 0.04,
+                  ),
                 ),
               ),
             ),
@@ -195,7 +224,9 @@ class _SplashScreenState extends State<SplashScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primaryBlue.withValues(alpha: isDark ? 0.3 : 0.1),
+                                  color: AppColors.primaryBlue.withValues(
+                                    alpha: isDark ? 0.3 : 0.1,
+                                  ),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -206,6 +237,9 @@ class _SplashScreenState extends State<SplashScreen>
                               width: 104,
                               height: 104,
                               fit: BoxFit.contain,
+                              // Decode at display resolution (3x for density)
+                              // to avoid decoding the full-size bitmap.
+                              cacheWidth: 312,
                               errorBuilder: (context, error, stackTrace) {
                                 return Icon(
                                   Icons.balance_rounded,
@@ -280,6 +314,55 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
 
+                      const SizedBox(height: 18),
+
+                      // ==================================================
+                      // CONCEPT & GUIDANCE
+                      // ==================================================
+                      FadeTransition(
+                        opacity: _contentFade,
+                        child: Column(
+                          children: [
+                            Text(
+                              'CONCEIVED UNDER THE VISION OF',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: secondaryTextColor,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+
+                            const SizedBox(height: 6),
+
+                            Text(
+                              'Hon\'ble Mr. Justice Bhaskar Raj Pradhan',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontSize: 14,
+                                height: 1.3,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryBlue,
+                              ),
+                            ),
+
+                            const SizedBox(height: 3),
+
+                            Text(
+                              'Judge, High Court of Sikkim\n'
+                              'Executive Chairperson, Sikkim SLSA',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 10.5,
+                                height: 1.45,
+                                color: secondaryTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       const SizedBox(height: 20),
 
                       // ==================================================
@@ -312,6 +395,8 @@ class _SplashScreenState extends State<SplashScreen>
                             width: 48,
                             height: 48,
                             fit: BoxFit.contain,
+                            // 1MB source shown at 48px – decode small.
+                            cacheWidth: 144,
                             errorBuilder: (context, error, stackTrace) {
                               return SizedBox(
                                 width: 48,

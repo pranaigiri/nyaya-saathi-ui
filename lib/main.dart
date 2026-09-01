@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -31,10 +33,12 @@ void main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
-  // Initialize Firebase and Push Notification Service
+  // Try to initialize Firebase first (needed by the notification service).
   try {
     await Firebase.initializeApp();
-    await NotificationService.instance.initialize();
+    // Notification permission prompt / channel setup does not need to block
+    // the first frame — run it in the background to reduce launch time.
+    unawaited(NotificationService.instance.initialize());
   } catch (e) {
     // ignore: avoid_print
     print('[Main] Firebase initialization warning: $e');

@@ -35,17 +35,7 @@ class ApplicationRepository {
     };
 
     // ignore: avoid_print
-    print('========================================');
-    // ignore: avoid_print
-    print('[ApplicationRepository] SUBMITTING APPLICATION PAYLOAD:');
-    // ignore: avoid_print
-    print('[ApplicationRepository] Auth Current User ID: ${_client.auth.currentUser?.id}');
-    // ignore: avoid_print
-    print('[ApplicationRepository] Effective Applicant ID: $effectiveApplicantId');
-    // ignore: avoid_print
-    print('[ApplicationRepository] Data map: $insertData');
-    // ignore: avoid_print
-    print('========================================');
+    print('[ApplicationRepository] Submitting application (applicant: $effectiveApplicantId)');
 
     try {
       final res = await _client
@@ -54,37 +44,40 @@ class ApplicationRepository {
           .select(_applicationSelectFields)
           .single();
 
-      // ignore: avoid_print
-      print('[ApplicationRepository] Insert success response: $res');
       final application = LegalAidApplication.fromJson(res);
 
-      // Upload documents if any
-      for (final entry in draft.documentStoragePaths.entries) {
+      // Upload documents if any.
+      // Batched: resolve all document_master ids in ONE query, then insert all
+      // links in ONE statement (previously 2 round-trips per document).
+      final docCodes = draft.documentStoragePaths.keys.toList();
+      if (docCodes.isNotEmpty) {
         try {
-          // ignore: avoid_print
-          print('[ApplicationRepository] Linking doc code: ${entry.key}, storage path: ${entry.value}');
-          final docResult = await _client
+          final docRows = await _client
               .from('document_master')
-              .select('id')
-              .eq('document_code', entry.key)
-              .maybeSingle();
+              .select('id, document_code')
+              .inFilter('document_code', docCodes);
 
-          if (docResult != null) {
-            await _client.from('application_document').insert({
-              'application_id': application.id,
-              'document_id': docResult['id'],
-              'file_url': entry.value,
-              'file_name': '${entry.key}.jpg',
-            });
-            // ignore: avoid_print
-            print('[ApplicationRepository] Successfully linked doc ${entry.key}');
-          } else {
-            // ignore: avoid_print
-            print('[ApplicationRepository] Warning: docResult was null for code: ${entry.key}');
+          final idByCode = <String, dynamic>{
+            for (final row in docRows) row['document_code'] as String: row['id'],
+          };
+
+          final links = <Map<String, dynamic>>[
+            for (final entry in draft.documentStoragePaths.entries)
+              if (idByCode[entry.key] != null)
+                {
+                  'application_id': application.id,
+                  'document_id': idByCode[entry.key],
+                  'file_url': entry.value,
+                  'file_name': '${entry.key}.jpg',
+                },
+          ];
+
+          if (links.isNotEmpty) {
+            await _client.from('application_document').insert(links);
           }
         } catch (docErr) {
           // ignore: avoid_print
-          print('[ApplicationRepository] Document linking failed for ${entry.key}: $docErr');
+          print('[ApplicationRepository] Document linking failed: $docErr');
         }
       }
 
@@ -273,15 +266,27 @@ class ApplicationRepository {
     }
   }
 
-  /// Subscribe to realtime updates for legal_aid_application table
+  /// Subscribe to realtime updates for legal_aid_application.
+  ///
+  /// Filtered to the current user's rows so that changes made by other users
+  /// don't trigger pointless full refetches on every client.
   RealtimeChannel subscribeToApplications({
     required void Function(PostgresChangePayload payload) onData,
   }) {
     final channelName = 'public:legal_aid_application_${DateTime.now().millisecondsSinceEpoch}';
+    final userId = _client.auth.currentUser?.id;
+
     final channel = _client.channel(channelName).onPostgresChanges(
       event: PostgresChangeEvent.all,
       schema: 'public',
       table: 'legal_aid_application',
+      filter: (userId != null && userId.isNotEmpty)
+          ? PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'applicant_id',
+              value: userId,
+            )
+          : null,
       callback: onData,
     );
     channel.subscribe();

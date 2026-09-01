@@ -52,6 +52,7 @@ class UnauthHomeScreen extends StatelessWidget {
                     width: 96,
                     height: 96,
                     fit: BoxFit.cover,
+                    cacheWidth: 288,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.gavel_rounded,
                       size: 56,

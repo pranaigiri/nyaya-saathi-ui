@@ -20,7 +20,13 @@ class LanguageProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> init() async {
+  Future<void>? _initFuture;
+
+  /// Idempotent init – safe to call multiple times (main.dart + SplashScreen).
+  /// Memoized so repeat calls are free.
+  Future<void> init() => _initFuture ??= _doInit();
+
+  Future<void> _doInit() async {
     _isFirstLaunch = await HiveDraftService.isFirstLaunch();
     final langStr = await HiveDraftService.getLanguage();
     _locale = Locale(langStr);

@@ -568,33 +568,8 @@ For helpline support, dial 15100 (Toll-Free).
             ),
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
 
-          // Row 3: Legal Aid Category & Case Type badges
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildInfoBadge(
-                icon: Icons.category_rounded,
-                label: categoryText,
-                color: AppColors.successGreen,
-                isDark: isDark,
-              ),
-              if (application.caseTypeName != null &&
-                  application.caseTypeName!.trim().isNotEmpty)
-                _buildInfoBadge(
-                  icon: Icons.gavel_rounded,
-                  label: application.caseTypeName!,
-                  color: AppColors.primaryBlue,
-                  isDark: isDark,
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Row 4: Date Applied & District in a single row
+          // Row 3: Date Applied & District in a single row (above the divider)
           Row(
             children: [
               const Icon(
@@ -634,6 +609,31 @@ For helpline support, dial 15100 (Toll-Free).
                   ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Row 4: Legal Aid Category & Case Type badges
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoBadge(
+                icon: Icons.category_rounded,
+                label: categoryText,
+                color: AppColors.successGreen,
+                isDark: isDark,
+              ),
+              if (application.caseTypeName != null &&
+                  application.caseTypeName!.trim().isNotEmpty)
+                _buildInfoBadge(
+                  icon: Icons.gavel_rounded,
+                  label: application.caseTypeName!,
+                  color: AppColors.primaryBlue,
+                  isDark: isDark,
+                ),
             ],
           ),
         ],
@@ -739,7 +739,9 @@ For helpline support, dial 15100 (Toll-Free).
           const SizedBox(height: 16),
 
           // ── Lifecycle Stepper Progress Bar (Milestones with Animated Glow) ──
-          _buildMilestoneTracker(application.status, isDark),
+          // RepaintBoundary isolates the per-frame glow animation repaints so
+          // the rest of the timeline card is not repainted every frame.
+          RepaintBoundary(child: _buildMilestoneTracker(application.status, isDark)),
           const SizedBox(height: 20),
           const Divider(height: 1),
           const SizedBox(height: 16),
