@@ -47,18 +47,21 @@ class LocalApplyRepository implements ApplyRepository {
         id: '1061ce0c-c230-47cc-b6d0-226e17acffbc',
         caseTypeCode: 'SUCCESSION_CERTIFICATE',
         caseTypeName: 'Succession Certificate',
+        caseTypeDescription: 'Assistance with obtaining court certificates to claim securities, debts, or inheritances of deceased family members.',
         displayOrder: 1,
       ),
       CaseTypeMaster(
         id: 'ff25398e-f2f5-4968-86d1-7720a5bd88f2',
         caseTypeCode: 'DOMESTIC_VIOLENCE',
         caseTypeName: 'Domestic Violence',
+        caseTypeDescription: 'Legal help for persons facing physical, emotional, verbal, sexual or economic abuse within the family.',
         displayOrder: 2,
       ),
       CaseTypeMaster(
         id: '0e6b1747-e003-44e6-86dc-34ccb988658e',
         caseTypeCode: 'PROPERTY_DISPUTE',
         caseTypeName: 'Property Dispute',
+        caseTypeDescription: 'Assistance with title deeds, boundary disputes, unlawful possession, or partition of family properties.',
         displayOrder: 3,
       ),
     ];

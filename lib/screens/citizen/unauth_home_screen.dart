@@ -11,6 +11,7 @@ import 'tracking_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import 'citizen_dashboard_shell.dart';
+import '../../widgets/progressive_fade.dart';
 
 class UnauthHomeScreen extends StatelessWidget {
   const UnauthHomeScreen({super.key});
@@ -27,9 +28,10 @@ class UnauthHomeScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(24, 20, 24, 48 + MediaQuery.of(context).padding.bottom),
+      body: ProgressiveFade(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, 48 + MediaQuery.of(context).padding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -202,6 +204,7 @@ class UnauthHomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

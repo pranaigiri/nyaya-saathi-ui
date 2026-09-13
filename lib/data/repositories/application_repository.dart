@@ -3,12 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/advocate.dart';
 import '../../models/legal_aid_application.dart';
 import '../../models/draft_application_model.dart';
+import '../../core/utils/tracking_number_formatter.dart';
 
 class ApplicationRepository {
   SupabaseClient get _client => Supabase.instance.client;
 
   static const String _applicationSelectFields =
-      '*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*), district_master:applicant_district_id(district_name)';
+      '*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*), applicant_district:applicant_district_id(district_name), current_district:current_district_id(district_name)';
 
   /// Submit a new legal aid application from a draft
   Future<LegalAidApplication> submitApplication(DraftApplicationModel draft, {String? applicantId}) async {
@@ -187,35 +188,54 @@ class ApplicationRepository {
     return null;
   }
 
-  /// Track application using the RPC function
+  /// Track application using the RPC function with automatic district alias fallback
   Future<LegalAidApplication?> trackApplication({
     required String trackingNumber,
     required String phoneNumber,
   }) async {
-    final res = await _client.rpc('track_application', params: {
-      'p_tracking_number': trackingNumber.trim(),
-      'p_phone_number': phoneNumber.trim(),
-    });
+    final cleanTracking = trackingNumber.trim();
+    final cleanPhone = phoneNumber.trim();
+    final candidateNumbers = TrackingNumberHelper.getAlternativeTrackingNumbers(cleanTracking);
 
-    if (res == null || (res is List && res.isEmpty)) return null;
+    for (final num in candidateNumbers) {
+      try {
+        final res = await _client.rpc('track_application', params: {
+          'p_tracking_number': num,
+          'p_phone_number': cleanPhone,
+        });
 
-    final data = res is List ? res.first : res;
-    if (data == null || data is! Map<String, dynamic>) return null;
+        if (res != null && (res is! List || res.isNotEmpty)) {
+          final data = res is List ? res.first : res;
+          if (data != null && data is Map<String, dynamic>) {
+            final rawApp = LegalAidApplication.fromJson(data);
 
-    var app = LegalAidApplication.fromJson(data);
+            // Attempt to load fully-joined application (with category, case type, district names)
+            if (rawApp.id.isNotEmpty) {
+              final fullApp = await getApplicationDetail(rawApp.id);
+              if (fullApp != null) {
+                return fullApp;
+              }
+            }
 
-    // If advocate is assigned by ID but advocate details were not joined in the flat RPC return
-    if (app.assignedAdvocateId != null && app.assignedAdvocate == null) {
-      final adv = await getAdvocateById(app.assignedAdvocateId!);
-      if (adv != null) {
-        app = app.copyWith(
-          assignedAdvocate: adv,
-          assignedAdvocateName: adv.fullName,
-        );
-      }
+            var app = rawApp;
+            // If advocate is assigned by ID but advocate details were not joined in the flat RPC return
+            if (app.assignedAdvocateId != null && app.assignedAdvocate == null) {
+              final adv = await getAdvocateById(app.assignedAdvocateId!);
+              if (adv != null) {
+                app = app.copyWith(
+                  assignedAdvocate: adv,
+                  assignedAdvocateName: adv.fullName,
+                );
+              }
+            }
+
+            return app;
+          }
+        }
+      } catch (_) {}
     }
 
-    return app;
+    return null;
   }
 
   /// Withdraw an application
@@ -266,14 +286,21 @@ class ApplicationRepository {
   Future<bool> requestAdvocateChange({
     required String applicationId,
     String? currentAdvocateId,
+    String? preferredNewAdvocateId,
     required String reason,
   }) async {
     try {
       final userId = _client.auth.currentUser?.id;
+      if (userId == null || userId.isEmpty) {
+        // ignore: avoid_print
+        print('[ApplicationRepository] Cannot request advocate change: user is not authenticated');
+        return false;
+      }
       await _client.from('advocate_change_request').insert({
         'application_id': applicationId,
-        'requested_by_citizen_id': ?userId,
-        'current_advocate_id': ?currentAdvocateId,
+        'requested_by_citizen_id': userId,
+        'current_advocate_id': currentAdvocateId,
+        'preferred_new_advocate_id': preferredNewAdvocateId,
         'reason': reason.trim(),
         'request_status': 'PENDING',
       });

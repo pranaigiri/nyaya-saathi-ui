@@ -6,7 +6,8 @@ import '../../../core/services/notification_service.dart';
 import '../../../models/notification_model.dart';
 
 class NotificationsTab extends StatefulWidget {
-  const NotificationsTab({super.key});
+  final ScrollController? scrollController;
+  const NotificationsTab({super.key, this.scrollController});
 
   @override
   State<NotificationsTab> createState() => _NotificationsTabState();
@@ -28,11 +29,48 @@ class _NotificationsTabState extends State<NotificationsTab> {
   bool _isLoading = true;
   List<NotificationModel> _notifications = [];
   String? _errorMessage;
+  RealtimeChannel? _notificationsChannel;
 
   @override
   void initState() {
     super.initState();
     _fetchNotifications();
+    _setupRealtimeSubscription();
+  }
+
+  void _setupRealtimeSubscription() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      _notificationsChannel = Supabase.instance.client
+          .channel('citizen-notifications-$userId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'notifications',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: userId,
+            ),
+            callback: (payload) {
+              if (mounted) {
+                _fetchNotifications();
+              }
+            },
+          )
+          .subscribe();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    if (_notificationsChannel != null) {
+      Supabase.instance.client.removeChannel(_notificationsChannel!);
+      _notificationsChannel = null;
+    }
+    super.dispose();
   }
 
   Future<void> _fetchNotifications() async {
@@ -86,14 +124,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
         setState(() {
           final index = _notifications.indexWhere((n) => n.id == notification.id);
           if (index != -1) {
-            _notifications[index] = NotificationModel(
-              id: notification.id,
-              title: notification.title,
-              body: notification.body,
-              isRead: true,
-              createdAt: notification.createdAt,
-              applicationId: notification.applicationId,
-            );
+            _notifications[index] = notification.copyWith(isRead: true);
           }
         });
       }
@@ -333,6 +364,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
     return RefreshIndicator(
       onRefresh: _fetchNotifications,
       child: ListView.builder(
+        controller: widget.scrollController,
         padding: EdgeInsets.fromLTRB(16, 12, 16, 36 + MediaQuery.of(context).padding.bottom),
         itemCount: _notifications.length + 1,
         itemBuilder: (context, index) {

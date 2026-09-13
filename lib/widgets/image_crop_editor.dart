@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import '../core/constants/app_colors.dart';
 import '../core/theme/app_theme.dart';
+import 'edgy.dart';
 
 enum CropAspectRatio { free, ratio16x9, ratio3x4, ratio1x1, original }
 
@@ -39,6 +40,21 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
   _HandleType? _activeHandle;
   Offset? _dragStartOffset;
   Rect? _cropStartRect;
+
+  final Map<CropAspectRatio, GlobalKey> _chipKeys = {
+    for (var r in CropAspectRatio.values) r: GlobalKey(),
+  };
+
+  void _scrollToChip(GlobalKey key) {
+    final ctx = key.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      alignment: 0.5,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   void initState() {
@@ -309,46 +325,49 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
                     color: const Color(0xFF161925),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _aspectChip(
-                                "Full Image",
-                                CropAspectRatio.original,
-                                Icons.crop_original,
-                                constraints.biggest,
-                              ),
-                              const SizedBox(width: 8),
-                              _aspectChip(
-                                "Free",
-                                CropAspectRatio.free,
-                                Icons.crop_free,
-                                constraints.biggest,
-                              ),
-                              const SizedBox(width: 8),
-                              _aspectChip(
-                                "Card 16:9",
-                                CropAspectRatio.ratio16x9,
-                                Icons.badge_outlined,
-                                constraints.biggest,
-                              ),
-                              const SizedBox(width: 8),
-                              _aspectChip(
-                                "Doc 3:4",
-                                CropAspectRatio.ratio3x4,
-                                Icons.article_outlined,
-                                constraints.biggest,
-                              ),
-                              const SizedBox(width: 8),
-                              _aspectChip(
-                                "Square 1:1",
-                                CropAspectRatio.ratio1x1,
-                                Icons.crop_square,
-                                constraints.biggest,
-                              ),
-                            ],
+                        return Edgy(
+                          axis: Axis.horizontal,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _aspectChip(
+                                  "Full Image",
+                                  CropAspectRatio.original,
+                                  Icons.crop_original,
+                                  constraints.biggest,
+                                ),
+                                const SizedBox(width: 8),
+                                _aspectChip(
+                                  "Free",
+                                  CropAspectRatio.free,
+                                  Icons.crop_free,
+                                  constraints.biggest,
+                                ),
+                                const SizedBox(width: 8),
+                                _aspectChip(
+                                  "Card 16:9",
+                                  CropAspectRatio.ratio16x9,
+                                  Icons.badge_outlined,
+                                  constraints.biggest,
+                                ),
+                                const SizedBox(width: 8),
+                                _aspectChip(
+                                  "Doc 3:4",
+                                  CropAspectRatio.ratio3x4,
+                                  Icons.article_outlined,
+                                  constraints.biggest,
+                                ),
+                                const SizedBox(width: 8),
+                                _aspectChip(
+                                  "Square 1:1",
+                                  CropAspectRatio.ratio1x1,
+                                  Icons.crop_square,
+                                  constraints.biggest,
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -427,35 +446,40 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
     Size containerSize,
   ) {
     final isSelected = _selectedRatio == ratio;
-    return ChoiceChip(
-      showCheckmark: false,
-      avatar: Icon(
-        icon,
-        size: 16,
-        color: isSelected ? Colors.white : Colors.white70,
-      ),
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.white,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+    final key = _chipKeys[ratio];
+    return KeyedSubtree(
+      key: key,
+      child: ChoiceChip(
+        showCheckmark: false,
+        avatar: Icon(
+          icon,
+          size: 16,
+          color: isSelected ? Colors.white : Colors.white70,
         ),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+        selected: isSelected,
+        // Explicit high-contrast colors so labels stay readable in both the
+        // app's light and dark modes (the chip bar sits on a dark surface).
+        selectedColor: AppColors.primaryBlue,
+        backgroundColor: const Color(0xFF252A40),
+        side: BorderSide(
+          color: isSelected ? AppColors.accentGold : Colors.white24,
+          width: isSelected ? 1.4 : 1.0,
+        ),
+        onSelected: (selected) {
+          if (selected) {
+            if (key != null) _scrollToChip(key);
+            _applyAspectRatio(ratio, containerSize);
+          }
+        },
       ),
-      selected: isSelected,
-      // Explicit high-contrast colors so labels stay readable in both the
-      // app's light and dark modes (the chip bar sits on a dark surface).
-      selectedColor: AppColors.primaryBlue,
-      backgroundColor: const Color(0xFF252A40),
-      side: BorderSide(
-        color: isSelected ? AppColors.accentGold : Colors.white24,
-        width: isSelected ? 1.4 : 1.0,
-      ),
-      onSelected: (selected) {
-        if (selected) {
-          _applyAspectRatio(ratio, containerSize);
-        }
-      },
     );
   }
 
@@ -468,6 +492,7 @@ class _ImageCropEditorState extends State<ImageCropEditor> {
     );
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onPanStart: (details) {
         final pos = details.localPosition;
         const handleRadius = 24.0;

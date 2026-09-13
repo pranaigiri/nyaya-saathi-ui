@@ -18,7 +18,19 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Legal Aid service application for Sikkim State Legal Services Authority (SLSA).">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Nyaya Saathi — Sikkim State Legal Services Authority">
+  <meta property="og:description" content="Empowering citizens of Sikkim with seamless, free access to legal aid, application tracking, and legal services.">
+  <meta property="og:image" content="https://nyayasaathi.sikkim.gov.in/assets/images/app_logo.png">
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Nyaya Saathi — Sikkim State Legal Services Authority">
+  <meta name="twitter:description" content="Empowering citizens of Sikkim with seamless, free access to legal aid, application tracking, and legal services.">
+  <meta name="twitter:image" content="https://nyayasaathi.sikkim.gov.in/assets/images/app_logo.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,8 +43,46 @@
 
   <title>Nyaya Saathi</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #0F172A;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .loader-brand {
+      color: #FFFFFF;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+    .progress-container {
+      width: 180px;
+      height: 6px;
+      background-color: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 25%;
+      background: linear-gradient(90deg, #1E3A8A, #0D9488);
+      border-radius: 8px;
+      transition: width 0.4s ease;
+    }
+  </style>
 </head>
 <body>
+  <div class="loader-brand">Nyaya Saathi</div>
+  <div class="progress-container">
+    <div class="progress-bar" id="app-progress"></div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

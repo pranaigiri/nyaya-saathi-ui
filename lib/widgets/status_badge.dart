@@ -1,63 +1,24 @@
 import 'package:flutter/material.dart';
-import '../core/constants/app_colors.dart';
+import '../models/application_status.dart';
 
 class StatusBadge extends StatelessWidget {
   final String status;
 
   const StatusBadge({super.key, required this.status});
 
-  Color _getStatusColor() {
-    switch (status.toUpperCase()) {
-      case 'SUBMITTED':
-      case 'DRAFT':
-        return AppColors.infoCyan;
-      case 'UNDER_SCRUTINY':
-        return AppColors.warningOrange;
-      case 'APPROVED_SLSA':
-      case 'ASSIGNED_TO_ADVOCATE':
-      case 'ADVOCATE_ACCEPTED':
-      case 'CASE_IN_PROGRESS':
-        return AppColors.successGreen;
-      case 'REJECTED':
-        return AppColors.dangerRed;
-      case 'CLOSED':
-      case 'WITHDRAWN':
-        return Colors.grey;
-      default:
-        return AppColors.primaryBlue;
-    }
-  }
-
-  String _getReadableText() {
-    switch (status.toUpperCase()) {
-      case 'SUBMITTED':
-        return 'Submitted';
-      case 'UNDER_SCRUTINY':
-        return 'Under Scrutiny';
-      case 'APPROVED_SLSA':
-        return 'Approved by SLSA';
-      case 'ASSIGNED_TO_ADVOCATE':
-        return 'Advocate Assigned';
-      case 'CASE_IN_PROGRESS':
-        return 'Case In Progress';
-      case 'REJECTED':
-        return 'Rejected';
-      case 'CLOSED':
-        return 'Closed';
-      default:
-        return status.replaceAll('_', ' ');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _getStatusColor();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final appStatus = ApplicationStatus.fromString(status);
+    final color = appStatus.getColor(isDark);
+    final label = appStatus.displayLabel;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: isDark ? 0.16 : 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.35 : 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -69,10 +30,47 @@ class StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            _getReadableText(),
+            label,
             style: TextStyle(
               color: color,
               fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AdvocateAcceptanceBadge extends StatelessWidget {
+  final String status;
+
+  const AdvocateAcceptanceBadge({super.key, required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final acceptanceStatus = AdvocateAcceptanceStatus.fromString(status);
+    final color = acceptanceStatus.getColor(isDark);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.15 : 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(acceptanceStatus.icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            acceptanceStatus.displayLabel,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),

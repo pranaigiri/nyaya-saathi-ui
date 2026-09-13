@@ -11,7 +11,8 @@ import '../../../widgets/apply_choice_modal.dart';
 import '../../../widgets/eligibility_check_modal.dart';
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+  final ScrollController? scrollController;
+  const HomeTab({super.key, this.scrollController});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -36,6 +37,7 @@ class _HomeTabState extends State<HomeTab> {
     final resolvedCount = apps.where((a) => a.status == 'RESOLVED').length;
 
     return SingleChildScrollView(
+      controller: widget.scrollController,
       padding: EdgeInsets.fromLTRB(20, 16, 20, 36 + MediaQuery.of(context).padding.bottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

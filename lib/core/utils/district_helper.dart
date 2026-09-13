@@ -10,22 +10,33 @@ class DistrictHelper {
     '771eac9c-c0b1-4b1b-acfa-658163c4a82f': 'Pakyong',
     '2a8f7698-6ff5-48bf-a3c3-eea8a65109c6': 'Soreng',
 
-    // District Codes to Names
-    'GANGTOK': 'Gangtok',
+    // Canonical Database District Codes to Names
     'GTK': 'Gangtok',
-    'NAMCHI': 'Namchi',
     'NAM': 'Namchi',
+    'MAN': 'Mangan',
+    'GYL': 'Gyalshing',
+    'PAK': 'Pakyong',
+    'SOR': 'Soreng',
+
+    // Full Name and Legacy Aliases
+    'GANGTOK': 'Gangtok',
+    'NAMCHI': 'Namchi',
     'NCH': 'Namchi',
     'MANGAN': 'Mangan',
     'MGN': 'Mangan',
     'GYALSHING': 'Gyalshing',
-    'GYL': 'Gyalshing',
     'PAKYONG': 'Pakyong',
     'PKY': 'Pakyong',
     'SORENG': 'Soreng',
     'SRG': 'Soreng',
 
     // Lowercase variants
+    'gtk': 'Gangtok',
+    'nam': 'Namchi',
+    'man': 'Mangan',
+    'gyl': 'Gyalshing',
+    'pak': 'Pakyong',
+    'sor': 'Soreng',
     'gangtok': 'Gangtok',
     'namchi': 'Namchi',
     'mangan': 'Mangan',

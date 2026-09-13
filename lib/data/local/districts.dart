@@ -1,40 +1,42 @@
 import '../../data/models/district.dart';
 
+const String _sikkimStateId = '1ba79647-e698-4d33-8fca-2b9ae70949b5';
+
 const List<District> localDistricts = [
   District(
     id: '162e0db6-feb9-44ea-9476-483c844f4956',
     districtName: 'Gangtok',
-    districtCode: 'GANGTOK',
-    stateId: '',
+    districtCode: 'GTK',
+    stateId: _sikkimStateId,
   ),
   District(
     id: '7c7faa9f-4cbb-450d-9046-15ef51430cd9',
     districtName: 'Namchi',
-    districtCode: 'NAMCHI',
-    stateId: '',
+    districtCode: 'NAM',
+    stateId: _sikkimStateId,
   ),
   District(
     id: '18bcf408-b669-4e7d-b52c-d3b0a9b7c89d',
     districtName: 'Mangan',
-    districtCode: 'MANGAN',
-    stateId: '',
+    districtCode: 'MAN',
+    stateId: _sikkimStateId,
   ),
   District(
     id: 'd434b194-4038-4342-b475-0f1ef7b44ae4',
     districtName: 'Gyalshing',
-    districtCode: 'GYALSHING',
-    stateId: '',
+    districtCode: 'GYL',
+    stateId: _sikkimStateId,
   ),
   District(
     id: '771eac9c-c0b1-4b1b-acfa-658163c4a82f',
     districtName: 'Pakyong',
-    districtCode: 'PAKYONG',
-    stateId: '',
+    districtCode: 'PAK',
+    stateId: _sikkimStateId,
   ),
   District(
     id: '2a8f7698-6ff5-48bf-a3c3-eea8a65109c6',
     districtName: 'Soreng',
-    districtCode: 'SORENG',
-    stateId: '',
+    districtCode: 'SOR',
+    stateId: _sikkimStateId,
   ),
 ];

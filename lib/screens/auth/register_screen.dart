@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/captcha_box.dart';
 import '../citizen/citizen_dashboard_shell.dart';
 import 'login_screen.dart';
+import '../../widgets/bottom_padding.dart';
+import '../../core/utils/phone_number_formatter.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -64,7 +66,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
       fullName: _nameController.text.trim(),
-      phoneNumber: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
+      phoneNumber: _phoneController.text.replaceAll(' ', '').trim().isNotEmpty
+          ? _phoneController.text.replaceAll(' ', '').trim()
+          : null,
     );
 
     if (!mounted) return;
@@ -146,7 +150,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: EdgeInsets.fromLTRB(24, 16, 24, BottomPadding.of(context, minimum: 24)),
           child: Form(
             key: _formKey,
             child: Column(
@@ -275,6 +280,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [IndianPhoneNumberFormatter()],
                   decoration: const InputDecoration(
                     labelText: "Mobile Number (Optional)",
                     hintText: "10-digit mobile number",

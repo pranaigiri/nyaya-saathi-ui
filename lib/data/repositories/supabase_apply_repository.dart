@@ -29,10 +29,11 @@ class SupabaseApplyRepository implements ApplyRepository {
   Future<List<CaseTypeMaster>> getCaseTypes() async {
     final res = await _client
         .from('case_type_master')
-        .select('id, case_type_code, case_type_name, icon_url, display_order, is_active')
+        .select('id, case_type_code, case_type_name, case_type_description, icon_url, display_order, is_active')
         .eq('is_active', true)
-        .order('display_order');
-    return (res as List).map((x) => CaseTypeMaster.fromJson(x)).toList();
+        .order('display_order', ascending: true);
+    return ((res as List).map((x) => CaseTypeMaster.fromJson(x)).toList()
+      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder)));
   }
 
   @override
@@ -94,16 +95,19 @@ class SupabaseApplyRepository implements ApplyRepository {
 
     for (final row in catDocs) {
       final doc = row['document_master'];
+      final isReq = (row['is_required'] as bool?) ?? true;
       if (doc != null && doc is Map<String, dynamic>) {
         final dm = DocumentMaster.fromJson(doc);
         if (dm.isActive) {
+          final existing = docMap[dm.id];
           docMap[dm.id] = DocumentMaster(
             id: dm.id,
             documentCode: dm.documentCode,
             documentName: dm.documentName,
             description: dm.description,
             isActive: dm.isActive,
-            sources: <String>{...docMap[dm.id]?.sources ?? const <String>[], 'category'}.toList(),
+            isRequired: existing?.isRequired ?? isReq,
+            sources: <String>{...existing?.sources ?? const <String>[], 'category'}.toList(),
           );
         }
       }
@@ -111,16 +115,19 @@ class SupabaseApplyRepository implements ApplyRepository {
 
     for (final row in ctDocs) {
       final doc = row['document_master'];
+      final isReq = (row['is_required'] as bool?) ?? true;
       if (doc != null && doc is Map<String, dynamic>) {
         final dm = DocumentMaster.fromJson(doc);
         if (dm.isActive) {
+          final existing = docMap[dm.id];
           docMap[dm.id] = DocumentMaster(
             id: dm.id,
             documentCode: dm.documentCode,
             documentName: dm.documentName,
             description: dm.description,
             isActive: dm.isActive,
-            sources: <String>{...docMap[dm.id]?.sources ?? const <String>[], 'case_type'}.toList(),
+            isRequired: (existing?.isRequired ?? false) || isReq,
+            sources: <String>{...existing?.sources ?? const <String>[], 'case_type'}.toList(),
           );
         }
       }

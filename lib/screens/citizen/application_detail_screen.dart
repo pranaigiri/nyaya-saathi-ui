@@ -8,6 +8,8 @@ import '../../core/utils/district_helper.dart';
 import '../../data/repositories/application_repository.dart';
 import '../../models/legal_aid_application.dart';
 import '../../widgets/status_badge.dart';
+import '../../core/utils/string_extensions.dart';
+import '../../core/utils/number_extensions.dart';
 
 class ApplicationDetailScreen extends StatefulWidget {
   final LegalAidApplication? application;
@@ -243,7 +245,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
 • Applicant: ${app.applicantFullName}
 • District: $districtName
 • Status: $statusFormatted
-• Category: ${app.categoryName ?? 'Legal Aid'}
+• Category: ${app.categoryName.orPlaceholder('Legal Aid')}
 • Filed Date: ${_formatDateOnly(app.createdAt)}
 ${app.assignedAdvocateName != null ? '• Advocate: ${app.assignedAdvocateName}\n' : ''}
 Track application updates live on Nyaya Saathi App.
@@ -263,27 +265,31 @@ For helpline support, dial 15100 (Toll-Free).
         ? _application!.trackingNumber
         : (_application?.id.substring(0, 8) ?? 'Details');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Case #$trackingDisplay',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+    return Title(
+      title: 'Application Details — Nyaya Saathi',
+      color: AppColors.primaryBlue,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Case #$trackingDisplay',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
+          actions: [
+            if (_application != null)
+              IconButton(
+                icon: const Icon(Icons.share_rounded, size: 20),
+                tooltip: 'Share Application',
+                onPressed: () => _shareApplication(_application!),
+              ),
+            const SizedBox(width: 4),
+          ],
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (_application != null)
-            IconButton(
-              icon: const Icon(Icons.share_rounded, size: 20),
-              tooltip: 'Share Application',
-              onPressed: () => _shareApplication(_application!),
-            ),
-          const SizedBox(width: 4),
-        ],
+        body: _buildBody(isDark, bottomInset),
       ),
-      body: _buildBody(isDark, bottomInset),
     );
   }
 
@@ -417,11 +423,16 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
                 _buildRow(
                   "Village / Town",
-                  applicant.villageOrTown.isNotEmpty
+                  applicant.villageOrTown.isUsable
                       ? applicant.villageOrTown
-                      : (application.villageOrTown ?? 'N/A'),
+                      : application.villageOrTown.orPlaceholder('N/A'),
                 ),
-                _buildRow("District", resolvedDistrict),
+                _buildRow(
+                  "District",
+                  application.isForwarded
+                      ? "${application.currentDistrictName ?? resolvedDistrict} (Transferred from ${application.applicantDistrictName ?? resolvedDistrict})"
+                      : (application.currentDistrictName ?? resolvedDistrict),
+                ),
                 _buildRow(
                   "Phone Number",
                   applicant.phoneNumber.isNotEmpty
@@ -477,7 +488,7 @@ For helpline support, dial 15100 (Toll-Free).
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Hero Header Tracking Card (Overflow-free & Responsive)
+  // Hero Header Tracking Card (Clean Elevation & Hierarchy)
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildHeroTrackingCard(
     LegalAidApplication application,
@@ -492,74 +503,125 @@ For helpline support, dial 15100 (Toll-Free).
 
     final categoryText = application.categoryName ?? 'Legal Aid';
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface1 : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFE2E8F0),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Label + Status Badge (Protected with Expanded)
+          // Row 1: Header Category Label + Status Badge
           Row(
             children: [
-              const Expanded(
-                child: Text(
-                  "TRACKING NO.",
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primaryBlue)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 13,
+                      color: isDark ? AppColors.darkPrimary : AppColors.primaryBlue,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      "CASE TRACKING",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primaryBlue,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const Spacer(),
               StatusBadge(status: application.status),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          // Row 2: Prominent Tracking ID with inline Copy button
+          // Row 2: Prominent Tracking ID Container with Elevated Surface
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(
-              left: 14,
-              right: 6,
-              top: 6,
-              bottom: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              color: isDark ? AppColors.darkSurface2 : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isDark ? AppColors.borderDark : const Color(0xFFCBD5E1),
+                color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
               ),
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: SelectableText(
-                    trackingId,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16.5,
-                      letterSpacing: 1.0,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "TRACKING ID",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SelectableText(
+                        trackingId,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16.5,
+                          letterSpacing: 1.0,
+                          color: isDark
+                              ? AppColors.skyBlue
+                              : AppColors.primaryDark,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Material(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primaryBlue)
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(8),
                     onTap: () =>
                         _copyToClipboard(context, trackingId, "Tracking ID"),
-                    child: const Padding(
-                      padding: EdgeInsets.all(7),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
                       child: Icon(
                         Icons.copy_rounded,
-                        size: 16,
-                        color: AppColors.primaryBlue,
+                        size: 17,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primaryBlue,
                       ),
                     ),
                   ),
@@ -567,22 +629,24 @@ For helpline support, dial 15100 (Toll-Free).
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // Row 3: Date Applied & District in a single row (above the divider)
+          // Row 3: Date Applied & District SLSA
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.calendar_today_rounded,
-                size: 14,
-                color: AppColors.textSecondaryLight,
+                size: 13.5,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  _formatDateOnly(application.createdAt),
+                  "Filed: ${_formatDateOnly(application.createdAt)}",
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: isDark
                         ? AppColors.textSecondaryDark
@@ -591,17 +655,19 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
               ),
               const SizedBox(width: 16),
-              const Icon(
+              Icon(
                 Icons.location_on_rounded,
-                size: 14,
-                color: AppColors.textSecondaryLight,
+                size: 13.5,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  resolvedDistrict,
+                  application.currentDistrictName ?? resolvedDistrict,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: isDark
                         ? AppColors.textSecondaryDark
@@ -609,10 +675,36 @@ For helpline support, dial 15100 (Toll-Free).
                   ),
                 ),
               ),
+              if (application.isForwarded) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (isDark ? AppColors.amberGold : AppColors.warningOrange)
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: (isDark ? AppColors.amberGold : AppColors.warningOrange)
+                          .withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Text(
+                    "Transferred",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppColors.amberGold : AppColors.warningOrange,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFF1F5F9),
+          ),
           const SizedBox(height: 12),
 
           // Row 4: Legal Aid Category & Case Type badges
@@ -623,7 +715,7 @@ For helpline support, dial 15100 (Toll-Free).
               _buildInfoBadge(
                 icon: Icons.category_rounded,
                 label: categoryText,
-                color: AppColors.successGreen,
+                color: isDark ? AppColors.mintGreen : AppColors.successGreen,
                 isDark: isDark,
               ),
               if (application.caseTypeName != null &&
@@ -631,7 +723,7 @@ For helpline support, dial 15100 (Toll-Free).
                 _buildInfoBadge(
                   icon: Icons.gavel_rounded,
                   label: application.caseTypeName!,
-                  color: AppColors.primaryBlue,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primaryBlue,
                   isDark: isDark,
                 ),
             ],
@@ -650,9 +742,9 @@ For helpline support, dial 15100 (Toll-Free).
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: isDark ? 0.15 : 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.35 : 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -683,15 +775,15 @@ For helpline support, dial 15100 (Toll-Free).
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: isDark ? AppColors.darkSurface1 : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
-          width: 1.2,
+          color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFE2E8F0),
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -700,30 +792,31 @@ For helpline support, dial 15100 (Toll-Free).
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline Header (Protected with Expanded)
+          // Timeline Header
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primaryBlue)
+                      .withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.route_rounded,
                   size: 16,
-                  color: AppColors.primaryBlue,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primaryBlue,
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   "STATUS PROGRESS & TIMELINE",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12.5,
                     letterSpacing: 0.5,
-                    color: AppColors.primaryBlue,
+                    color: isDark ? AppColors.skyBlue : AppColors.primaryBlue,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -736,26 +829,43 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // ── Lifecycle Stepper Progress Bar (Milestones with Animated Glow) ──
-          // RepaintBoundary isolates the per-frame glow animation repaints so
-          // the rest of the timeline card is not repainted every frame.
-          RepaintBoundary(child: _buildMilestoneTracker(application.status, isDark)),
+          RepaintBoundary(
+            child: _buildMilestoneTracker(application.status, isDark),
+          ),
           const SizedBox(height: 20),
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFF1F5F9),
+          ),
           const SizedBox(height: 16),
 
           // ── Detailed Event Log (Vertical Track) ───────────────────
-          const Text(
-            "Activity & Status History Log",
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textSecondaryLight,
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.history_toggle_off_rounded,
+                size: 14,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                "Activity & Status History Log",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           if (_statusHistory.isEmpty) ...[
             _buildSingleHistoryNode(
@@ -837,6 +947,13 @@ For helpline support, dial 15100 (Toll-Free).
       {'title': 'Resolved', 'icon': Icons.verified_rounded},
     ];
 
+    final successCol = isDark ? AppColors.mintGreen : AppColors.successGreen;
+    final activeCol = isDark ? AppColors.darkPrimary : AppColors.primaryBlue;
+    final upcomingNodeCol = isDark ? AppColors.darkSurface2 : const Color(0xFFF1F5F9);
+    final upcomingBorderCol = isDark ? AppColors.darkSurface3 : const Color(0xFFCBD5E1);
+    final upcomingLineCol = isDark ? AppColors.darkSurface3 : const Color(0xFFE2E8F0);
+    final upcomingIconCol = isDark ? AppColors.textSecondaryDark : const Color(0xFF94A3B8);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return Row(
@@ -849,25 +966,28 @@ For helpline support, dial 15100 (Toll-Free).
                 stageIndex == currentStage && !isRejected && !isWithdrawn;
             Color nodeColor;
             Color iconColor;
+            Color borderColor;
+
             if (isCompleted) {
-              nodeColor = AppColors.successGreen;
+              nodeColor = successCol;
+              borderColor = successCol;
               iconColor = Colors.white;
             } else if (isCurrent) {
-              nodeColor = AppColors.primaryBlue;
+              nodeColor = activeCol;
+              borderColor = Colors.white;
               iconColor = Colors.white;
             } else if (isRejected && stageIndex == currentStage) {
-              nodeColor = AppColors.dangerRed;
+              nodeColor = isDark ? AppColors.roseRed : AppColors.dangerRed;
+              borderColor = Colors.white;
               iconColor = Colors.white;
             } else if (isWithdrawn && stageIndex == currentStage) {
               nodeColor = Colors.blueGrey;
+              borderColor = Colors.white;
               iconColor = Colors.white;
             } else {
-              nodeColor = isDark
-                  ? const Color(0xFF1E293B)
-                  : const Color(0xFFE2E8F0);
-              iconColor = isDark
-                  ? Colors.blueGrey.shade400
-                  : Colors.blueGrey.shade400;
+              nodeColor = upcomingNodeCol;
+              borderColor = upcomingBorderCol;
+              iconColor = upcomingIconCol;
             }
 
             return Expanded(
@@ -875,7 +995,7 @@ For helpline support, dial 15100 (Toll-Free).
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    height: 32,
+                    height: 34,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
@@ -885,49 +1005,45 @@ For helpline support, dial 15100 (Toll-Free).
                             children: [
                               Expanded(
                                 child: Container(
-                                  height: 2.5,
+                                  height: 3.0,
                                   color: idx == 0
                                       ? Colors.transparent
                                       : (stageIndex <= currentStage
-                                            ? AppColors.successGreen
-                                            : (isDark
-                                                  ? Colors.white12
-                                                  : const Color(0xFFE2E8F0))),
+                                            ? successCol
+                                            : upcomingLineCol),
                                 ),
                               ),
                               Expanded(
                                 child: Container(
-                                  height: 2.5,
+                                  height: 3.0,
                                   color: idx == stages.length - 1
                                       ? Colors.transparent
                                       : (stageIndex < currentStage
-                                            ? AppColors.successGreen
-                                            : (isDark
-                                                  ? Colors.white12
-                                                  : const Color(0xFFE2E8F0))),
+                                            ? successCol
+                                            : upcomingLineCol),
                                 ),
                               ),
                             ],
                           ),
                         ),
 
-                        // 2. Animated Glow Shadow (behind the node bubble)
+                        // 2. Animated Glow Shadow (behind the active node bubble)
                         if (isCurrent)
                           AnimatedBuilder(
                             animation: _glowController,
                             builder: (context, child) {
                               final glowVal = _glowController.value;
                               return Container(
-                                width: 32,
-                                height: 32,
+                                width: 34,
+                                height: 34,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.primaryBlue.withValues(
-                                        alpha: 0.3 + 0.35 * glowVal,
+                                      color: activeCol.withValues(
+                                        alpha: 0.35 + 0.35 * glowVal,
                                       ),
-                                      blurRadius: 6 + 8 * glowVal,
+                                      blurRadius: 8 + 8 * glowVal,
                                       spreadRadius: 1 + 2.5 * glowVal,
                                     ),
                                   ],
@@ -939,13 +1055,13 @@ For helpline support, dial 15100 (Toll-Free).
                         // 3. Node Bubble
                         isCurrent
                             ? Container(
-                                width: 32,
-                                height: 32,
+                                width: 34,
+                                height: 34,
                                 decoration: BoxDecoration(
                                   color: nodeColor,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: borderColor,
                                     width: 2,
                                   ),
                                 ),
@@ -964,9 +1080,7 @@ For helpline support, dial 15100 (Toll-Free).
                                   color: nodeColor,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isCompleted
-                                        ? AppColors.successGreen
-                                        : Colors.transparent,
+                                    color: borderColor,
                                     width: 1.5,
                                   ),
                                 ),
@@ -988,14 +1102,14 @@ For helpline support, dial 15100 (Toll-Free).
                     stages[idx]['title'] as String,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 10.5,
                       fontWeight: (isCurrent || isCompleted)
                           ? FontWeight.bold
                           : FontWeight.w500,
                       color: isCurrent
-                          ? AppColors.primaryBlue
+                          ? activeCol
                           : (isCompleted
-                                ? AppColors.successGreen
+                                ? successCol
                                 : (isDark
                                       ? AppColors.textSecondaryDark
                                       : AppColors.textSecondaryLight)),
@@ -1012,7 +1126,7 @@ For helpline support, dial 15100 (Toll-Free).
     );
   }
 
-  // ── Single Vertical Track Node ────────────────────────────────────────────
+  // ── Single Vertical Track Node (Continuous Rail) ───────────────────────────
   Widget _buildSingleHistoryNode({
     required String title,
     required String statusKey,
@@ -1022,24 +1136,24 @@ For helpline support, dial 15100 (Toll-Free).
     required bool isLast,
     required bool isDark,
   }) {
-    Color statusColor = AppColors.primaryBlue;
+    Color statusColor = isDark ? AppColors.darkPrimary : AppColors.primaryBlue;
     IconData statusIcon = Icons.update_rounded;
 
     final key = statusKey.toUpperCase();
     if (key.contains('SUBMITTED')) {
-      statusColor = AppColors.primaryBlue;
+      statusColor = isDark ? AppColors.skyBlue : AppColors.primaryBlue;
       statusIcon = Icons.assignment_turned_in_rounded;
     } else if (key.contains('REVIEW') || key.contains('SCRUTINY')) {
-      statusColor = const Color(0xFFF59E0B);
+      statusColor = isDark ? AppColors.amberGold : const Color(0xFFF59E0B);
       statusIcon = Icons.fact_check_rounded;
     } else if (key.contains('ADVOCATE') || key.contains('ASSIGNED')) {
-      statusColor = AppColors.successGreen;
+      statusColor = isDark ? AppColors.mintGreen : AppColors.successGreen;
       statusIcon = Icons.shield_rounded;
     } else if (key.contains('RESOLVED') || key.contains('COMPLETED')) {
-      statusColor = const Color(0xFF10B981);
+      statusColor = isDark ? AppColors.mintGreen : const Color(0xFF10B981);
       statusIcon = Icons.verified_rounded;
     } else if (key.contains('REJECTED')) {
-      statusColor = AppColors.dangerRed;
+      statusColor = isDark ? AppColors.roseRed : AppColors.dangerRed;
       statusIcon = Icons.cancel_rounded;
     } else if (key.contains('WITHDRAWN')) {
       statusColor = Colors.blueGrey;
@@ -1050,26 +1164,38 @@ For helpline support, dial 15100 (Toll-Free).
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left track with node icon + vertical connector
+          // Left track with node bullet + vertical rail line
           Column(
             children: [
               Container(
-                width: 28,
-                height: 28,
+                width: isFirst ? 26 : 20,
+                height: isFirst ? 26 : 20,
+                margin: EdgeInsets.only(top: isFirst ? 0 : 3),
                 decoration: BoxDecoration(
                   color: isFirst
                       ? statusColor
-                      : statusColor.withValues(alpha: 0.15),
+                      : statusColor.withValues(alpha: isDark ? 0.2 : 0.15),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: statusColor,
                     width: isFirst ? 2 : 1.5,
                   ),
                 ),
-                child: Icon(
-                  statusIcon,
-                  size: 14,
-                  color: isFirst ? Colors.white : statusColor,
+                child: Center(
+                  child: isFirst
+                      ? Icon(
+                          statusIcon,
+                          size: 13,
+                          color: Colors.white,
+                        )
+                      : Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                 ),
               ),
               if (!isLast)
@@ -1077,31 +1203,30 @@ For helpline support, dial 15100 (Toll-Free).
                   child: Container(
                     width: 2,
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    color: isDark ? Colors.white12 : const Color(0xFFCBD5E1),
+                    color: isDark ? AppColors.borderDark : const Color(0xFFCBD5E1),
                   ),
                 ),
             ],
           ),
           const SizedBox(width: 14),
 
-          // Right Content Box
+          // Right Content: Sleek timeline typography (no heavy outer card box)
           Expanded(
             child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isFirst
-                      ? statusColor.withValues(alpha: 0.3)
-                      : (isDark
-                            ? AppColors.borderDark
-                            : const Color(0xFFE2E8F0)),
-                ),
-              ),
+              margin: const EdgeInsets.only(bottom: 18),
+              padding: isFirst ? const EdgeInsets.all(12) : const EdgeInsets.only(bottom: 4),
+              decoration: isFirst
+                  ? BoxDecoration(
+                      color: isDark ? AppColors.darkSurface2 : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? statusColor.withValues(alpha: 0.35)
+                            : const Color(0xFFE2E8F0),
+                        width: 1.0,
+                      ),
+                    )
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1117,7 +1242,7 @@ For helpline support, dial 15100 (Toll-Free).
                             color: isFirst
                                 ? statusColor
                                 : (isDark
-                                      ? Colors.white
+                                      ? AppColors.textPrimaryDark
                                       : AppColors.primaryDark),
                           ),
                         ),
@@ -1143,20 +1268,24 @@ For helpline support, dial 15100 (Toll-Free).
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.access_time_rounded,
                         size: 12,
-                        color: AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         dateTime,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.textSecondaryLight,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                       ),
                     ],
@@ -1170,12 +1299,12 @@ For helpline support, dial 15100 (Toll-Free).
                       ),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF0F172A)
+                            ? AppColors.darkSurface3
                             : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isDark
-                              ? Colors.white10
+                              ? AppColors.borderDarkSubtle
                               : const Color(0xFFBFDBFE),
                           width: 0.8,
                         ),
@@ -1187,7 +1316,7 @@ For helpline support, dial 15100 (Toll-Free).
                             Icons.chat_bubble_outline_rounded,
                             size: 13,
                             color: isDark
-                                ? Colors.blue.shade300
+                                ? AppColors.skyBlue
                                 : AppColors.primaryBlue,
                           ),
                           const SizedBox(width: 6),
@@ -1198,7 +1327,7 @@ For helpline support, dial 15100 (Toll-Free).
                                 fontSize: 11.5,
                                 height: 1.35,
                                 color: isDark
-                                    ? Colors.blue.shade100
+                                    ? AppColors.textPrimaryDark
                                     : const Color(0xFF1E3A8A),
                               ),
                             ),
@@ -1248,8 +1377,7 @@ For helpline support, dial 15100 (Toll-Free).
     final advocate = application.assignedAdvocate;
     final String advocateName =
         advocate?.fullName ??
-        application.assignedAdvocateName ??
-        'Assigned Panel Advocate';
+        application.assignedAdvocateName.orPlaceholder('Assigned Panel Advocate');
     final String enrollmentNumber =
         advocate?.enrollmentNumber.isNotEmpty == true
         ? advocate!.enrollmentNumber
@@ -1270,18 +1398,20 @@ For helpline support, dial 15100 (Toll-Free).
               ? nameParts[0][0].toUpperCase()
               : 'A');
 
+    final accentCol = isDark ? AppColors.mintGreen : AppColors.successGreen;
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: isDark ? AppColors.darkSurface2 : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.successGreen.withValues(alpha: isDark ? 0.4 : 0.6),
+          color: accentCol.withValues(alpha: isDark ? 0.35 : 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.successGreen.withValues(alpha: 0.08),
-            blurRadius: 14,
+            color: accentCol.withValues(alpha: isDark ? 0.08 : 0.08),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -1289,12 +1419,11 @@ For helpline support, dial 15100 (Toll-Free).
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Banner: Distinctive Accent Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.successGreen.withValues(
-                alpha: isDark ? 0.2 : 0.1,
-              ),
+              color: accentCol.withValues(alpha: isDark ? 0.18 : 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(17),
                 topRight: Radius.circular(17),
@@ -1302,40 +1431,25 @@ For helpline support, dial 15100 (Toll-Free).
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.shield_rounded,
-                  color: AppColors.successGreen,
-                  size: 20,
+                  color: accentCol,
+                  size: 19,
                 ),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
                     "ASSIGNED LEGAL AID ADVOCATE",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                       fontSize: 12,
-                      letterSpacing: 0.5,
-                      color: AppColors.successGreen,
+                      letterSpacing: 0.6,
+                      color: accentCol,
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.successGreen,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    "Free Legal Aid",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                AdvocateAcceptanceBadge(
+                  status: application.advocateAcceptanceStatus,
                 ),
               ],
             ),
@@ -1346,20 +1460,24 @@ For helpline support, dial 15100 (Toll-Free).
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Advocate Profile Row
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
-                      radius: 26,
-                      backgroundColor: AppColors.primaryBlue.withValues(
-                        alpha: isDark ? 0.3 : 0.15,
-                      ),
+                      radius: 28,
+                      backgroundColor: (isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primaryBlue)
+                          .withValues(alpha: isDark ? 0.25 : 0.12),
                       child: Text(
                         initials,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: 19,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
+                          color: isDark
+                              ? AppColors.skyBlue
+                              : AppColors.primaryBlue,
                         ),
                       ),
                     ),
@@ -1374,48 +1492,98 @@ For helpline support, dial 15100 (Toll-Free).
                                 : "Adv. $advocateName",
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 16.5,
                             ),
                           ),
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.badge_outlined,
-                                size: 14,
-                                color: AppColors.textSecondaryLight,
+                                size: 13.5,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 5),
                               Expanded(
                                 child: Text(
                                   "Bar Reg: $enrollmentNumber",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.textSecondaryLight,
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                          if (experience > 0) ...[
-                            const SizedBox(height: 2),
+                          if (application.assignedAt != null &&
+                              application.assignedAt!.isNotEmpty) ...[
+                            const SizedBox(height: 3),
                             Row(
                               children: [
-                                const Icon(
-                                  Icons.workspace_premium_outlined,
-                                  size: 14,
-                                  color: AppColors.textSecondaryLight,
+                                Icon(
+                                  Icons.event_available_rounded,
+                                  size: 13.5,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "$experience Years Bar Experience",
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondaryLight,
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    "Assigned: ${_formatDateOnly(application.assignedAt)}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondaryLight,
+                                    ),
                                   ),
                                 ),
                               ],
+                            ),
+                          ],
+                          if (experience > 0) ...[
+                            const SizedBox(height: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (isDark
+                                        ? AppColors.amberGold
+                                        : AppColors.accentGold)
+                                    .withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.workspace_premium_rounded,
+                                    size: 13,
+                                    color: isDark
+                                        ? AppColors.amberGold
+                                        : AppColors.accentGold,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "${experience.humanizedCount()} Years Bar Experience",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? AppColors.amberGold
+                                          : AppColors.accentGold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ],
@@ -1425,130 +1593,40 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
 
                 const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 14),
 
-                const Text(
-                  "Connect with your Advocate",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryBlue,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Primary Phone
-                if (primaryPhone != null && primaryPhone.isNotEmpty)
-                  _buildAdvocateContactRow(
-                    context: context,
-                    icon: Icons.phone_rounded,
-                    iconColor: AppColors.successGreen,
-                    title: "Primary Phone",
-                    value: primaryPhone,
-                    copyValue: primaryPhone,
-                    copyLabel: "Phone number",
-                    isDark: isDark,
-                  )
-                else
-                  _buildAdvocateContactRow(
-                    context: context,
-                    icon: Icons.phone_rounded,
-                    iconColor: AppColors.textSecondaryLight,
-                    title: "Advocate Phone",
-                    value: "Available via SLSA Helpline (15100)",
-                    copyValue: "15100",
-                    copyLabel: "SLSA Helpline",
-                    isDark: isDark,
-                  ),
-
-                // Secondary Phone
-                if (secondaryPhone != null && secondaryPhone.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildAdvocateContactRow(
-                    context: context,
-                    icon: Icons.phone_android_rounded,
-                    iconColor: AppColors.primaryBlue,
-                    title: "Alternate Phone",
-                    value: secondaryPhone,
-                    copyValue: secondaryPhone,
-                    copyLabel: "Alternate phone number",
-                    isDark: isDark,
-                  ),
-                ],
-
-                // Email
-                if (email != null && email.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildAdvocateContactRow(
-                    context: context,
-                    icon: Icons.email_outlined,
-                    iconColor: Colors.deepOrange,
-                    title: "Email Address",
-                    value: email,
-                    copyValue: email,
-                    copyLabel: "Email address",
-                    isDark: isDark,
-                  ),
-                ],
-
-                // Office Address
-                if (officeAddress != null && officeAddress.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildAdvocateContactRow(
-                    context: context,
-                    icon: Icons.location_on_outlined,
-                    iconColor: Colors.purple,
-                    title: "Chamber / Office Address",
-                    value: officeAddress,
-                    copyValue: officeAddress,
-                    copyLabel: "Office address",
-                    isDark: isDark,
-                  ),
-                ],
-
-                const SizedBox(height: 14),
-
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.blue.withValues(alpha: 0.1)
-                        : const Color(0xFFF0F7FF),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Colors.blue.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: AppColors.primaryBlue,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "Advocate consultation under Sikkim SLSA is 100% free of charge. Please quote your Tracking No. (#${application.trackingNumber.isNotEmpty ? application.trackingNumber : application.id.substring(0, 8)}) when calling.",
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            height: 1.4,
-                            color: isDark
-                                ? Colors.blue.shade100
-                                : const Color(0xFF1E3A8A),
+                // ── Direct High-Priority Quick Action Buttons ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final phone = primaryPhone ?? "15100";
+                          _copyToClipboard(
+                            context,
+                            phone,
+                            primaryPhone != null ? "Phone number" : "SLSA Helpline",
+                          );
+                        },
+                        icon: const Icon(Icons.phone_rounded, size: 16),
+                        label: Text(
+                          primaryPhone != null ? "Call Advocate" : "Call Helpline",
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentCol,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                Row(
-                  children: [
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
@@ -1567,38 +1645,190 @@ For helpline support, dial 15100 (Toll-Free).
                         icon: const Icon(Icons.copy_rounded, size: 15),
                         label: const Text(
                           "Copy Details",
-                          style: TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                         ),
                         style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showAdvocateChangeDialog(context),
-                        icon: const Icon(Icons.swap_horiz, size: 16),
-                        label: const Text(
-                          "Change Request",
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          foregroundColor: isDark
-                              ? Colors.amber.shade300
-                              : Colors.amber.shade900,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           side: BorderSide(
                             color: isDark
-                                ? Colors.amber.withValues(alpha: 0.4)
-                                : Colors.amber.shade300,
+                                ? AppColors.borderDark
+                                : const Color(0xFFCBD5E1),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 16),
+                Divider(
+                  height: 1,
+                  color: isDark
+                      ? AppColors.borderDarkSubtle
+                      : const Color(0xFFF1F5F9),
+                ),
+                const SizedBox(height: 14),
+
+                Text(
+                  "Connect with your Advocate",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppColors.skyBlue
+                        : AppColors.primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Primary Phone
+                if (primaryPhone != null && primaryPhone.isNotEmpty)
+                  _buildAdvocateContactRow(
+                    context: context,
+                    icon: Icons.phone_rounded,
+                    iconColor: accentCol,
+                    title: "Primary Phone",
+                    value: primaryPhone,
+                    copyValue: primaryPhone,
+                    copyLabel: "Phone number",
+                    isDark: isDark,
+                  )
+                else
+                  _buildAdvocateContactRow(
+                    context: context,
+                    icon: Icons.phone_rounded,
+                    iconColor: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    title: "Advocate Phone",
+                    value: "Available via SLSA Helpline (15100)",
+                    copyValue: "15100",
+                    copyLabel: "SLSA Helpline",
+                    isDark: isDark,
+                  ),
+
+                // Secondary Phone
+                if (secondaryPhone != null && secondaryPhone.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildAdvocateContactRow(
+                    context: context,
+                    icon: Icons.phone_android_rounded,
+                    iconColor: isDark
+                        ? AppColors.darkPrimary
+                        : AppColors.primaryBlue,
+                    title: "Alternate Phone",
+                    value: secondaryPhone,
+                    copyValue: secondaryPhone,
+                    copyLabel: "Alternate phone number",
+                    isDark: isDark,
+                  ),
+                ],
+
+                // Email
+                if (email != null && email.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildAdvocateContactRow(
+                    context: context,
+                    icon: Icons.email_outlined,
+                    iconColor: isDark
+                        ? AppColors.coralOrange
+                        : Colors.deepOrange,
+                    title: "Email Address",
+                    value: email,
+                    copyValue: email,
+                    copyLabel: "Email address",
+                    isDark: isDark,
+                  ),
+                ],
+
+                // Office Address
+                if (officeAddress != null && officeAddress.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildAdvocateContactRow(
+                    context: context,
+                    icon: Icons.location_on_outlined,
+                    iconColor: isDark
+                        ? const Color(0xFFA78BFA)
+                        : Colors.purple,
+                    title: "Chamber / Office Address",
+                    value: officeAddress,
+                    copyValue: officeAddress,
+                    copyLabel: "Office address",
+                    isDark: isDark,
+                  ),
+                ],
+
+                const SizedBox(height: 14),
+
+                // Free consultation notice callout
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.darkSurface3
+                        : const Color(0xFFF0F7FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark
+                          ? AppColors.borderDarkSubtle
+                          : const Color(0xFFBFDBFE),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: isDark
+                            ? AppColors.skyBlue
+                            : AppColors.primaryBlue,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Advocate consultation under Sikkim SLSA is 100% free of charge. Please quote your Tracking No. (#${application.trackingNumber.isNotEmpty ? application.trackingNumber : application.id.substring(0, 8)}) when calling.",
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF1E3A8A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Change Request button
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _showAdvocateChangeDialog(context),
+                    icon: Icon(
+                      Icons.swap_horiz,
+                      size: 15,
+                      color: isDark
+                          ? AppColors.amberGold
+                          : Colors.amber.shade900,
+                    ),
+                    label: Text(
+                      "Request Advocate Change",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.amberGold
+                            : Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1613,17 +1843,19 @@ For helpline support, dial 15100 (Toll-Free).
     LegalAidApplication application,
     bool isDark,
   ) {
+    final amberCol = isDark ? AppColors.amberGold : Colors.amber.shade700;
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: isDark ? AppColors.darkSurface2 : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.amber.shade600.withValues(alpha: isDark ? 0.4 : 0.5),
+          color: amberCol.withValues(alpha: isDark ? 0.4 : 0.5),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.amber.withValues(alpha: 0.08),
+            color: amberCol.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1635,7 +1867,7 @@ For helpline support, dial 15100 (Toll-Free).
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
+              color: amberCol.withValues(alpha: isDark ? 0.2 : 0.12),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(17),
                 topRight: Radius.circular(17),
@@ -1645,7 +1877,7 @@ For helpline support, dial 15100 (Toll-Free).
               children: [
                 Icon(
                   Icons.hourglass_top_rounded,
-                  color: Colors.amber.shade700,
+                  color: amberCol,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -1656,7 +1888,7 @@ For helpline support, dial 15100 (Toll-Free).
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       letterSpacing: 0.5,
-                      color: Colors.amber.shade800,
+                      color: amberCol,
                     ),
                   ),
                 ),
@@ -1666,7 +1898,7 @@ For helpline support, dial 15100 (Toll-Free).
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.amber.shade700,
+                    color: amberCol,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
@@ -1693,35 +1925,37 @@ For helpline support, dial 15100 (Toll-Free).
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(
+                        color: amberCol.withValues(
                           alpha: isDark ? 0.2 : 0.1,
                         ),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.assignment_ind_outlined,
-                        color: Colors.amber.shade700,
+                        color: amberCol,
                         size: 28,
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             "Panel Advocate Allocation in Progress",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             "Your application has been approved for free legal aid. The Sikkim State Legal Services Authority (SLSA) is assigning a designated panel advocate to your case.",
                             style: TextStyle(
                               fontSize: 12.5,
-                              color: AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                               height: 1.4,
                             ),
                           ),
@@ -1731,7 +1965,12 @@ For helpline support, dial 15100 (Toll-Free).
                   ],
                 ),
                 const SizedBox(height: 14),
-                const Divider(height: 1),
+                Divider(
+                  height: 1,
+                  color: isDark
+                      ? AppColors.borderDarkSubtle
+                      : const Color(0xFFF1F5F9),
+                ),
                 const SizedBox(height: 12),
 
                 _buildFallbackBullet(
@@ -1754,40 +1993,44 @@ For helpline support, dial 15100 (Toll-Free).
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? AppColors.darkSurface
+                        ? AppColors.darkSurface3
                         : const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isDark
-                          ? AppColors.borderDark
+                          ? AppColors.borderDarkSubtle
                           : AppColors.borderLight,
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(
                         Icons.support_agent_rounded,
                         size: 20,
-                        color: AppColors.primaryBlue,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primaryBlue,
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               "Need urgent legal assistance?",
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
                               "Call Sikkim SLSA Helpline: 15100 (Toll-Free) / 03592-202695",
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                             ),
                           ],
@@ -1809,6 +2052,8 @@ For helpline support, dial 15100 (Toll-Free).
                           style: TextStyle(fontSize: 12),
                         ),
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppColors.darkPrimary : AppColors.primaryBlue,
+                          foregroundColor: Colors.white,
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
@@ -1858,11 +2103,11 @@ For helpline support, dial 15100 (Toll-Free).
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.04)
+            ? AppColors.darkSurface3
             : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
+          color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFE2E8F0),
         ),
       ),
       child: Row(
@@ -1875,18 +2120,23 @@ For helpline support, dial 15100 (Toll-Free).
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10.5,
-                    color: AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1894,10 +2144,10 @@ For helpline support, dial 15100 (Toll-Free).
             ),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.copy_rounded,
               size: 16,
-              color: AppColors.primaryBlue,
+              color: isDark ? AppColors.skyBlue : AppColors.primaryBlue,
             ),
             tooltip: "Copy $copyLabel",
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -1917,14 +2167,20 @@ For helpline support, dial 15100 (Toll-Free).
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: Colors.amber.shade700),
+        Icon(
+          icon,
+          size: 15,
+          color: isDark ? AppColors.amberGold : Colors.amber.shade700,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
               height: 1.35,
             ),
           ),
@@ -1934,7 +2190,7 @@ For helpline support, dial 15100 (Toll-Free).
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Reusable Detail Card
+  // Reusable Detail Card & Clean Label/Value Data Grid
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildDetailCard(
     BuildContext context, {
@@ -1946,15 +2202,15 @@ For helpline support, dial 15100 (Toll-Free).
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: isDark ? AppColors.darkSurface1 : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : const Color(0xFFE2E8F0),
-          width: 1.2,
+          color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFE2E8F0),
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1968,27 +2224,37 @@ For helpline support, dial 15100 (Toll-Free).
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primaryBlue)
+                      .withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 16, color: AppColors.primaryBlue),
+                child: Icon(
+                  icon,
+                  size: 16,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primaryBlue,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: 12.5,
                     letterSpacing: 0.5,
-                    color: AppColors.primaryBlue,
+                    color: isDark ? AppColors.skyBlue : AppColors.primaryBlue,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const Divider(height: 24),
+          const SizedBox(height: 14),
+          Divider(
+            height: 1,
+            color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFF1F5F9),
+          ),
+          const SizedBox(height: 14),
           ...children,
         ],
       ),
@@ -1996,33 +2262,74 @@ For helpline support, dial 15100 (Toll-Free).
   }
 
   Widget _buildRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: AppColors.textSecondaryLight,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+    final isLong = value.length > 35;
+    return Builder(
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isLong) ...[
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ] else ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 130,
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -23,6 +23,8 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
 
+  final Set<String> _expandedCaseTypeIds = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +32,24 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
     final draft = Provider.of<DraftProvider>(context, listen: false);
     _grievanceController.text = draft.draft?.summaryOfGrievance ?? '';
     _reliefController.text = draft.draft?.reliefSought ?? '';
+  }
+
+  @override
+  void dispose() {
+    _grievanceController.dispose();
+    _reliefController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpanded(String id) {
+    setState(() {
+      if (_expandedCaseTypeIds.contains(id)) {
+        _expandedCaseTypeIds.remove(id);
+      } else {
+        _expandedCaseTypeIds.add(id);
+      }
+    });
   }
 
   void _saveAndNext() {
@@ -56,11 +76,14 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         final rawList = snapshot.data ?? [];
-        final filteredList = rawList.where((ct) {
+        final sortedList = List<CaseTypeMaster>.from(rawList)
+          ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+        final filteredList = sortedList.where((ct) {
           if (_searchQuery.trim().isEmpty) return true;
           final q = _searchQuery.toLowerCase();
           return ct.caseTypeName.toLowerCase().contains(q) ||
-              ct.caseTypeCode.toLowerCase().contains(q);
+              ct.caseTypeCode.toLowerCase().contains(q) ||
+              (ct.caseTypeDescription?.toLowerCase().contains(q) ?? false);
         }).toList();
 
         return Form(
@@ -117,6 +140,9 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                        ...filteredList.map((ct) {
                          final isSelected = selectedCaseTypeId == ct.id;
                          final iconData = Provider.of<ApplyDataProvider>(context, listen: false).resolveIcon(ct.iconUrl ?? ct.iconName);
+                         final hasDescription = ct.caseTypeDescription != null && ct.caseTypeDescription!.trim().isNotEmpty;
+                         final description = ct.caseTypeDescription?.trim() ?? '';
+                         final isExpanded = _expandedCaseTypeIds.contains(ct.id);
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
@@ -137,50 +163,109 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                             },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? AppColors.primaryBlue
-                                          : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      iconData,
-                                      color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          ct.caseTypeName,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: isSelected ? AppColors.primaryBlue : null,
-                                          ),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppColors.primaryBlue
+                                              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+                                          shape: BoxShape.circle,
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          ct.caseTypeCode,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                          ),
+                                        child: Icon(
+                                          iconData,
+                                          color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                          size: 22,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              ct.caseTypeName,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: isSelected ? AppColors.primaryBlue : null,
+                                              ),
+                                            ),
+                                            if (hasDescription) ...[
+                                              const SizedBox(height: 3),
+                                              InkWell(
+                                                borderRadius: BorderRadius.circular(4),
+                                                onTap: () => _toggleExpanded(ct.id),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      isExpanded ? "Show less" : "Tap to learn more",
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: isSelected
+                                                            ? AppColors.primaryBlue
+                                                            : (isDark ? const Color(0xFF93C5FD) : AppColors.primaryBlue),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 3),
+                                                    AnimatedRotation(
+                                                      turns: isExpanded ? 0.5 : 0.0,
+                                                      duration: const Duration(milliseconds: 260),
+                                                      curve: Curves.easeInOutCubic,
+                                                      child: Icon(
+                                                        Icons.keyboard_arrow_down,
+                                                        size: 15,
+                                                        color: isSelected
+                                                            ? AppColors.primaryBlue
+                                                            : (isDark ? const Color(0xFF93C5FD) : AppColors.primaryBlue),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        const Padding(
+                                          padding: EdgeInsets.only(left: 8),
+                                          child: Icon(Icons.check_circle, color: AppColors.primaryBlue, size: 20),
+                                        ),
+                                    ],
                                   ),
-                                  if (isSelected)
-                                    const Padding(
-                                      padding: EdgeInsets.only(left: 8),
-                                      child: Icon(Icons.check_circle, color: AppColors.primaryBlue, size: 20),
+                                  if (hasDescription)
+                                    ClipRect(
+                                      child: AnimatedSize(
+                                        duration: const Duration(milliseconds: 260),
+                                        curve: Curves.easeInOutCubic,
+                                        alignment: Alignment.topCenter,
+                                        child: isExpanded
+                                            ? Padding(
+                                                padding: const EdgeInsets.only(top: 8),
+                                                child: AnimatedOpacity(
+                                                  opacity: isExpanded ? 1.0 : 0.0,
+                                                  duration: const Duration(milliseconds: 220),
+                                                  curve: Curves.easeIn,
+                                                  child: Text(
+                                                    description,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      height: 1.45,
+                                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                            : const SizedBox.shrink(),
+                                      ),
                                     ),
                                 ],
                               ),

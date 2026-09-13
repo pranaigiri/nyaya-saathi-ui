@@ -581,6 +581,7 @@ class _DocumentScannerModalState extends State<DocumentScannerModal>
                       ),
                     ] else ...[
                       GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: _captureAndProceed,
                         child: Container(
                           width: 72,

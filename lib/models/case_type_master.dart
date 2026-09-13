@@ -2,6 +2,7 @@ class CaseTypeMaster {
   final String id;
   final String caseTypeCode;
   final String caseTypeName;
+  final String? caseTypeDescription;
   final String? iconUrl;
   final int displayOrder;
   final bool isActive;
@@ -10,6 +11,7 @@ class CaseTypeMaster {
     required this.id,
     required this.caseTypeCode,
     required this.caseTypeName,
+    this.caseTypeDescription,
     this.iconUrl,
     this.displayOrder = 0,
     this.isActive = true,
@@ -24,7 +26,8 @@ class CaseTypeMaster {
       id: json['id'] ?? '',
       caseTypeCode: json['case_type_code'] ?? '',
       caseTypeName: json['case_type_name'] ?? '',
-      iconUrl: json['icon_url'],
+      caseTypeDescription: json['case_type_description'] as String?,
+      iconUrl: json['icon_url'] as String?,
       displayOrder: json['display_order'] ?? 0,
       isActive: json['is_active'] ?? true,
     );
@@ -34,6 +37,7 @@ class CaseTypeMaster {
     'id': id,
     'case_type_code': caseTypeCode,
     'case_type_name': caseTypeName,
+    if (caseTypeDescription != null) 'case_type_description': caseTypeDescription,
     'icon_url': iconUrl,
     'display_order': displayOrder,
     'is_active': isActive,

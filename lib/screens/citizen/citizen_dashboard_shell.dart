@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/utils/haptics.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/my_applications_tab.dart';
 import 'tabs/notifications_tab.dart';
 import 'tabs/chat_tab.dart';
 import 'profile_screen.dart';
+import '../../widgets/in_app_changelog_dialog.dart';
 
 class CitizenDashboardShell extends StatefulWidget {
   const CitizenDashboardShell({super.key});
@@ -16,17 +18,61 @@ class CitizenDashboardShell extends StatefulWidget {
 
 class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
   int _currentIndex = 0;
-
-  final List<Widget> _tabs = const [
-    HomeTab(),
-    MyApplicationsTab(),
-    NotificationsTab(),
-    ChatTab(),
+  final List<ScrollController> _tabControllers = [
+    ScrollController(),
+    ScrollController(),
+    ScrollController(),
+    ScrollController(),
   ];
+
+  late final List<Widget> _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = [
+      HomeTab(scrollController: _tabControllers[0]),
+      MyApplicationsTab(scrollController: _tabControllers[1]),
+      NotificationsTab(scrollController: _tabControllers[2]),
+      const ChatTab(),
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        InAppChangelogDialog.checkAndShow(context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _tabControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onTabTapped(int index) {
+    if (index == _currentIndex) {
+      final controller = _tabControllers[index];
+      if (controller.hasClients && controller.offset > 0) {
+        controller.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      return;
+    }
+    Haptics.selection();
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Title(
+      title: 'Dashboard — Nyaya Saathi',
+      color: AppColors.primaryBlue,
+      child: Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
@@ -101,7 +147,7 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: _onTabTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: AppColors.textSecondaryLight,
@@ -132,6 +178,7 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
           ),
         ],
       ),
+    ),
     );
   }
 }

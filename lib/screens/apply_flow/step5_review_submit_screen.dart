@@ -5,6 +5,8 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/draft_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'application_success_screen.dart';
+import '../../widgets/bottom_padding.dart';
+import '../../core/utils/number_extensions.dart';
 
 class Step5ReviewSubmitScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -215,7 +217,7 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
       children: [
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, BottomPadding.of(context, minimum: 24)),
             children: [
               const FittedBox(
                 fit: BoxFit.scaleDown,
@@ -273,7 +275,7 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
               // Section 4: Uploaded Documents Summary
               _buildSectionCard(
                 context: context,
-                title: "Uploaded Documents (${draft.documentStoragePaths.length} Attached)",
+                title: "Uploaded Documents (${draft.documentStoragePaths.length.humanizedCount()} Attached)",
                 icon: Icons.folder_open_outlined,
                 children: [
                   if (docs.isEmpty && draft.documentStoragePaths.isEmpty)

@@ -1,4 +1,5 @@
 import 'advocate.dart';
+import 'application_status.dart';
 
 class ApplicantDetailsAdapter {
   final LegalAidApplication _app;
@@ -32,6 +33,7 @@ class LegalAidApplication {
   final String? preferredAdvocateId;
   final String? assignedAdvocateId;
   final String advocateAcceptanceStatus;
+  final String? assignedAt;
   final String status;
   final bool isWithdrawnByCitizen;
   final String? withdrawalReason;
@@ -43,6 +45,8 @@ class LegalAidApplication {
   final String? categoryName;
   final String? caseTypeName;
   final String? districtName;
+  final String? applicantDistrictName;
+  final String? currentDistrictName;
   final String? assignedAdvocateName;
   final Advocate? assignedAdvocate;
 
@@ -64,6 +68,7 @@ class LegalAidApplication {
     this.preferredAdvocateId,
     this.assignedAdvocateId,
     this.advocateAcceptanceStatus = 'NONE',
+    this.assignedAt,
     required this.status,
     this.isWithdrawnByCitizen = false,
     this.withdrawalReason,
@@ -73,9 +78,21 @@ class LegalAidApplication {
     this.categoryName,
     this.caseTypeName,
     this.districtName,
+    this.applicantDistrictName,
+    this.currentDistrictName,
     this.assignedAdvocateName,
     this.assignedAdvocate,
   });
+
+  // Typed status enum getters
+  ApplicationStatus get statusEnum => ApplicationStatus.fromString(status);
+  AdvocateAcceptanceStatus get advocateAcceptanceStatusEnum =>
+      AdvocateAcceptanceStatus.fromString(advocateAcceptanceStatus);
+
+  bool get isForwarded =>
+      applicantDistrictId.isNotEmpty &&
+      currentDistrictId.isNotEmpty &&
+      applicantDistrictId != currentDistrictId;
 
   // Backward-compatibility getters
   String get applicationId => id;
@@ -95,6 +112,16 @@ class LegalAidApplication {
       advocate = Advocate.fromJson(json['assigned_advocate'] as Map<String, dynamic>);
     }
 
+    final applicantDistName = json['applicant_district'] is Map
+        ? json['applicant_district']['district_name']?.toString()
+        : (json['district_master'] is Map
+            ? json['district_master']['district_name']?.toString()
+            : null);
+
+    final currentDistName = json['current_district'] is Map
+        ? json['current_district']['district_name']?.toString()
+        : (applicantDistName ?? json['district_name']?.toString());
+
     return LegalAidApplication(
       id: json['id']?.toString() ?? '',
       trackingNumber: json['tracking_number']?.toString() ?? json['application_number']?.toString() ?? '',
@@ -113,6 +140,7 @@ class LegalAidApplication {
       preferredAdvocateId: json['preferred_advocate_id']?.toString(),
       assignedAdvocateId: json['assigned_advocate_id']?.toString(),
       advocateAcceptanceStatus: json['advocate_acceptance_status']?.toString() ?? 'NONE',
+      assignedAt: json['assigned_at']?.toString(),
       status: json['status']?.toString() ?? json['current_status']?.toString() ?? 'SUBMITTED',
       isWithdrawnByCitizen: json['is_withdrawn_by_citizen'] == true,
       withdrawalReason: json['withdrawal_reason']?.toString(),
@@ -126,11 +154,9 @@ class LegalAidApplication {
       caseTypeName: json['case_type_master'] is Map
           ? json['case_type_master']['case_type_name']?.toString()
           : json['case_type_name']?.toString(),
-      districtName: json['district_master'] is Map
-          ? json['district_master']['district_name']?.toString()
-          : (json['applicant_district'] is Map
-              ? json['applicant_district']['district_name']?.toString()
-              : json['district_name']?.toString()),
+      districtName: currentDistName ?? applicantDistName ?? json['district_name']?.toString(),
+      applicantDistrictName: applicantDistName,
+      currentDistrictName: currentDistName,
       assignedAdvocateName: advocate?.fullName ??
           (json['advocate_master'] is Map
               ? json['advocate_master']['full_name']?.toString()
@@ -157,6 +183,7 @@ class LegalAidApplication {
     String? preferredAdvocateId,
     String? assignedAdvocateId,
     String? advocateAcceptanceStatus,
+    String? assignedAt,
     String? status,
     bool? isWithdrawnByCitizen,
     String? withdrawalReason,
@@ -166,6 +193,8 @@ class LegalAidApplication {
     String? categoryName,
     String? caseTypeName,
     String? districtName,
+    String? applicantDistrictName,
+    String? currentDistrictName,
     String? assignedAdvocateName,
     Advocate? assignedAdvocate,
   }) {
@@ -187,6 +216,7 @@ class LegalAidApplication {
       preferredAdvocateId: preferredAdvocateId ?? this.preferredAdvocateId,
       assignedAdvocateId: assignedAdvocateId ?? this.assignedAdvocateId,
       advocateAcceptanceStatus: advocateAcceptanceStatus ?? this.advocateAcceptanceStatus,
+      assignedAt: assignedAt ?? this.assignedAt,
       status: status ?? this.status,
       isWithdrawnByCitizen: isWithdrawnByCitizen ?? this.isWithdrawnByCitizen,
       withdrawalReason: withdrawalReason ?? this.withdrawalReason,
@@ -196,6 +226,8 @@ class LegalAidApplication {
       categoryName: categoryName ?? this.categoryName,
       caseTypeName: caseTypeName ?? this.caseTypeName,
       districtName: districtName ?? this.districtName,
+      applicantDistrictName: applicantDistrictName ?? this.applicantDistrictName,
+      currentDistrictName: currentDistrictName ?? this.currentDistrictName,
       assignedAdvocateName: assignedAdvocateName ?? this.assignedAdvocateName,
       assignedAdvocate: assignedAdvocate ?? this.assignedAdvocate,
     );
@@ -218,22 +250,5 @@ class LegalAidApplication {
     'tracking_number': '', // Trigger will generate
   };
 
-  String get displayStatus {
-    switch (status) {
-      case 'SUBMITTED':
-        return 'Submitted';
-      case 'UNDER_REVIEW':
-        return 'Under Review';
-      case 'ADVOCATE_ASSIGNED':
-        return 'Advocate Assigned';
-      case 'RESOLVED':
-        return 'Resolved';
-      case 'REJECTED':
-        return 'Rejected';
-      case 'WITHDRAWN':
-        return 'Withdrawn';
-      default:
-        return status;
-    }
-  }
+  String get displayStatus => statusEnum.displayLabel;
 }

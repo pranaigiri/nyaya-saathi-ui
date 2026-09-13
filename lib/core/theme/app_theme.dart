@@ -1,8 +1,42 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
 enum AppFontScale { small, medium, large }
+
+const PageTransitionsTheme appPageTransitionsTheme = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: kIsWeb ? _NoPageTransitionsBuilder() : ZoomPageTransitionsBuilder(),
+    TargetPlatform.iOS: kIsWeb ? _NoPageTransitionsBuilder() : CupertinoPageTransitionsBuilder(),
+    TargetPlatform.macOS: _NoPageTransitionsBuilder(),
+    TargetPlatform.windows: _NoPageTransitionsBuilder(),
+    TargetPlatform.linux: _NoPageTransitionsBuilder(),
+    TargetPlatform.fuchsia: _NoPageTransitionsBuilder(),
+  },
+);
+
+class _NoPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoPageTransitionsBuilder();
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Duration get reverseTransitionDuration => Duration.zero;
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
+  }
+}
 
 class AppTheme {
   static double getScaleFactor(AppFontScale scale) {
@@ -19,6 +53,7 @@ class AppTheme {
   static ThemeData lightTheme(AppFontScale fontScale) {
     final scale = getScaleFactor(fontScale);
     return ThemeData(
+      pageTransitionsTheme: appPageTransitionsTheme,
       useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: AppColors.primaryBlue,
@@ -82,6 +117,11 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2),
         ),
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        selectionColor: AppColors.primaryBlue.withValues(alpha: 0.3),
+        selectionHandleColor: AppColors.primaryBlue,
+        cursorColor: AppColors.primaryBlue,
+      ),
       listTileTheme: const ListTileThemeData(),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -104,15 +144,17 @@ class AppTheme {
   static ThemeData darkTheme(AppFontScale fontScale) {
     final scale = getScaleFactor(fontScale);
     return ThemeData(
+      pageTransitionsTheme: appPageTransitionsTheme,
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: AppColors.primaryBlue,
+      primaryColor: AppColors.darkPrimary,
       scaffoldBackgroundColor: AppColors.darkBg,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryBlue,
-        secondary: AppColors.accentGold,
-        surface: AppColors.darkSurface,
-        error: AppColors.dangerRed,
+        primary: AppColors.darkPrimary,
+        secondary: AppColors.amberGold,
+        surface: AppColors.darkSurface1,
+        surfaceContainerHighest: AppColors.darkSurface2,
+        error: AppColors.roseRed,
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme)
           .copyWith(
@@ -136,20 +178,23 @@ class AppTheme {
             ),
           ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkSurface,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.darkBg,
+        foregroundColor: AppColors.textPrimaryDark,
         elevation: 0,
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkSurface,
-        elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: AppColors.darkSurface1,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.borderDarkSubtle, width: 1),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.darkSurface,
+        fillColor: AppColors.darkSurface2,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -164,15 +209,25 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accentGold, width: 2),
+          borderSide: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
         ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        selectionColor: AppColors.darkPrimary.withValues(alpha: 0.35),
+        selectionHandleColor: AppColors.darkPrimary,
+        cursorColor: AppColors.darkPrimary,
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.borderDarkSubtle,
+        thickness: 0.8,
+        space: 1,
       ),
       listTileTheme: const ListTileThemeData(),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: AppColors.darkPrimary,
           foregroundColor: Colors.white,
-          elevation: 2,
+          elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

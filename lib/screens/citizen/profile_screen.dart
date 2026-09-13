@@ -11,6 +11,8 @@ import '../../providers/apply_data_provider.dart';
 import '../../data/models/district.dart';
 import '../../data/models/gender_option.dart';
 import '../splash/splash_screen.dart';
+import '../../widgets/spring_bottom_sheet.dart';
+import '../../widgets/version_indicator.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -248,6 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   //  DOB Picker Modal
   // ─────────────────────────────────────────────────────────
   void _openDobModal() {
+    FocusManager.instance.primaryFocus?.unfocus();
     int tempYear = _dobYear;
     int tempMonth = _dobMonth;
     int tempDay = _dobDay;
@@ -256,10 +259,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final bgColor = isDark ? AppColors.darkSurface : Colors.white;
 
-    showModalBottomSheet<void>(
+    showSpringBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -451,6 +452,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: EdgeInsets.fromLTRB(20, 16, 20, 48 + MediaQuery.of(context).padding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,6 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Date of Birth
                     _buildFieldLabel("DATE OF BIRTH *", _hasDob),
                     GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: _openDobModal,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -846,6 +849,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              const VersionIndicator(),
             ],
           ),
         ),

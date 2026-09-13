@@ -7,6 +7,7 @@ import '../../providers/draft_provider.dart';
 import '../../providers/apply_data_provider.dart';
 import '../../data/models/gender_option.dart';
 import '../../data/models/district.dart';
+import '../../widgets/spring_bottom_sheet.dart';
 
 // ─────────────────────────────────────────────────────────
 //  Main Widget
@@ -180,6 +181,7 @@ class _Step2ApplicantDetailsScreenState
   //  DOB Cupertino wheel picker – modal bottom sheet
   // ─────────────────────────────────────────────────────
   void _openDobModal() {
+    FocusManager.instance.primaryFocus?.unfocus();
     int tempYear = _dobYear;
     int tempMonth = _dobMonth;
     int tempDay = _dobDay;
@@ -199,10 +201,8 @@ class _Step2ApplicantDetailsScreenState
       }
     }
 
-    showModalBottomSheet<void>(
+    showSpringBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -898,6 +898,7 @@ class _DobTriggerButton extends StatelessWidget {
     final hasValue = dobDisplay != null;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

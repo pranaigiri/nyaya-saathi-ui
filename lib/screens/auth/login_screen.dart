@@ -4,6 +4,8 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../citizen/citizen_dashboard_shell.dart';
 import 'register_screen.dart';
+import '../../widgets/bottom_padding.dart';
+import '../../core/utils/haptics.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -74,7 +76,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.fromLTRB(24, 24, 24, BottomPadding.of(context, minimum: 24)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -126,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: "Email Address *",
                 prefixIcon: Icon(Icons.email_outlined),
@@ -136,6 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _handleLogin(),
               decoration: InputDecoration(
                 labelText: "Password *",
                 prefixIcon: const Icon(Icons.lock_outline),
@@ -151,7 +157,12 @@ class _LoginScreenState extends State<LoginScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        Haptics.medium();
+                        _handleLogin();
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   foregroundColor: Colors.white,

@@ -4,6 +4,7 @@ class DocumentMaster {
   final String documentName;
   final String? description;
   final bool isActive;
+  final bool isRequired;
 
   /// Why this document is required — values are 'category' (asked because of the
   /// selected eligibility category) and/or 'case_type' (asked because of the
@@ -16,10 +17,11 @@ class DocumentMaster {
     required this.documentName,
     this.description,
     this.isActive = true,
+    this.isRequired = true,
     this.sources = const [],
   });
 
-  bool get isMandatoryDefault => true;
+  bool get isMandatoryDefault => isRequired;
   int get displayOrder => 0;
 
   factory DocumentMaster.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class DocumentMaster {
       documentName: json['document_name'] ?? '',
       description: json['description'] ?? '',
       isActive: json['is_active'] ?? true,
+      isRequired: json['is_required'] ?? true,
     );
   }
 
@@ -38,6 +41,7 @@ class DocumentMaster {
     'document_name': documentName,
     'description': description,
     'is_active': isActive,
+    'is_required': isRequired,
   };
 
   @override

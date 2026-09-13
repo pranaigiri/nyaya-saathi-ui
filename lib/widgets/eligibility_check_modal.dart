@@ -103,6 +103,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
   bool? _isEligible;
   _EligibilityQuestion? _matchedQuestion;
   List<LegalAidCategory> _categories = [];
+  bool _isMovingForward = true;
 
   @override
   void initState() {
@@ -132,20 +133,37 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
     final q = _questions[_currentIndex];
     if (yes) {
       setState(() {
+        _isMovingForward = true;
         _isEligible = true;
         _matchedQuestion = q;
       });
       return;
     }
     if (_currentIndex < _questions.length - 1) {
-      setState(() => _currentIndex++);
+      setState(() {
+        _isMovingForward = true;
+        _currentIndex++;
+      });
     } else {
-      setState(() => _isEligible = false);
+      setState(() {
+        _isMovingForward = true;
+        _isEligible = false;
+      });
+    }
+  }
+
+  void _previousQuestion() {
+    if (_currentIndex > 0) {
+      setState(() {
+        _isMovingForward = false;
+        _currentIndex--;
+      });
     }
   }
 
   void _restart() {
     setState(() {
+      _isMovingForward = false;
       _currentIndex = 0;
       _isEligible = null;
       _matchedQuestion = null;
@@ -237,100 +255,173 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
         ? AppColors.textSecondaryDark
         : AppColors.textSecondaryLight;
 
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        16,
-        24,
-        24 + MediaQuery.of(context).padding.bottom,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                borderRadius: BorderRadius.circular(2),
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = mediaQuery.padding.bottom;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          10 + bottomPadding,
+        ),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 18),
+            const SizedBox(height: 10),
 
-          // Header
-          Row(
+            // Header
+            _buildHeader(isDark, textPrimary, textSecondary),
+            const SizedBox(height: 14),
+
+            // Animated question & result content
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
+              transitionBuilder: _buildTransition,
+              child: _isEligible == null
+                  ? _buildQuestionFlow(isDark, textPrimary, textSecondary)
+                  : _isEligible!
+                      ? _buildEligibleResult(isDark, textPrimary, textSecondary)
+                      : _buildNotEligibleResult(
+                          isDark,
+                          textPrimary,
+                          textSecondary,
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------- Directional Animated Transition ----------
+
+  Widget _buildTransition(Widget child, Animation<double> animation) {
+    final activeKey = _isEligible == null
+        ? ValueKey('q_$_currentIndex')
+        : (_isEligible!
+            ? const ValueKey('eligible')
+            : const ValueKey('not_eligible'));
+
+    final bool isIncoming = child.key == activeKey;
+
+    final Offset beginOffset = isIncoming
+        ? Offset(_isMovingForward ? 0.20 : -0.20, 0.0)
+        : Offset(_isMovingForward ? -0.20 : 0.20, 0.0);
+
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: beginOffset,
+        end: Offset.zero,
+      ).animate(curvedAnimation),
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOut,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  // ---------- Header ----------
+
+  Widget _buildHeader(
+    bool isDark,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.fact_check_rounded,
+            color: Color(0xFF0D9488),
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.fact_check_rounded,
-                  color: Color(0xFF0D9488),
-                  size: 24,
+              Text(
+                'One Tap Eligibility Check',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'One Tap Eligibility Check',
-                      style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Answer a few quick questions to check if you qualify for free legal aid',
-                      style: TextStyle(fontSize: 13, color: textSecondary),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 1),
+              Text(
+                'Answer a few quick questions to check your eligibility',
+                style: TextStyle(fontSize: 12, color: textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          const SizedBox(height: 22),
-
-          Flexible(
-            child: SingleChildScrollView(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _isEligible == null
-                    ? _buildQuestionFlow(isDark, textPrimary, textSecondary)
-                    : _isEligible!
-                    ? _buildEligibleResult(isDark, textPrimary, textSecondary)
-                    : _buildNotEligibleResult(
-                        isDark,
-                        textPrimary,
-                        textSecondary,
-                      ),
-              ),
-            ),
+        ),
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close_rounded, size: 20),
+          color: textSecondary,
+          tooltip: 'Close',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
           ),
-          const SizedBox(height: 12),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -342,95 +433,123 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
     Color textSecondary,
   ) {
     final q = _questions[_currentIndex];
+    final progressValue = (_currentIndex + 1) / _questions.length;
+
     return Column(
       key: ValueKey('q_$_currentIndex'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Progress indicator
+        // Progress indicator & step counter
         Row(
           children: [
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (_currentIndex) / _questions.length,
-                  minHeight: 5,
-                  backgroundColor: isDark
-                      ? AppColors.borderDark
-                      : AppColors.borderLight,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF0D9488),
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutCubic,
+                  tween: Tween<double>(
+                    begin: progressValue,
+                    end: progressValue,
+                  ),
+                  builder: (context, value, _) => LinearProgressIndicator(
+                    value: value,
+                    minHeight: 5,
+                    backgroundColor: isDark
+                        ? AppColors.borderDark.withValues(alpha: 0.5)
+                        : AppColors.borderLight,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF0D9488),
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Text(
-              '${_currentIndex + 1} / ${_questions.length}',
-              style: TextStyle(
+              '${_currentIndex + 1} of ${_questions.length}',
+              style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: textSecondary,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0D9488),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 14),
 
+        // Question & Hint (snug, directly above Yes/No buttons)
         Text(
           q.question,
           style: TextStyle(
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: textPrimary,
             height: 1.3,
           ),
         ),
         const SizedBox(height: 6),
-        Text(q.hint, style: TextStyle(fontSize: 12, color: textSecondary)),
-        const SizedBox(height: 24),
+        Text(
+          q.hint,
+          style: TextStyle(
+            fontSize: 12,
+            color: textSecondary,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 18),
 
+        // Both Yes and No in the same row
         Row(
           children: [
             Expanded(
               child: _buildAnswerButton(
                 label: 'Yes',
                 icon: Icons.check_rounded,
-                color: const Color(0xFF0D9488),
-                isDark: isDark,
+                backgroundColor: const Color(0xFF0D9488),
+                foregroundColor: Colors.white,
                 onPressed: () => _answer(true),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildAnswerButton(
                 label: 'No',
                 icon: Icons.close_rounded,
-                color: AppColors.primaryBlue,
-                isDark: isDark,
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
                 onPressed: () => _answer(false),
               ),
             ),
           ],
         ),
 
-        if (_currentIndex > 0) ...[
-          const SizedBox(height: 14),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => setState(() => _currentIndex--),
-              icon: const Icon(Icons.arrow_back_rounded, size: 16),
-              label: const Text('Previous Question'),
-              style: TextButton.styleFrom(
-                foregroundColor: textSecondary,
-                textStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
+        // Consistent Footer Area for Previous Question
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 34,
+          child: _currentIndex > 0
+              ? Center(
+                  child: TextButton.icon(
+                    onPressed: _previousQuestion,
+                    icon: const Icon(Icons.arrow_back_rounded, size: 15),
+                    label: const Text('Previous Question'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: textSecondary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -438,29 +557,38 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
   Widget _buildAnswerButton({
     required String label,
     required IconData icon,
-    required Color color,
-    required bool isDark,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    Color? borderColor,
     required VoidCallback onPressed,
   }) {
     return SizedBox(
-      height: 52,
+      height: 46,
       child: ElevatedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: 20),
+        icon: Icon(icon, size: 19),
         label: Text(
           label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          elevation: 0,
+          side: borderColor != null
+              ? BorderSide(color: borderColor)
+              : BorderSide.none,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
     );
   }
+
   // ---------- Eligible result ----------
 
   Widget _buildEligibleResult(
@@ -470,20 +598,25 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
   ) {
     final q = _matchedQuestion!;
     final cat = _resolveCategory(q);
+    final categoryDisplayName = cat?.categoryName ?? q.categoryLabel;
+
     return Column(
       key: const ValueKey('eligible'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.successGreen.withValues(
-              alpha: isDark ? 0.15 : 0.1,
+              alpha: isDark ? 0.15 : 0.08,
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColors.successGreen.withValues(alpha: 0.4),
+              color: AppColors.successGreen.withValues(
+                alpha: isDark ? 0.4 : 0.3,
+              ),
             ),
           ),
           child: Column(
@@ -494,73 +627,99 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                   Icon(
                     Icons.verified_rounded,
                     color: AppColors.successGreen,
-                    size: 28,
+                    size: 24,
                   ),
                   SizedBox(width: 10),
                   Text(
-                    'You are Eligible!',
+                    "You're Eligible",
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                       color: AppColors.successGreen,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
-                'Based on your answers, you qualify for free legal aid under the category:',
+                'Based on your answers, you qualify for free legal aid under:',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   color: textSecondary,
-                  height: 1.4,
+                  height: 1.3,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                cat?.categoryName ?? q.categoryLabel,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimary,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface2 : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                  ),
+                ),
+                child: Text(
+                  categoryDisplayName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
+        // Primary Action
         SizedBox(
-          height: 52,
-          width: double.infinity,
+          height: 46,
           child: ElevatedButton.icon(
             onPressed: _proceedToApply,
-            icon: const Icon(Icons.post_add_rounded, size: 20),
+            icon: const Icon(Icons.post_add_rounded, size: 19),
             label: const Text(
               'Apply for Legal Aid',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        Center(
-          child: TextButton(
-            onPressed: _restart,
-            child: const Text(
-              'Start Check Again',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        const SizedBox(height: 6),
+        // Secondary Action
+        SizedBox(
+          height: 34,
+          child: Center(
+            child: TextButton.icon(
+              onPressed: _restart,
+              icon: const Icon(Icons.refresh_rounded, size: 15),
+              label: const Text('Start Check Again'),
+              style: TextButton.styleFrom(
+                foregroundColor: textSecondary,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ),
       ],
     );
   }
+
   // ---------- Not eligible result ----------
 
   Widget _buildNotEligibleResult(
@@ -570,18 +729,21 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
   ) {
     return Column(
       key: const ValueKey('not_eligible'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(
-              0xFFF97316,
-            ).withValues(alpha: isDark ? 0.15 : 0.1),
+            color: const Color(0xFFF97316).withValues(
+              alpha: isDark ? 0.15 : 0.08,
+            ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFF97316).withValues(alpha: 0.4),
+              color: const Color(0xFFF97316).withValues(
+                alpha: isDark ? 0.4 : 0.3,
+              ),
             ),
           ),
           child: Column(
@@ -592,14 +754,14 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                   Icon(
                     Icons.info_outline_rounded,
                     color: Color(0xFFF97316),
-                    size: 28,
+                    size: 24,
                   ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'You may not be eligible',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFF97316),
                       ),
@@ -607,45 +769,54 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
-                'You did not select any of the qualifying criteria under the Legal Services Authorities Act, 1987. You may still contact Sikkim SLSA for guidance — a legal aid authority can review special circumstances.',
+                'Based on this quick screening, you did not match the standard statutory criteria. Legal aid authorities like Sikkim SLSA can review exceptional circumstances.',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   color: textSecondary,
-                  height: 1.5,
+                  height: 1.35,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
+        // Primary Action
         SizedBox(
-          height: 52,
-          width: double.infinity,
+          height: 46,
           child: ElevatedButton.icon(
             onPressed: _restart,
-            icon: const Icon(Icons.refresh_rounded, size: 20),
+            icon: const Icon(Icons.refresh_rounded, size: 19),
             label: const Text(
               'Start Check Again',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        Center(
-          child: TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Close',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        const SizedBox(height: 6),
+        // Secondary Action
+        SizedBox(
+          height: 34,
+          child: Center(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Close',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textSecondary,
+                ),
+              ),
             ),
           ),
         ),

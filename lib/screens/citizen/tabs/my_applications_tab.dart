@@ -4,9 +4,11 @@ import '../../../core/constants/app_colors.dart';
 import '../../../providers/application_provider.dart';
 import '../../../widgets/status_badge.dart';
 import '../application_detail_screen.dart';
+import '../../../core/utils/date_extensions.dart';
 
 class MyApplicationsTab extends StatefulWidget {
-  const MyApplicationsTab({super.key});
+  final ScrollController? scrollController;
+  const MyApplicationsTab({super.key, this.scrollController});
 
   @override
   State<MyApplicationsTab> createState() => _MyApplicationsTabState();
@@ -89,6 +91,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     return RefreshIndicator(
       onRefresh: () => appProvider.refresh(),
       child: ListView.builder(
+        controller: widget.scrollController,
         padding: EdgeInsets.fromLTRB(16, 16, 16, 36 + MediaQuery.of(context).padding.bottom),
         itemCount: list.length,
         itemBuilder: (context, index) {
@@ -198,7 +201,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Filed on: ${app.createdAt.split('T')[0]}",
+                          "Filed on: ${DateTime.tryParse(app.createdAt).formattedDate()}",
                           style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
                         ),
                         Row(

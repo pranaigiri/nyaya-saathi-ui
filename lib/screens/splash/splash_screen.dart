@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -72,6 +73,13 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheImage(const AssetImage('assets/images/app_logo.png'), context);
+    precacheImage(const AssetImage('assets/images/sikkim_emblem.png'), context);
+  }
+
   Future<void> _navigateToNext() async {
     final langProvider = Provider.of<LanguageProvider>(context, listen: false);
     final draftProvider = Provider.of<DraftProvider>(context, listen: false);
@@ -82,6 +90,13 @@ class _SplashScreenState extends State<SplashScreen>
     // a fixed artificial delay), so startup is never blocked longer than the
     // brand animation itself.
     final results = await Future.wait([
+      GoogleFonts.pendingFonts([
+        GoogleFonts.inter(fontWeight: FontWeight.w400),
+        GoogleFonts.inter(fontWeight: FontWeight.w500),
+        GoogleFonts.inter(fontWeight: FontWeight.w600),
+        GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        GoogleFonts.outfit(fontWeight: FontWeight.bold),
+      ]),
       langProvider.init(),
       draftProvider.loadDraft(),
       authProvider.restoreSession(),
@@ -90,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    final sessionResult = results[2] as String;
+    final sessionResult = results[3] as String;
 
     // Handle language first launch
     if (langProvider.isFirstLaunch) {
