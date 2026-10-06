@@ -263,12 +263,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
       curve: Curves.easeOutCubic,
       alignment: Alignment.topCenter,
       child: Container(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          12,
-          20,
-          10 + bottomPadding,
-        ),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 10 + bottomPadding),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -307,22 +302,15 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               layoutBuilder: (currentChild, previousChildren) {
                 return Stack(
                   alignment: Alignment.topCenter,
-                  children: [
-                    ...previousChildren,
-                    if (currentChild != null) currentChild,
-                  ],
+                  children: [...previousChildren, ?currentChild],
                 );
               },
               transitionBuilder: _buildTransition,
               child: _isEligible == null
                   ? _buildQuestionFlow(isDark, textPrimary, textSecondary)
                   : _isEligible!
-                      ? _buildEligibleResult(isDark, textPrimary, textSecondary)
-                      : _buildNotEligibleResult(
-                          isDark,
-                          textPrimary,
-                          textSecondary,
-                        ),
+                  ? _buildEligibleResult(isDark, textPrimary, textSecondary)
+                  : _buildNotEligibleResult(isDark, textPrimary, textSecondary),
             ),
           ],
         ),
@@ -336,8 +324,8 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
     final activeKey = _isEligible == null
         ? ValueKey('q_$_currentIndex')
         : (_isEligible!
-            ? const ValueKey('eligible')
-            : const ValueKey('not_eligible'));
+              ? const ValueKey('eligible')
+              : const ValueKey('not_eligible'));
 
     final bool isIncoming = child.key == activeKey;
 
@@ -357,10 +345,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
         end: Offset.zero,
       ).animate(curvedAnimation),
       child: FadeTransition(
-        opacity: CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeInOut,
-        ),
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
         child: child,
       ),
     );
@@ -368,11 +353,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
 
   // ---------- Header ----------
 
-  Widget _buildHeader(
-    bool isDark,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
+  Widget _buildHeader(bool isDark, Color textPrimary, Color textSecondary) {
     return Row(
       children: [
         Container(
@@ -416,10 +397,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           color: textSecondary,
           tooltip: 'Close',
           padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(
-            minWidth: 32,
-            minHeight: 32,
-          ),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
       ],
     );
@@ -492,11 +470,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
         const SizedBox(height: 6),
         Text(
           q.hint,
-          style: TextStyle(
-            fontSize: 12,
-            color: textSecondary,
-            height: 1.3,
-          ),
+          style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
         ),
         const SizedBox(height: 18),
 
@@ -569,10 +543,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
         icon: Icon(icon, size: 19),
         label: Text(
           label,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
@@ -660,7 +631,9 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                   color: isDark ? AppColors.darkSurface2 : Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                   ),
                 ),
                 child: Text(
@@ -736,14 +709,14 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF97316).withValues(
-              alpha: isDark ? 0.15 : 0.08,
-            ),
+            color: const Color(
+              0xFFF97316,
+            ).withValues(alpha: isDark ? 0.15 : 0.08),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFF97316).withValues(
-                alpha: isDark ? 0.4 : 0.3,
-              ),
+              color: const Color(
+                0xFFF97316,
+              ).withValues(alpha: isDark ? 0.4 : 0.3),
             ),
           ),
           child: Column(
