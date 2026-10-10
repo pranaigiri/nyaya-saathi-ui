@@ -325,6 +325,41 @@ The app reads its backend configuration from a `.env` file in the project root (
 
 > ⚠️ Do not commit real secrets. The checked-in `.env` in this repository contains a live Supabase URL and publishable key — rotate/replace them before sharing the project. Never expose the Supabase **service-role** key or Firebase service-account credentials in the app; those belong only to the Edge Function's server-side secrets.
 
+### 🛡️ Edge Functions Secrets & Environment
+
+The backend includes Deno Edge Functions in `supabase/functions/`:
+- `submit-application`: Unified guest submission (supporting `QUICK_CALLBACK` and `FULL` modes) with honeypot, timing, rate limiting, anti-fake phone validation, and duplicate suppression.
+- `track-by-phone`: Citizen phone tracking returning uniform list structures without leaking registration existence.
+- `send-fcm-notification`: Push notification fan-out via FCM v1 API.
+
+Configure these secrets in Supabase via CLI or Dashboard (`Settings` → `Edge Functions`):
+
+| Secret / Env Var | Required | Default | Description |
+| ---------------- | -------- | ------- | ----------- |
+| `SUPABASE_URL` | Yes | Supabase auto-injected | The Supabase project base URL. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | - | Secret service role key used to execute SECURITY DEFINER RPCs. |
+| `HASH_PEPPER` | Yes | - | High-entropy server secret used for HMAC/SHA-256 telemetry hashing (`submission_attempt_log`). Raw IPs/devices are never stored. |
+| `MIN_ELAPSED_MS_QUICK` | No | `3000` | Minimum client elapsed submission time in ms for Quick Callback. |
+| `MIN_ELAPSED_MS_FULL` | No | `20000` | Minimum client elapsed submission time in ms for Full flow. |
+| `RATE_LIMIT_PHONE_10M` | No | `1` | Max submissions per normalized phone in 10 minutes. |
+| `RATE_LIMIT_PHONE_24H` | No | `3` | Max submissions per normalized phone in 24 hours. |
+| `RATE_LIMIT_DEVICE_24H` | No | `5` | Max submissions per device hash in 24 hours. |
+| `RATE_LIMIT_IP_24H` | No | `10` | Max submissions per IP hash in 24 hours. |
+| `RATE_LIMIT_TRACK_IP_1H` | No | `30` | Max tracking lookups per IP hash in 1 hour. |
+| `RATE_LIMIT_TRACK_DEVICE_1H` | No | `20` | Max tracking lookups per device hash in 1 hour. |
+| `RATE_LIMIT_TRACK_PHONE_1H` | No | `10` | Max tracking lookups per phone hash in 1 hour. |
+| `FIREBASE_APP_CHECK_ENABLED` | No | `false` | Set to `true` to enforce Firebase App Check token verification. |
+| `FIREBASE_PROJECT_ID` | Conditional | - | Required if `FIREBASE_APP_CHECK_ENABLED=true`. |
+
+### 🧹 Telemetry Retention (`submission_attempt_log`)
+
+The `submission_attempt_log` table contains hashed abuse and rate-limit telemetry. It is recommended to schedule a 30-day purge via `pg_cron` or Supabase Scheduled Functions:
+
+```sql
+DELETE FROM public.submission_attempt_log
+WHERE created_at < now() - INTERVAL '30 days';
+```
+
 ---
 
 ## 🧪 Testing
