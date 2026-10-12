@@ -10,6 +10,7 @@ import '../../models/legal_aid_application.dart';
 import '../../widgets/status_badge.dart';
 import '../../core/utils/string_extensions.dart';
 import '../../core/utils/number_extensions.dart';
+import '../../core/localization/app_localizations.dart';
 
 class ApplicationDetailScreen extends StatefulWidget {
   final LegalAidApplication? application;
@@ -242,7 +243,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
 📄 Legal Aid Application Details
 
 • Tracking ID: $trackingId
-• Applicant: ${app.applicantFullName}
+• Applicant: ${app.applicantFullName.orPlaceholder('Details Pending')}
 • District: $districtName
 • Status: $statusFormatted
 • Category: ${app.categoryName.orPlaceholder('Legal Aid')}
@@ -378,8 +379,14 @@ For helpline support, dial 15100 (Toll-Free).
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── 1. Case Header (Tracking ID, Status, Meta) ───────────
-            _buildHeroTrackingCard(application, resolvedDistrict, isDark),
+            _buildHeroTrackingCard(context, application, resolvedDistrict, isDark),
             const SizedBox(height: 18),
+
+            // ── Callback Status Card (for Quick Apply / Callback mode) ──
+            if (application.isQuickMode) ...[
+              _buildCallbackStatusCard(context, application, isDark),
+              const SizedBox(height: 18),
+            ],
 
             // ── 2. Interactive Delivery-Style Milestone & Timeline ───
             _buildInteractiveTimelineCard(context, application, isDark),
@@ -404,29 +411,25 @@ For helpline support, dial 15100 (Toll-Free).
                   "Full Name",
                   applicant.fullName.isNotEmpty
                       ? applicant.fullName
-                      : application.applicantFullName,
+                      : (application.isDetailsPending
+                          ? context.tr('details_pending_notice')
+                          : 'N/A'),
                 ),
-                _buildRow(
-                  "Gender",
-                  applicant.gender.isNotEmpty
-                      ? applicant.gender
-                      : application.applicantGender,
-                ),
-                _buildRow(
-                  "Date of Birth",
-                  applicant.dateOfBirth != null &&
-                          applicant.dateOfBirth!.isNotEmpty
-                      ? applicant.dateOfBirth!
-                      : (application.applicantDob.isNotEmpty
-                            ? application.applicantDob
-                            : 'N/A'),
-                ),
-                _buildRow(
-                  "Village / Town",
-                  applicant.villageOrTown.isUsable
-                      ? applicant.villageOrTown
-                      : application.villageOrTown.orPlaceholder('N/A'),
-                ),
+                if (applicant.gender.isNotEmpty)
+                  _buildRow(
+                    "Gender",
+                    applicant.gender,
+                  ),
+                if (applicant.dateOfBirth != null && applicant.dateOfBirth!.isNotEmpty)
+                  _buildRow(
+                    "Date of Birth",
+                    applicant.dateOfBirth!,
+                  ),
+                if (applicant.villageOrTown.isUsable)
+                  _buildRow(
+                    "Village / Town",
+                    applicant.villageOrTown,
+                  ),
                 _buildRow(
                   "District",
                   application.isForwarded
@@ -462,11 +465,11 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
                 _buildRow(
                   "Summary of Grievance",
-                  application.caseDetails.isNotEmpty
-                      ? application.caseDetails
-                      : (application.summaryOfGrievance.isNotEmpty
-                            ? application.summaryOfGrievance
-                            : 'N/A'),
+                  application.summaryOfGrievance.isNotEmpty
+                      ? application.summaryOfGrievance
+                      : (application.isDetailsPending
+                          ? context.tr('details_pending_notice')
+                          : 'N/A'),
                 ),
                 if (application.reliefSought != null &&
                     application.reliefSought!.isNotEmpty)
@@ -481,8 +484,252 @@ For helpline support, dial 15100 (Toll-Free).
                   _buildRow("Withdrawal Reason", application.withdrawalReason!),
               ],
             ),
+            const SizedBox(height: 18),
+
+            // ── 6. PDF Action Card ──────────────────────────────────
+            _buildPdfActionCard(context, application, isDark),
           ],
         ),
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Callback Status Banner (For Quick Apply / Request a Call)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildCallbackStatusCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
+    final status = application.callbackStatus.toUpperCase();
+    final String statusLabel;
+    final IconData statusIcon;
+    final Color statusColor;
+
+    switch (status) {
+      case 'ATTEMPTED':
+        statusLabel = context.tr('callback_attempted');
+        statusIcon = Icons.phone_callback_rounded;
+        statusColor = const Color(0xFFD97706);
+        break;
+      case 'REACHED':
+        statusLabel = context.tr('callback_details_collected');
+        statusIcon = Icons.check_circle_rounded;
+        statusColor = const Color(0xFF16A34A);
+        break;
+      case 'UNREACHABLE':
+        statusLabel = context.tr('callback_unreachable');
+        statusIcon = Icons.phone_missed_rounded;
+        statusColor = const Color(0xFFDC2626);
+        break;
+      case 'PENDING':
+      default:
+        statusLabel = context.tr('callback_waiting');
+        statusIcon = Icons.phone_in_talk_rounded;
+        statusColor = const Color(0xFF2563EB);
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface1 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withValues(alpha: isDark ? 0.15 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(statusIcon, size: 18, color: statusColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "QUICK APPLY — CALLBACK STATUS",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.7,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      statusLabel,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (application.callbackAttempts > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    "Attempts: ${application.callbackAttempts}",
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            application.isDetailsPending
+                ? "An SLSA representative will call you on your registered phone number to collect case details and complete your legal aid application."
+                : "Your details have been successfully recorded by SLSA staff.",
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.4,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // PDF Action Card (Form PDF Export)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildPdfActionCard(
+    BuildContext context,
+    LegalAidApplication application,
+    bool isDark,
+  ) {
+    final isPending = application.isDetailsPending;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface1 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.borderDarkSubtle : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.picture_as_pdf_rounded,
+                color: isPending
+                    ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                    : (isDark ? AppColors.darkPrimary : AppColors.primaryBlue),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('download_form_pdf'),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (isPending) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: isDark ? 0.12 : 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Colors.amber.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      context.tr('pdf_disabled_details_pending'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Application PDF export is ready."),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.download_rounded, size: 16),
+                label: Text(
+                  context.tr('download_form_pdf'),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -491,6 +738,7 @@ For helpline support, dial 15100 (Toll-Free).
   // Hero Header Tracking Card (Clean Elevation & Hierarchy)
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildHeroTrackingCard(
+    BuildContext context,
     LegalAidApplication application,
     String resolvedDistrict,
     bool isDark,
@@ -557,7 +805,37 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
               ),
               const Spacer(),
-              StatusBadge(status: application.status),
+              Wrap(
+                spacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (application.isDetailsPending)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.hourglass_top_rounded, size: 12, color: Colors.amber.shade800),
+                          const SizedBox(width: 4),
+                          Text(
+                            context.tr('details_pending_badge'),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  StatusBadge(status: application.status),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 14),

@@ -16,9 +16,10 @@ Under the **Legal Services Authorities Act, 1987**, SLSA provides free legal aid
 
 ### Public experience (no login required)
 
+- **Quick Apply ("Request a Call")** — lightweight 1-screen option for elderly and low-literacy citizens needing only a phone number (plus optional name, district, and note) where SLSA paralegals call them back to complete legal aid registration. Includes anti-bot rate-limiting and honeypot protection.
 - **One-Tap Eligibility Check** — an 11-question yes/no screening based on Section 12 criteria that maps the result to a legal-aid category and feeds it straight into the application.
-- **Apply for Legal Aid** — a guided **5-step wizard** with CAPTCHA-verified submission and an auto-generated **A4 legal-aid form PDF**.
-- **Application Tracking** — track any application **without an account** using the **Application (Tracking) Number + registered phone number**.
+- **Apply for Legal Aid (Full Flow)** — a guided **5-step wizard** routed securely through the `submit-application` Edge Function and generating an **A4 legal-aid form PDF**.
+- **Phone-Based Application Tracking** — track any application **without logging in** using just your **10-digit mobile number** (or canonical Tracking ID). Displays active applications, callback statuses, and real-time updates.
 - **Draft Resumption** — the in-progress application auto-saves locally (Hive) after every step and reopens on the correct step, even after an app restart.
 - **Bilingual onboarding** — English 🇬🇧 / Nepali 🇳🇵 selection on first launch.
 
@@ -64,11 +65,12 @@ Under the **Legal Services Authorities Act, 1987**, SLSA provides free legal aid
 
 The hub for unauthenticated users (auto-redirects to the dashboard if a session already exists):
 
+- **Quick Apply ("Request a Call")** → `QuickApplyScreen` (prominent top banner for direct phone callbacks).
 - **Draft Resumption Card** — shown when a saved draft exists (resume or discard).
 - **One-Tap Eligibility Check** → `EligibilityCheckModal`.
-- **Apply for Legal Aid** → starts/resumes the wizard.
-- **Track Application** → guest tracking.
-- **Register / Sign In** → auth screens.
+- **Apply for Legal Aid (Full Flow)** → starts/resumes the 5-step wizard.
+- **Track Application** → phone-first or Tracking ID search (`TrackingScreen`).
+- **Register / Sign In** → citizen auth screens.
 
 ### 3. Eligibility check & "who is this for" (`eligibility_check_modal.dart`, `apply_choice_modal.dart`)
 
@@ -87,9 +89,9 @@ Hosted in `ApplyWizardScreen` with an animated progress bar and an `IndexedStack
 | 2 | `Step2ApplicantDetailsScreen` — *Applicant Details* | Full name, gender, DOB (wheel picker), village/town, district (`district_master`), and phone. For logged-in users these are **prefilled from the `profiles` row** (via `startNewDraft(profile: ...)`). |
 | 3 | `Step3CaseTypeScreen` — *Case & Grievance* | Case type from `case_type_master`, plus grievance summary and relief sought. |
 | 4 | `Step4DocumentUploadScreen` — *Document Upload* | Required documents = union of `legal_aid_category_document_map` + `case_type_document_map` for the chosen category/case type. Each document is captured via file picker or the camera scanner modal (`document_scanner_modal.dart` + `image_crop_editor.dart`) and **uploaded immediately** to the `legal-documents` bucket at `draft-uploads/{draftUuid}/{docCode}.jpg` (upsert). |
-| 5 | `Step5ReviewSubmitScreen` — *Review & Submit* | Full review, a **declaration checkbox**, and an in-app **CAPTCHA**. On submit the app inserts into `legal_aid_application` (a DB trigger generates the tracking number), then links each uploaded file into `application_document`. |
+| 5 | `Step5ReviewSubmitScreen` — *Review & Submit* | Full review, a **declaration checkbox**, and instant submission. Logged-in users submit directly; **guests** submit via the `submit-application` Edge Function (`mode: "FULL"`) with automated honeypot and elapsed timing protection (replacing cumbersome client CAPTCHAs). |
 
-**Submission detail:** logged-in users insert directly; **guests** call the `submit_legal_aid_application` SECURITY DEFINER RPC (so anonymous rows pass row-level security). After submit, `application_success_screen.dart` shows the generated **Tracking Number** (copy & share via `share_plus`) and links to tracking / dashboard.
+**Submission detail:** Logged-in users insert directly into `legal_aid_application`; **guests** route via the `submit-application` Edge Function (`mode: FULL` or `mode: QUICK_CALLBACK`), which verifies rate limits and triggers the DB procedure. After submit, `application_success_screen.dart` shows the generated **Tracking Number** (copy & share via `share_plus`) with one-tap navigation to "Track My Applications".
 
 **PDF:** `PdfGeneratorService.generateA4FormPdf(draft)` renders the application as a formatted **A4 legal-aid form** (Form A/B/C/D style, per Sikkim SLSA regulations) that can be printed/shared.
 

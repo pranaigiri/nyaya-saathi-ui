@@ -4,6 +4,21 @@ import '../../models/advocate.dart';
 import '../../models/legal_aid_application.dart';
 import '../../models/draft_application_model.dart';
 import '../../core/utils/tracking_number_formatter.dart';
+import '../../core/utils/phone_utils.dart';
+import '../../core/services/device_id_service.dart';
+
+class ApplicationException implements Exception {
+  final String code; // 'RATE_LIMITED' | 'INVALID_INPUT' | 'TRY_AGAIN'
+  final String message;
+
+  const ApplicationException({
+    required this.code,
+    required this.message,
+  });
+
+  @override
+  String toString() => message;
+}
 
 class ApplicationRepository {
   SupabaseClient get _client => Supabase.instance.client;
@@ -11,8 +26,16 @@ class ApplicationRepository {
   static const String _applicationSelectFields =
       '*, legal_aid_category(category_name), case_type_master(case_type_name), advocate_master:assigned_advocate_id(*), applicant_district:applicant_district_id(district_name), current_district:current_district_id(district_name)';
 
-  /// Submit a new legal aid application from a draft
-  Future<LegalAidApplication> submitApplication(DraftApplicationModel draft, {String? applicantId}) async {
+  /// Submit a new legal aid application from a draft.
+  ///
+  /// For logged-in users, directly inserts to `legal_aid_application`.
+  /// For guest (unauthenticated) users, invokes the `submit-application` Edge Function (mode FULL).
+  Future<LegalAidApplication> submitApplication(
+    DraftApplicationModel draft, {
+    String? applicantId,
+    String? deviceId,
+    int? clientElapsedMs,
+  }) async {
     final effectiveApplicantId = applicantId ?? _client.auth.currentUser?.id;
 
     final insertData = <String, dynamic>{
@@ -33,44 +56,78 @@ class ApplicationRepository {
           ? draft.preferredAdvocateId
           : null,
       'tracking_number': '', // Trigger will generate
+      'application_mode': 'FULL',
     };
 
     // ignore: avoid_print
     print('[ApplicationRepository] Submitting application (applicant: $effectiveApplicantId)');
 
     try {
-      final Map<String, dynamic> res;
+      final LegalAidApplication application;
+
       if (effectiveApplicantId == null) {
-        // Anonymous (not logged in) submission.
-        //
-        // `.insert(...).select(...)` cannot be used here: PostgreSQL applies
-        // the table's SELECT policies to rows returned by INSERT ... RETURNING,
-        // and anonymous applications (applicant_id IS NULL) match no SELECT
-        // policy on legal_aid_application, so the request fails with
-        // 42501 "new row violates row-level security policy".
-        //
-        // Instead, call the SECURITY DEFINER RPC which performs the insert and
-        // returns the created row to the caller that created it.
-        final dynamic rpcRes = await _client.rpc(
-          'submit_legal_aid_application',
-          params: {'p_application': insertData},
+        // Anonymous (not logged in) submission through Edge Function
+        final persistentDeviceId = deviceId ?? await DeviceIdService.getDeviceId();
+        final elapsed = clientElapsedMs ?? 20000;
+
+        final res = await _client.functions.invoke(
+          'submit-application',
+          body: {
+            'mode': 'FULL',
+            'phone': PhoneUtils.normalize(draft.phone),
+            'full_payload': insertData,
+            'device_id': persistentDeviceId,
+            'honeypot': '',
+            'client_elapsed_ms': elapsed,
+          },
         );
-        res = Map<String, dynamic>.from(rpcRes as Map);
+
+        final data = res.data;
+        if (data is Map && data['tracking_number'] != null) {
+          final trackingNo = data['tracking_number'].toString();
+          // Fetch created application using tracking RPC to obtain row ID for document linking
+          final tracked = await trackApplication(
+            trackingNumber: trackingNo,
+            phoneNumber: draft.phone,
+          );
+          application = tracked ??
+              LegalAidApplication(
+                id: trackingNo,
+                trackingNumber: trackingNo,
+                applicantPhoneNumber: draft.phone,
+                applicantFullName: draft.fullName,
+                categoryId: draft.categoryId,
+                caseTypeId: draft.caseTypeId,
+                applicantDistrictId: draft.districtId,
+                status: 'SUBMITTED',
+                createdAt: DateTime.now().toIso8601String(),
+                updatedAt: DateTime.now().toIso8601String(),
+              );
+        } else if (data is Map && data['error'] != null) {
+          throw ApplicationException(
+            code: data['error'].toString(),
+            message: _mapErrorCode(data['error'].toString()),
+          );
+        } else {
+          throw const ApplicationException(
+            code: 'TRY_AGAIN',
+            message: 'Unable to submit application. Please try again.',
+          );
+        }
       } else {
-        res = await _client
+        // Authenticated citizen: direct database insert
+        final res = await _client
             .from('legal_aid_application')
             .insert(insertData)
             .select(_applicationSelectFields)
             .single();
+
+        application = LegalAidApplication.fromJson(res);
       }
 
-      final application = LegalAidApplication.fromJson(res);
-
-      // Upload documents if any.
-      // Batched: resolve all document_master ids in ONE query, then insert all
-      // links in ONE statement (previously 2 round-trips per document).
+      // Upload and link documents if any
       final docCodes = draft.documentStoragePaths.keys.toList();
-      if (docCodes.isNotEmpty) {
+      if (docCodes.isNotEmpty && application.id.isNotEmpty) {
         try {
           final docRows = await _client
               .from('document_master')
@@ -102,6 +159,12 @@ class ApplicationRepository {
       }
 
       return application;
+    } on FunctionException catch (fe) {
+      final code = _extractErrorCode(fe.details, fe.status);
+      throw ApplicationException(
+        code: code,
+        message: _mapErrorCode(code),
+      );
     } catch (e, stack) {
       // ignore: avoid_print
       print('========================================');
@@ -111,7 +174,143 @@ class ApplicationRepository {
       print('[ApplicationRepository] STACK TRACE: $stack');
       // ignore: avoid_print
       print('========================================');
-      rethrow;
+      if (e is ApplicationException) rethrow;
+      throw const ApplicationException(
+        code: 'TRY_AGAIN',
+        message: 'Something went wrong. Please check your connection and try again.',
+      );
+    }
+  }
+
+  /// Submit a quick application requesting a call back from SLSA.
+  ///
+  /// Calls the `submit-application` Edge Function with mode `QUICK_CALLBACK`.
+  Future<String> submitQuickApplication({
+    required String phone,
+    String? name,
+    String? districtId,
+    String? note,
+    required String deviceId,
+    required String honeypot,
+    required int clientElapsedMs,
+  }) async {
+    final cleanPhone = PhoneUtils.normalize(phone);
+
+    try {
+      final res = await _client.functions.invoke(
+        'submit-application',
+        body: {
+          'mode': 'QUICK_CALLBACK',
+          'phone': cleanPhone,
+          if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+          if (districtId != null && districtId.trim().isNotEmpty) 'district_id': districtId.trim(),
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+          'device_id': deviceId,
+          'honeypot': honeypot,
+          'client_elapsed_ms': clientElapsedMs,
+        },
+      );
+
+      final data = res.data;
+      if (data is Map && data['tracking_number'] != null) {
+        return data['tracking_number'].toString();
+      }
+
+      if (data is Map && data['error'] != null) {
+        final errCode = data['error'].toString();
+        throw ApplicationException(
+          code: errCode,
+          message: _mapErrorCode(errCode),
+        );
+      }
+
+      throw const ApplicationException(
+        code: 'TRY_AGAIN',
+        message: 'Something went wrong. Please check your connection and try again.',
+      );
+    } on FunctionException catch (fe) {
+      final code = _extractErrorCode(fe.details, fe.status);
+      throw ApplicationException(
+        code: code,
+        message: _mapErrorCode(code),
+      );
+    } catch (e) {
+      if (e is ApplicationException) rethrow;
+      throw const ApplicationException(
+        code: 'TRY_AGAIN',
+        message: 'Something went wrong. Please check your connection and try again.',
+      );
+    }
+  }
+
+  /// Track all applications associated with a phone number.
+  ///
+  /// Calls the `track-by-phone` Edge Function and returns a list of applications.
+  Future<List<LegalAidApplication>> trackApplicationsByPhone({
+    required String phone,
+    required String deviceId,
+  }) async {
+    final cleanPhone = PhoneUtils.normalize(phone);
+
+    try {
+      final res = await _client.functions.invoke(
+        'track-by-phone',
+        body: {
+          'phone': cleanPhone,
+          'device_id': deviceId,
+        },
+      );
+
+      final data = res.data;
+      if (data is Map && data['applications'] is List) {
+        final list = data['applications'] as List;
+        return list.map((item) {
+          final m = Map<String, dynamic>.from(item as Map);
+          return LegalAidApplication.fromJson(m);
+        }).toList();
+      }
+
+      if (data is Map && data['error'] != null) {
+        final errCode = data['error'].toString();
+        throw ApplicationException(
+          code: errCode,
+          message: _mapErrorCode(errCode),
+        );
+      }
+
+      return [];
+    } on FunctionException catch (fe) {
+      final code = _extractErrorCode(fe.details, fe.status);
+      throw ApplicationException(
+        code: code,
+        message: _mapErrorCode(code),
+      );
+    } catch (e) {
+      if (e is ApplicationException) rethrow;
+      throw const ApplicationException(
+        code: 'TRY_AGAIN',
+        message: 'Something went wrong. Please check your connection and try again.',
+      );
+    }
+  }
+
+  static String _extractErrorCode(dynamic details, int? status) {
+    if (details is Map && details['error'] != null) {
+      return details['error'].toString();
+    }
+    if (status == 429) return 'RATE_LIMITED';
+    if (status == 400) return 'INVALID_INPUT';
+    return 'TRY_AGAIN';
+  }
+
+  static String _mapErrorCode(String code) {
+    switch (code) {
+      case 'RATE_LIMITED':
+        return 'Too many requests. Please wait a few moments and try again.';
+      case 'INVALID_INPUT':
+        return 'Please enter a valid 10-digit mobile number.';
+      default:
+        return 'Something went wrong. Please check your connection and try again.';
     }
   }
 
@@ -313,9 +512,6 @@ class ApplicationRepository {
   }
 
   /// Subscribe to realtime updates for legal_aid_application.
-  ///
-  /// Filtered to the current user's rows so that changes made by other users
-  /// don't trigger pointless full refetches on every client.
   RealtimeChannel subscribeToApplications({
     required void Function(PostgresChangePayload payload) onData,
   }) {
@@ -388,4 +584,3 @@ class ApplicationRepository {
     return await _client.removeChannel(channel);
   }
 }
-

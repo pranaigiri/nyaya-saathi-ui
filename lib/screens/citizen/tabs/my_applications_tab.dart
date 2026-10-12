@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../providers/application_provider.dart';
 import '../../../widgets/status_badge.dart';
 import '../application_detail_screen.dart';
@@ -138,15 +139,41 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      "${app.categoryName ?? 'Legal Aid'} • ${app.caseTypeName ?? 'Dispute'}",
-                      style: const TextStyle(fontSize: 13, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
-                    ),
+                    if (app.isDetailsPending) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.accentGold),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              context.tr("details_pending_notice"),
+                              style: const TextStyle(fontSize: 12.5, color: AppColors.accentGold, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      Text(
+                        "${app.categoryName ?? 'Legal Aid'} • ${app.caseTypeName ?? 'Dispute'}",
+                        style: const TextStyle(fontSize: 13, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Text(
-                      "Applicant: ${app.applicantFullName}",
+                      (app.applicantFullName != null && app.applicantFullName!.trim().isNotEmpty)
+                          ? "Applicant: ${app.applicantFullName}"
+                          : "Applicant: Details pending",
                       style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                     ),
+                    if (app.isQuickMode && app.callbackStatus != 'NOT_REQUIRED') ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        app.callbackStatus == 'CALLBACK_COMPLETED' || app.callbackStatus == 'DETAILS_COLLECTED'
+                            ? "✓ ${context.tr("callback_details_collected")}"
+                            : "📞 ${context.tr("callback_waiting")}",
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF0F9D78), fontWeight: FontWeight.w600),
+                      ),
+                    ],
                     if (app.assignedAdvocateName != null && app.assignedAdvocateName!.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Row(

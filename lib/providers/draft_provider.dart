@@ -207,10 +207,14 @@ class DraftProvider extends ChangeNotifier {
     }
   }
 
-  Future<String> submitFinalApplication({String? loggedInCitizenId}) async {
+  Future<String> submitFinalApplication({String? loggedInCitizenId, int? clientElapsedMs}) async {
     if (_draft == null) throw Exception("No active draft found");
 
-    final app = await _appRepo.submitApplication(_draft!, applicantId: loggedInCitizenId);
+    final app = await _appRepo.submitApplication(
+      _draft!,
+      applicantId: loggedInCitizenId,
+      clientElapsedMs: clientElapsedMs,
+    );
     final trackingNo = app.trackingNumber.isNotEmpty ? app.trackingNumber : 'LA-${DateTime.now().millisecondsSinceEpoch}';
 
     await HiveDraftService.clearDraft();

@@ -6,11 +6,11 @@ class ApplicantDetailsAdapter {
 
   ApplicantDetailsAdapter(this._app);
 
-  String get fullName => _app.applicantFullName;
-  String get gender => _app.applicantGender;
+  String get fullName => _app.applicantFullName ?? '';
+  String get gender => _app.applicantGender ?? '';
   String? get dateOfBirth => _app.applicantDob;
   String get villageOrTown => _app.villageOrTown ?? '';
-  String get districtId => _app.applicantDistrictId;
+  String get districtId => _app.applicantDistrictId ?? '';
   String get phoneNumber => _app.applicantPhoneNumber;
   String? get email => null;
 }
@@ -19,17 +19,17 @@ class LegalAidApplication {
   final String id;
   final String trackingNumber;
   final String? applicantId;
-  final String categoryId;
-  final String applicantFullName;
+  final String? categoryId;
+  final String? applicantFullName;
   final String applicantPhoneNumber;
-  final String applicantDob;
-  final String applicantGender;
+  final String? applicantDob;
+  final String? applicantGender;
   final String? villageOrTown;
-  final String applicantDistrictId;
-  final String caseTypeId;
-  final String currentDistrictId;
+  final String? applicantDistrictId;
+  final String? caseTypeId;
+  final String? currentDistrictId;
   final String? currentTalukaId;
-  final String caseDetails;
+  final String? caseDetails;
   final String? preferredAdvocateId;
   final String? assignedAdvocateId;
   final String advocateAcceptanceStatus;
@@ -40,6 +40,12 @@ class LegalAidApplication {
   final String? withdrawnAt;
   final String createdAt;
   final String updatedAt;
+
+  // Quick Apply & Callback fields
+  final String applicationMode;
+  final String callbackStatus;
+  final int callbackAttempts;
+  final String? detailsCompletedAt;
 
   // Joined/resolved display names (populated from joined queries)
   final String? categoryName;
@@ -54,17 +60,17 @@ class LegalAidApplication {
     required this.id,
     required this.trackingNumber,
     this.applicantId,
-    required this.categoryId,
-    required this.applicantFullName,
+    this.categoryId,
+    this.applicantFullName,
     required this.applicantPhoneNumber,
-    required this.applicantDob,
-    required this.applicantGender,
+    this.applicantDob,
+    this.applicantGender,
     this.villageOrTown,
-    required this.applicantDistrictId,
-    required this.caseTypeId,
-    required this.currentDistrictId,
+    this.applicantDistrictId,
+    this.caseTypeId,
+    this.currentDistrictId,
     this.currentTalukaId,
-    required this.caseDetails,
+    this.caseDetails,
     this.preferredAdvocateId,
     this.assignedAdvocateId,
     this.advocateAcceptanceStatus = 'NONE',
@@ -75,6 +81,10 @@ class LegalAidApplication {
     this.withdrawnAt,
     required this.createdAt,
     required this.updatedAt,
+    this.applicationMode = 'FULL',
+    this.callbackStatus = 'NOT_REQUIRED',
+    this.callbackAttempts = 0,
+    this.detailsCompletedAt,
     this.categoryName,
     this.caseTypeName,
     this.districtName,
@@ -89,9 +99,18 @@ class LegalAidApplication {
   AdvocateAcceptanceStatus get advocateAcceptanceStatusEnum =>
       AdvocateAcceptanceStatus.fromString(advocateAcceptanceStatus);
 
+  bool get isQuickMode =>
+      applicationMode == 'QUICK_CALLBACK' || applicationMode == 'QUICK';
+
+  /// Returns true if this is a quick application where remaining details have not yet been collected.
+  bool get isDetailsPending =>
+      isQuickMode && (detailsCompletedAt == null || detailsCompletedAt!.isEmpty);
+
   bool get isForwarded =>
-      applicantDistrictId.isNotEmpty &&
-      currentDistrictId.isNotEmpty &&
+      applicantDistrictId != null &&
+      applicantDistrictId!.isNotEmpty &&
+      currentDistrictId != null &&
+      currentDistrictId!.isNotEmpty &&
       applicantDistrictId != currentDistrictId;
 
   // Backward-compatibility getters
@@ -99,9 +118,9 @@ class LegalAidApplication {
   String get applicationNumber => trackingNumber;
   String get currentStatus => status;
   String get submittedAt => createdAt;
-  String get summaryOfGrievance => caseDetails;
+  String get summaryOfGrievance => caseDetails ?? '';
   String? get reliefSought => null;
-  String get fullName => applicantFullName;
+  String get fullName => applicantFullName ?? '';
   ApplicantDetailsAdapter get applicantDetails => ApplicantDetailsAdapter(this);
 
   factory LegalAidApplication.fromJson(Map<String, dynamic> json) {
@@ -126,17 +145,17 @@ class LegalAidApplication {
       id: json['id']?.toString() ?? '',
       trackingNumber: json['tracking_number']?.toString() ?? json['application_number']?.toString() ?? '',
       applicantId: json['applicant_id']?.toString(),
-      categoryId: json['category_id']?.toString() ?? json['legal_aid_category_id']?.toString() ?? '',
-      applicantFullName: json['applicant_full_name']?.toString() ?? json['applicant_details']?['full_name']?.toString() ?? json['full_name']?.toString() ?? '',
+      categoryId: json['category_id']?.toString() ?? json['legal_aid_category_id']?.toString(),
+      applicantFullName: json['applicant_full_name']?.toString() ?? json['applicant_details']?['full_name']?.toString() ?? json['full_name']?.toString() ?? json['masked_name']?.toString(),
       applicantPhoneNumber: json['applicant_phone_number']?.toString() ?? json['applicant_details']?['phone_number']?.toString() ?? json['phone_number']?.toString() ?? '',
-      applicantDob: json['applicant_dob']?.toString() ?? json['applicant_details']?['date_of_birth']?.toString() ?? json['dob']?.toString() ?? '',
-      applicantGender: json['applicant_gender']?.toString() ?? json['applicant_details']?['gender']?.toString() ?? json['gender']?.toString() ?? 'Male',
+      applicantDob: json['applicant_dob']?.toString() ?? json['applicant_details']?['date_of_birth']?.toString() ?? json['dob']?.toString(),
+      applicantGender: json['applicant_gender']?.toString() ?? json['applicant_details']?['gender']?.toString() ?? json['gender']?.toString(),
       villageOrTown: json['village_or_town']?.toString() ?? json['applicant_details']?['village_or_town']?.toString(),
-      applicantDistrictId: json['applicant_district_id']?.toString() ?? json['district_id']?.toString() ?? '',
-      caseTypeId: json['case_type_id']?.toString() ?? '',
-      currentDistrictId: json['current_district_id']?.toString() ?? json['district_id']?.toString() ?? '',
+      applicantDistrictId: json['applicant_district_id']?.toString() ?? json['district_id']?.toString(),
+      caseTypeId: json['case_type_id']?.toString(),
+      currentDistrictId: json['current_district_id']?.toString() ?? json['district_id']?.toString(),
       currentTalukaId: json['current_taluka_id']?.toString(),
-      caseDetails: json['case_details']?.toString() ?? json['summary_of_grievance']?.toString() ?? '',
+      caseDetails: json['case_details']?.toString() ?? json['summary_of_grievance']?.toString(),
       preferredAdvocateId: json['preferred_advocate_id']?.toString(),
       assignedAdvocateId: json['assigned_advocate_id']?.toString(),
       advocateAcceptanceStatus: json['advocate_acceptance_status']?.toString() ?? 'NONE',
@@ -147,6 +166,10 @@ class LegalAidApplication {
       withdrawnAt: json['withdrawn_at']?.toString(),
       createdAt: json['created_at']?.toString() ?? json['submitted_at']?.toString() ?? DateTime.now().toIso8601String(),
       updatedAt: json['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      applicationMode: json['application_mode']?.toString() ?? 'FULL',
+      callbackStatus: json['callback_status']?.toString() ?? 'NOT_REQUIRED',
+      callbackAttempts: int.tryParse(json['callback_attempts']?.toString() ?? '') ?? 0,
+      detailsCompletedAt: json['details_completed_at']?.toString(),
       // Joined relations
       categoryName: json['legal_aid_category'] is Map
           ? json['legal_aid_category']['category_name']?.toString()
@@ -190,6 +213,10 @@ class LegalAidApplication {
     String? withdrawnAt,
     String? createdAt,
     String? updatedAt,
+    String? applicationMode,
+    String? callbackStatus,
+    int? callbackAttempts,
+    String? detailsCompletedAt,
     String? categoryName,
     String? caseTypeName,
     String? districtName,
@@ -223,6 +250,10 @@ class LegalAidApplication {
       withdrawnAt: withdrawnAt ?? this.withdrawnAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      applicationMode: applicationMode ?? this.applicationMode,
+      callbackStatus: callbackStatus ?? this.callbackStatus,
+      callbackAttempts: callbackAttempts ?? this.callbackAttempts,
+      detailsCompletedAt: detailsCompletedAt ?? this.detailsCompletedAt,
       categoryName: categoryName ?? this.categoryName,
       caseTypeName: caseTypeName ?? this.caseTypeName,
       districtName: districtName ?? this.districtName,
@@ -248,6 +279,8 @@ class LegalAidApplication {
     'case_details': caseDetails,
     'preferred_advocate_id': preferredAdvocateId,
     'tracking_number': '', // Trigger will generate
+    'application_mode': applicationMode,
+    'callback_status': callbackStatus,
   };
 
   String get displayStatus => statusEnum.displayLabel;

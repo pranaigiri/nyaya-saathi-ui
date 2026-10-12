@@ -8,6 +8,7 @@ import '../../widgets/draft_resumption_card.dart';
 import '../../widgets/eligibility_check_modal.dart';
 import '../apply_flow/apply_wizard_screen.dart';
 import 'tracking_screen.dart';
+import 'quick_apply_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import 'citizen_dashboard_shell.dart';
@@ -100,6 +101,20 @@ class UnauthHomeScreen extends StatelessWidget {
                 outlinedColor: const Color(0xFF0F9D78),
                 onTap: () {
                   EligibilityCheckModal.show(context);
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildBigActionButton(
+                context,
+                title: context.tr("quick_apply_title"),
+                subtitle: context.tr("quick_apply_subtitle"),
+                icon: Icons.phone_callback_rounded,
+                gradientColors: [const Color(0xFF0F9D78), const Color(0xFF047857)],
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const QuickApplyScreen()),
+                  );
                 },
               ),
               const SizedBox(height: 16),

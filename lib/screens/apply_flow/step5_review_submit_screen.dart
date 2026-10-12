@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
@@ -20,166 +19,17 @@ class Step5ReviewSubmitScreen extends StatefulWidget {
 class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
   bool _declarationAccepted = false;
   bool _isSubmitting = false;
-  final _captchaController = TextEditingController();
-  String _currentCaptcha = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _generateCaptcha();
-  }
-
-  void _generateCaptcha() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final rand = Random();
-    _currentCaptcha = List.generate(5, (_) => chars[rand.nextInt(chars.length)]).join();
-  }
-
-  void _showCaptchaVerificationDialog(BuildContext context) {
-    _captchaController.clear();
-    _generateCaptcha();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return AlertDialog(
-              scrollable: true,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Row(
-                children: [
-                  Icon(Icons.security_outlined, color: AppColors.primaryBlue),
-                  SizedBox(width: 10),
-                  Text("Security Verification", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                  const Text(
-                    "Please enter the security Captcha code shown below to confirm and submit your legal aid application.",
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Visual Captcha display with refresh button
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Stylized captcha text
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.3)),
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Text(
-                                _currentCaptcha,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 6,
-                                  color: AppColors.primaryBlue,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                              Positioned.fill(
-                                child: CustomPaint(
-                                  painter: _CaptchaLinePainter(isDark: isDark),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Refresh button
-                        IconButton(
-                          icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryBlue),
-                          tooltip: "Get New Code",
-                          onPressed: () {
-                            setDialogState(() {
-                              _generateCaptcha();
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: _captchaController,
-                    textCapitalization: TextCapitalization.characters,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: "Enter Captcha Code *",
-                      hintText: "Enter the 5 characters",
-                      prefixIcon: Icon(Icons.pin_outlined),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text("Cancel"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final entered = _captchaController.text.trim().toUpperCase();
-                    if (entered == _currentCaptcha) {
-                      Navigator.of(ctx).pop();
-                      _submitApplication();
-                    } else {
-                      setDialogState(() {
-                        _generateCaptcha();
-                        _captchaController.clear();
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Incorrect captcha code. A new code has been generated."),
-                          backgroundColor: AppColors.dangerRed,
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text("Verify & Submit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  final DateTime _screenOpenedAt = DateTime.now();
 
   Future<void> _submitApplication() async {
     setState(() => _isSubmitting = true);
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final citizenId = auth.profile?.id ?? auth.currentUser?.id;
+      final elapsed = DateTime.now().difference(_screenOpenedAt).inMilliseconds;
       final appNum = await Provider.of<DraftProvider>(context, listen: false).submitFinalApplication(
         loggedInCitizenId: citizenId,
+        clientElapsedMs: elapsed,
       );
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -332,25 +182,25 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
           ),
           child: SafeArea(
             top: false,
-            child: SizedBox(
-              height: 52,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: (!_declarationAccepted || _isSubmitting)
-                    ? null
-                    : () => _showCaptchaVerificationDialog(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.successGreen,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: (!_declarationAccepted || _isSubmitting)
+                      ? null
+                      : _submitApplication,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.successGreen,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text("Submit Application ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
                 ),
-                child: _isSubmitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text("Verify Captcha & Submit ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
               ),
-            ),
           ),
         ),
       ],
@@ -465,23 +315,4 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
       ),
     );
   }
-}
-
-class _CaptchaLinePainter extends CustomPainter {
-  final bool isDark;
-  _CaptchaLinePainter({required this.isDark});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = isDark ? Colors.white24 : Colors.black12
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width, size.height * 0.3), paint);
-    canvas.drawLine(Offset(0, size.height * 0.2), Offset(size.width, size.height * 0.8), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

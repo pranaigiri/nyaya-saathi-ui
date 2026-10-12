@@ -2,63 +2,155 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/utils/phone_utils.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../citizen/unauth_home_screen.dart';
 import '../citizen/citizen_dashboard_shell.dart';
+import '../citizen/tracking_screen.dart';
 
 class ApplicationSuccessScreen extends StatelessWidget {
   final String applicationNumber;
+  final bool isQuickMode;
+  final String? phoneNumber;
 
-  const ApplicationSuccessScreen({super.key, required this.applicationNumber});
+  const ApplicationSuccessScreen({
+    super.key,
+    required this.applicationNumber,
+    this.isQuickMode = false,
+    this.phoneNumber,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isAuth = Provider.of<AuthProvider>(context, listen: false).isAuthenticated;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maskedPhone = PhoneUtils.maskPhone(phoneNumber);
+
+    final callNotice = context
+        .tr("quick_apply_success_call_notice")
+        .replaceAll('{phone}', maskedPhone);
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Animated-style check icon circle
                 Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.successGreen,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.successGreen.withValues(alpha: 0.3),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 64),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  "Application Submitted!",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+
+                Text(
+                  isQuickMode ? "Callback Request Received!" : "Application Submitted!",
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  "Your application has been received by Sikkim State Legal Services Authority (SLSA).",
+
+                Text(
+                  isQuickMode
+                      ? "Your request has been registered with Sikkim State Legal Services Authority (SLSA)."
+                      : "Your application has been received by Sikkim State Legal Services Authority (SLSA).",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    height: 1.4,
+                  ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
+
+                // Quick Mode Call Notice Banner
+                if (isQuickMode && phoneNumber != null && phoneNumber!.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F9D78).withValues(alpha: isDark ? 0.2 : 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xFF0F9D78).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.phone_callback_rounded,
+                          color: Color(0xFF0F9D78),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                callNotice,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
+                                  color: isDark ? Colors.white : AppColors.primaryDark,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Registered Mobile: $maskedPhone",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF0F9D78),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 // Tracking ID Box
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withValues(alpha: 0.08),
+                    color: AppColors.primaryBlue.withValues(alpha: isDark ? 0.15 : 0.08),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.primaryBlue, width: 1.5),
                   ),
                   child: Column(
                     children: [
-                      const Text("YOUR TRACKING ID", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
-                      const SizedBox(height: 6),
+                      const Text(
+                        "YOUR TRACKING ID",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryBlue,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Row(
@@ -66,7 +158,12 @@ class ApplicationSuccessScreen extends StatelessWidget {
                           children: [
                             Text(
                               applicationNumber,
-                              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: AppColors.primaryDark),
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                                color: isDark ? Colors.white : AppColors.primaryDark,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             IconButton(
@@ -86,22 +183,55 @@ class ApplicationSuccessScreen extends StatelessWidget {
                               tooltip: "Copy Tracking ID",
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        "Save this number to track status without logging in.",
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Save this tracking ID to check your application status anytime.",
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
+                // Primary Action Button: "Track My Applications" in quick mode
+                if (isQuickMode && phoneNumber != null && phoneNumber!.isNotEmpty) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TrackingScreen(initialPhone: phoneNumber),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.search_rounded, size: 20),
+                      label: Text(
+                        context.tr("track_my_applications"),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6750C8),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // Secondary Action Buttons: Share & Home/Dashboard
                 Row(
                   children: [
                     Expanded(
@@ -109,9 +239,12 @@ class ApplicationSuccessScreen extends StatelessWidget {
                         onPressed: () {
                           Share.share("My Nyaya Saathi Legal Aid Tracking ID is $applicationNumber");
                         },
-                        icon: const Icon(Icons.share, size: 18),
+                        icon: const Icon(Icons.share_rounded, size: 18),
                         label: const FittedBox(fit: BoxFit.scaleDown, child: Text("Share ID")),
-                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -128,14 +261,16 @@ class ApplicationSuccessScreen extends StatelessWidget {
                             (route) => false,
                           );
                         },
-                        icon: Icon(isAuth ? Icons.dashboard : Icons.home, size: 18),
+                        icon: Icon(isAuth ? Icons.dashboard_rounded : Icons.home_rounded, size: 18),
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(isAuth ? "Dashboard" : "Home"),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),
@@ -149,4 +284,3 @@ class ApplicationSuccessScreen extends StatelessWidget {
     );
   }
 }
-

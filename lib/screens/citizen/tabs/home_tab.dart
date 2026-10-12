@@ -7,6 +7,7 @@ import '../../../providers/application_provider.dart';
 import '../../../widgets/draft_resumption_card.dart';
 import '../../../widgets/stat_card.dart';
 import '../tracking_screen.dart';
+import '../quick_apply_screen.dart';
 import '../../../widgets/apply_choice_modal.dart';
 import '../../../widgets/eligibility_check_modal.dart';
 
@@ -82,6 +83,20 @@ class _HomeTabState extends State<HomeTab> {
             outlinedColor: const Color(0xFF0F9D78),
             onTap: () {
               EligibilityCheckModal.show(context);
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildActionCard(
+            context,
+            title: context.tr("quick_apply_title"),
+            subtitle: context.tr("quick_apply_subtitle"),
+            icon: Icons.phone_callback_rounded,
+            gradientColors: [const Color(0xFF0F9D78), const Color(0xFF047857)],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QuickApplyScreen()),
+              );
             },
           ),
           const SizedBox(height: 16),
