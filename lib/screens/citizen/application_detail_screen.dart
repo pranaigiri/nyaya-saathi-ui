@@ -96,11 +96,33 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
 
   Future<void> _refreshApplicationSilently(String id) async {
     try {
-      final app = await _repository.getApplicationDetail(id);
+      LegalAidApplication? app = await _repository.getApplicationDetail(id);
+      if (app == null &&
+          _application != null &&
+          _application!.trackingNumber.isNotEmpty &&
+          _application!.applicantPhoneNumber.isNotEmpty) {
+        app = await _repository.trackApplication(
+          trackingNumber: _application!.trackingNumber,
+          phoneNumber: _application!.applicantPhoneNumber,
+        );
+      }
       if (app != null && mounted) {
         setState(() {
           _application = app;
         });
+        return;
+      }
+      if (_application?.assignedAdvocateId != null &&
+          _application?.assignedAdvocate == null) {
+        final adv = await _repository.getAdvocateById(_application!.assignedAdvocateId!);
+        if (adv != null && mounted) {
+          setState(() {
+            _application = _application!.copyWith(
+              assignedAdvocate: adv,
+              assignedAdvocateName: adv.fullName,
+            );
+          });
+        }
       }
     } catch (_) {}
   }
@@ -112,7 +134,16 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
     });
 
     try {
-      final app = await _repository.getApplicationDetail(id);
+      var app = await _repository.getApplicationDetail(id);
+      if (app == null &&
+          _application != null &&
+          _application!.trackingNumber.isNotEmpty &&
+          _application!.applicantPhoneNumber.isNotEmpty) {
+        app = await _repository.trackApplication(
+          trackingNumber: _application!.trackingNumber,
+          phoneNumber: _application!.applicantPhoneNumber,
+        );
+      }
       if (app != null) {
         if (mounted) {
           setState(() {
@@ -171,6 +202,24 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
   }
 
   Future<void> _handleRefresh() async {
+    final currentApp = _application;
+    if (currentApp != null &&
+        currentApp.trackingNumber.isNotEmpty &&
+        currentApp.applicantPhoneNumber.isNotEmpty) {
+      try {
+        final refreshed = await _repository.trackApplication(
+          trackingNumber: currentApp.trackingNumber,
+          phoneNumber: currentApp.applicantPhoneNumber,
+        );
+        if (refreshed != null && mounted) {
+          setState(() {
+            _application = refreshed;
+          });
+          _fetchStatusHistory(refreshed.id);
+          return;
+        }
+      } catch (_) {}
+    }
     final targetId = _application?.id ?? widget.applicationId;
     if (targetId != null) {
       await _fetchApplicationDetails(targetId);
@@ -465,11 +514,11 @@ For helpline support, dial 15100 (Toll-Free).
                 ),
                 _buildRow(
                   "Summary of Grievance",
-                  application.summaryOfGrievance.isNotEmpty
+                  application.summaryOfGrievance.trim().isNotEmpty
                       ? application.summaryOfGrievance
                       : (application.isDetailsPending
                           ? context.tr('details_pending_notice')
-                          : 'N/A'),
+                          : 'General Grievance (Details recorded)'),
                 ),
                 if (application.reliefSought != null &&
                     application.reliefSought!.isNotEmpty)
@@ -509,21 +558,28 @@ For helpline support, dial 15100 (Toll-Free).
 
     switch (status) {
       case 'ATTEMPTED':
+      case 'CALL_ATTEMPTED':
+      case 'CALLBACK_ATTEMPTED':
         statusLabel = context.tr('callback_attempted');
         statusIcon = Icons.phone_callback_rounded;
         statusColor = const Color(0xFFD97706);
         break;
       case 'REACHED':
+      case 'DETAILS_COLLECTED':
+      case 'CALLBACK_COMPLETED':
         statusLabel = context.tr('callback_details_collected');
         statusIcon = Icons.check_circle_rounded;
         statusColor = const Color(0xFF16A34A);
         break;
       case 'UNREACHABLE':
+      case 'CALLBACK_UNREACHABLE':
         statusLabel = context.tr('callback_unreachable');
         statusIcon = Icons.phone_missed_rounded;
         statusColor = const Color(0xFFDC2626);
         break;
       case 'PENDING':
+      case 'PENDING_CALL':
+      case 'CALLBACK_PENDING':
       default:
         statusLabel = context.tr('callback_waiting');
         statusIcon = Icons.phone_in_talk_rounded;
@@ -613,7 +669,7 @@ For helpline support, dial 15100 (Toll-Free).
           Text(
             application.isDetailsPending
                 ? "An SLSA representative will call you on your registered phone number to collect case details and complete your legal aid application."
-                : "Your details have been successfully recorded by SLSA staff.",
+                : "Your case details have been successfully recorded by SLSA staff and your legal aid application is actively proceeding.",
             style: TextStyle(
               fontSize: 12.5,
               height: 1.4,
@@ -2645,7 +2701,7 @@ For helpline support, dial 15100 (Toll-Free).
                 decoration: const InputDecoration(
                   hintText:
                       "State your reasons clearly (e.g. communication issue, conflict of interest)...",
-                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
               ),
             ],

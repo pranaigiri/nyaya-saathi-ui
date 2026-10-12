@@ -103,8 +103,31 @@ class LegalAidApplication {
       applicationMode == 'QUICK_CALLBACK' || applicationMode == 'QUICK';
 
   /// Returns true if this is a quick application where remaining details have not yet been collected.
-  bool get isDetailsPending =>
-      isQuickMode && (detailsCompletedAt == null || detailsCompletedAt!.isEmpty);
+  bool get isDetailsPending {
+    if (!isQuickMode) return false;
+    final cb = callbackStatus.toUpperCase();
+    if (cb == 'CALLBACK_COMPLETED' ||
+        cb == 'DETAILS_COLLECTED' ||
+        cb == 'REACHED') {
+      return false;
+    }
+    if (detailsCompletedAt != null && detailsCompletedAt!.trim().isNotEmpty) {
+      return false;
+    }
+    if (caseDetails != null && caseDetails!.trim().isNotEmpty) {
+      return false;
+    }
+    final s = status.toUpperCase();
+    if (s == 'ADVOCATE_ASSIGNED' ||
+        s == 'UNDER_SCRUTINY' ||
+        s == 'IN_REVIEW' ||
+        s == 'APPROVED' ||
+        s == 'RESOLVED' ||
+        s == 'CLOSED') {
+      return false;
+    }
+    return true;
+  }
 
   bool get isForwarded =>
       applicantDistrictId != null &&
@@ -125,10 +148,10 @@ class LegalAidApplication {
 
   factory LegalAidApplication.fromJson(Map<String, dynamic> json) {
     Advocate? advocate;
-    if (json['advocate_master'] is Map<String, dynamic>) {
-      advocate = Advocate.fromJson(json['advocate_master'] as Map<String, dynamic>);
-    } else if (json['assigned_advocate'] is Map<String, dynamic>) {
-      advocate = Advocate.fromJson(json['assigned_advocate'] as Map<String, dynamic>);
+    if (json['advocate_master'] is Map) {
+      advocate = Advocate.fromJson(Map<String, dynamic>.from(json['advocate_master'] as Map));
+    } else if (json['assigned_advocate'] is Map) {
+      advocate = Advocate.fromJson(Map<String, dynamic>.from(json['assigned_advocate'] as Map));
     }
 
     final applicantDistName = json['applicant_district'] is Map

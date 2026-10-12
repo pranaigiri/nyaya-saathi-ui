@@ -108,11 +108,11 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                       controller: _searchController,
                       onChanged: (val) => setState(() => _searchQuery = val),
                       decoration: InputDecoration(
-                        labelText: "Search Case Type...",
+                        hintText: "Search Case Type...",
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.clear),
+                                icon: const Icon(Icons.clear, size: 20),
                                 onPressed: () {
                                   _searchController.clear();
                                   setState(() => _searchQuery = '');
@@ -282,6 +282,7 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                       decoration: const InputDecoration(
                         labelText: "Summary of Grievance / Case Details *",
                         hintText: "Explain facts of the case, dates, opposing parties, and key issues...",
+                        alignLabelWithHint: true,
                       ),
                       validator: (v) => v == null || v.trim().length < 10 ? "Please provide a summary (min 10 chars)" : null,
                     ),
@@ -293,6 +294,7 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                       decoration: const InputDecoration(
                         labelText: "Relief Sought (Optional)",
                         hintText: "e.g. Free advocate for bail application / property court suit...",
+                        alignLabelWithHint: true,
                       ),
                     ),
                   ],

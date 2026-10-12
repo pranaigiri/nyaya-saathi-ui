@@ -661,7 +661,7 @@ class _Step2ApplicantDetailsScreenState
                       }
                       final selectedDistrictValue = districts.any((d) => d.id == _districtId)
                           ? _districtId
-                          : (districts.isNotEmpty ? districts.first.id : null);
+                          : null;
 
                       return DropdownButtonFormField<String>(
                         initialValue: selectedDistrictValue,
@@ -673,7 +673,13 @@ class _Step2ApplicantDetailsScreenState
                             .map(
                               (d) => DropdownMenuItem<String>(
                                 value: d.id,
-                                child: Text(d.districtName),
+                                child: Text(
+                                  d.districtName,
+                                  style: TextStyle(
+                                    color: primaryTxt,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
                             )
                             .toList(),
@@ -912,7 +918,9 @@ class _DobTriggerButton extends StatelessWidget {
             Icon(
               Icons.calendar_month_outlined,
               size: 20,
-              color: hasValue ? AppColors.primaryBlue : secondTxt,
+              color: hasValue
+                  ? AppColors.primaryBlue
+                  : (isDark ? AppColors.iconDark : AppColors.iconLight),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -920,7 +928,9 @@ class _DobTriggerButton extends StatelessWidget {
                 hasValue ? dobDisplay! : 'Select date of birth',
                 style: TextStyle(
                   fontSize: 14,
-                  color: hasValue ? primaryTxt : secondTxt,
+                  color: hasValue
+                      ? primaryTxt
+                      : (isDark ? AppColors.placeholderDark : AppColors.placeholderLight),
                   fontWeight: hasValue ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
@@ -930,7 +940,9 @@ class _DobTriggerButton extends StatelessWidget {
                   ? Icons.edit_calendar_outlined
                   : Icons.chevron_right_rounded,
               size: 20,
-              color: hasValue ? AppColors.primaryBlue : secondTxt,
+              color: hasValue
+                  ? AppColors.primaryBlue
+                  : (isDark ? AppColors.iconDark : AppColors.iconLight),
             ),
           ],
         ),

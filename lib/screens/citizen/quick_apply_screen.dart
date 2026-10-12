@@ -287,19 +287,20 @@ class _QuickApplyScreenState extends State<QuickApplyScreen> {
                 keyboardType: TextInputType.phone,
                 inputFormatters: [IndianPhoneNumberFormatter()],
                 textInputAction: TextInputAction.next,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.8,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                 ),
                 decoration: InputDecoration(
                   hintText: "10-digit mobile number",
                   prefixIcon: const Icon(Icons.phone_android_rounded),
-                  prefixText: "+91 ",
+                  prefixText: _phoneController.text.isNotEmpty ? "+91 " : null,
                   prefixStyle: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white70 : AppColors.primaryDark,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.primaryDark,
                   ),
                   suffixIcon: _phoneController.text.isNotEmpty
                       ? IconButton(
@@ -343,6 +344,9 @@ class _QuickApplyScreenState extends State<QuickApplyScreen> {
                 textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.next,
                 maxLength: 100,
+                style: TextStyle(
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
                 decoration: const InputDecoration(
                   hintText: "e.g. Tenzing Norbu",
                   prefixIcon: Icon(Icons.person_outline_rounded),
@@ -367,7 +371,13 @@ class _QuickApplyScreenState extends State<QuickApplyScreen> {
                 items: _districts.map((d) {
                   return DropdownMenuItem<String>(
                     value: d.id,
-                    child: Text(d.districtName),
+                    child: Text(
+                      d.districtName,
+                      style: TextStyle(
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   );
                 }).toList(),
                 onChanged: (val) {

@@ -36,6 +36,12 @@ class AppColors {
   static const Color textPrimaryDark = Color(0xFFF8FAFC);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
 
+  // Form Controls & Placeholder Design Tokens
+  static const Color placeholderLight = Color(0xFF9CA3AF); // Muted neutral grey (~#9CA3AF)
+  static const Color placeholderDark = Color(0xFF9CA3AF);  // Muted light grey placeholder on dark surfaces
+  static const Color iconLight = Color(0xFF64748B);        // Crisp, visible slate icon in light mode
+  static const Color iconDark = Color(0xFF94A3B8);         // High-contrast, distinguishable icon in dark mode
+
   // Card & Glass
   static Color glassLight = Colors.white.withValues(alpha: 0.85);
   static Color glassDark = const Color(0xFF191B20).withValues(alpha: 0.85);

@@ -132,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: "Email Address *",
+                hintText: "e.g. citizen@example.com",
                 prefixIcon: Icon(Icons.email_outlined),
               ),
             ),
@@ -144,6 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onSubmitted: (_) => _handleLogin(),
               decoration: InputDecoration(
                 labelText: "Password *",
+                hintText: "Enter your password",
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),

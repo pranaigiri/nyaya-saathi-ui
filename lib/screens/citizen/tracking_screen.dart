@@ -760,15 +760,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
             inputFormatters: [IndianPhoneNumberFormatter()],
             textInputAction: TextInputAction.search,
             onFieldSubmitted: (_) => _performPhoneTrack(),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.8),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
             decoration: InputDecoration(
               hintText: "10-digit registered number",
               prefixIcon: const Icon(Icons.phone_outlined),
-              prefixText: "+91 ",
+              prefixText: _phoneController.text.isNotEmpty ? "+91 " : null,
               prefixStyle: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white70 : AppColors.primaryDark,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.primaryDark,
               ),
               suffixIcon: _phoneController.text.isNotEmpty
                   ? IconButton(
@@ -1204,17 +1209,24 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   inputFormatters: [RemainingDigitsFormatter()],
                   keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.next,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: "26-00034",
+                    hintStyle: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.normal,
+                      letterSpacing: 1.0,
+                      color: isDark ? AppColors.placeholderDark : AppColors.placeholderLight,
+                    ),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     isDense: true,
                   ),
                   validator: (val) {
@@ -1336,12 +1348,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
         child: DropdownButton<String>(
           value: _selectedDistrictCode,
           isExpanded: true,
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: isDark ? AppColors.iconDark : AppColors.iconLight,
+          ),
           items: TrackingNumberHelper.sikkimDistricts.map((opt) {
             return DropdownMenuItem<String>(
               value: opt.code,
               child: Text(
                 "${opt.name} (${opt.code})",
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.5,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
               ),
             );
           }).toList(),
@@ -1394,15 +1414,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
           controller: _directTrackingController,
           inputFormatters: [TrackingNumberFormatter()],
           textInputAction: TextInputAction.next,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14.5,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
           ),
           decoration: InputDecoration(
             labelText: "Full Tracking ID *",
             hintText: "e.g. SK-GTK-26-00034",
-            prefixIcon: const Icon(Icons.confirmation_number_outlined, color: _violet),
+            prefixIcon: Icon(
+              Icons.confirmation_number_outlined,
+              color: isDark ? AppColors.darkPrimary : _violet,
+            ),
             suffixIcon: _directTrackingController.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear_rounded, size: 18),

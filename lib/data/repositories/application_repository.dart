@@ -405,8 +405,8 @@ class ApplicationRepository {
 
         if (res != null && (res is! List || res.isNotEmpty)) {
           final data = res is List ? res.first : res;
-          if (data != null && data is Map<String, dynamic>) {
-            final rawApp = LegalAidApplication.fromJson(data);
+          if (data != null && data is Map) {
+            final rawApp = LegalAidApplication.fromJson(Map<String, dynamic>.from(data));
 
             // Attempt to load fully-joined application (with category, case type, district names)
             if (rawApp.id.isNotEmpty) {

@@ -623,7 +623,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icon(
                               Icons.calendar_month_outlined,
                               size: 20,
-                              color: _hasDob ? AppColors.primaryBlue : secondTxt,
+                              color: _hasDob
+                                  ? AppColors.primaryBlue
+                                  : (isDark ? AppColors.iconDark : AppColors.iconLight),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -631,7 +633,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _hasDob ? _dobDisplay : 'Select date of birth',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: _hasDob ? primaryTxt : secondTxt,
+                                  color: _hasDob
+                                      ? primaryTxt
+                                      : (isDark ? AppColors.placeholderDark : AppColors.placeholderLight),
                                   fontWeight: _hasDob ? FontWeight.w600 : FontWeight.normal,
                                 ),
                               ),
@@ -639,7 +643,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if (_hasDob)
                               const Icon(Icons.check_circle_rounded, color: AppColors.successGreen, size: 20)
                             else
-                              Icon(Icons.chevron_right_rounded, color: secondTxt, size: 20),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: isDark ? AppColors.iconDark : AppColors.iconLight,
+                                size: 20,
+                              ),
                           ],
                         ),
                       ),
@@ -687,7 +695,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               .map(
                                 (d) => DropdownMenuItem<String>(
                                   value: d.id,
-                                  child: Text(d.districtName),
+                                  child: Text(
+                                    d.districtName,
+                                    style: TextStyle(
+                                      color: primaryTxt,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               )
                               .toList(),

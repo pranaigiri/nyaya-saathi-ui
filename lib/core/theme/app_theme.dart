@@ -97,6 +97,11 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
+      hintColor: AppColors.placeholderLight,
+      iconTheme: const IconThemeData(
+        color: AppColors.iconLight,
+        size: 20,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
@@ -104,6 +109,40 @@ class AppTheme {
           horizontal: 16,
           vertical: 14,
         ),
+        hintStyle: GoogleFonts.inter(
+          fontSize: 14.5 * scale,
+          fontWeight: FontWeight.normal,
+          color: AppColors.placeholderLight,
+        ),
+        labelStyle: GoogleFonts.inter(
+          fontSize: 14.5 * scale,
+          fontWeight: FontWeight.normal,
+          color: AppColors.textSecondaryLight,
+        ),
+        floatingLabelStyle: GoogleFonts.inter(
+          fontSize: 13 * scale,
+          fontWeight: FontWeight.w600,
+          color: AppColors.primaryBlue,
+        ),
+        prefixIconColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return AppColors.primaryBlue;
+          }
+          if (states.contains(WidgetState.error)) {
+            return AppColors.dangerRed;
+          }
+          return AppColors.iconLight;
+        }),
+        suffixIconColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return AppColors.primaryBlue;
+          }
+          if (states.contains(WidgetState.error)) {
+            return AppColors.dangerRed;
+          }
+          return AppColors.iconLight;
+        }),
+        iconColor: AppColors.iconLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderLight),
@@ -115,6 +154,14 @@ class AppTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.dangerRed),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.dangerRed, width: 2),
         ),
       ),
       textSelectionTheme: TextSelectionThemeData(
@@ -192,6 +239,11 @@ class AppTheme {
           side: const BorderSide(color: AppColors.borderDarkSubtle, width: 1),
         ),
       ),
+      hintColor: AppColors.placeholderDark,
+      iconTheme: const IconThemeData(
+        color: AppColors.iconDark,
+        size: 20,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurface2,
@@ -199,6 +251,40 @@ class AppTheme {
           horizontal: 16,
           vertical: 14,
         ),
+        hintStyle: GoogleFonts.inter(
+          fontSize: 14.5 * scale,
+          fontWeight: FontWeight.normal,
+          color: AppColors.placeholderDark,
+        ),
+        labelStyle: GoogleFonts.inter(
+          fontSize: 14.5 * scale,
+          fontWeight: FontWeight.normal,
+          color: AppColors.textSecondaryDark,
+        ),
+        floatingLabelStyle: GoogleFonts.inter(
+          fontSize: 13 * scale,
+          fontWeight: FontWeight.w600,
+          color: AppColors.darkPrimary,
+        ),
+        prefixIconColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return AppColors.darkPrimary;
+          }
+          if (states.contains(WidgetState.error)) {
+            return AppColors.roseRed;
+          }
+          return AppColors.iconDark;
+        }),
+        suffixIconColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return AppColors.darkPrimary;
+          }
+          if (states.contains(WidgetState.error)) {
+            return AppColors.roseRed;
+          }
+          return AppColors.iconDark;
+        }),
+        iconColor: AppColors.iconDark,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderDark),
@@ -210,6 +296,14 @@ class AppTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.roseRed),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.roseRed, width: 1.5),
         ),
       ),
       textSelectionTheme: TextSelectionThemeData(
