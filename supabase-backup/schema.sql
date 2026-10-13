@@ -91,6 +91,54 @@ $$;
 ALTER FUNCTION "public"."application_exists_for_link"("app_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") RETURNS TABLE("tracking_number" "text", "application_id" "uuid")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_clean_phone text;
+  v_app_id uuid;
+  v_tracking text;
+BEGIN
+  v_clean_phone := RIGHT(REGEXP_REPLACE(COALESCE(p_phone, ''), '\D', '', 'g'), 10);
+  IF LENGTH(v_clean_phone) <> 10 THEN
+    RAISE EXCEPTION 'Invalid phone number: exactly 10 digits required'
+      USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+
+  INSERT INTO public.legal_aid_application (
+    application_mode,
+    status,
+    callback_status,
+    callback_attempts,
+    applicant_phone_number,
+    applicant_full_name,
+    applicant_district_id,
+    current_district_id,
+    case_details,
+    applicant_id
+  ) VALUES (
+    'QUICK_CALLBACK',
+    'SUBMITTED',
+    'PENDING_CALL',
+    0,
+    v_clean_phone,
+    NULLIF(TRIM(p_name), ''),
+    p_district_id,
+    p_district_id,
+    COALESCE(NULLIF(TRIM(p_note), ''), 'Quick callback request'),
+    p_applicant_id
+  )
+  RETURNING id, legal_aid_application.tracking_number INTO v_app_id, v_tracking;
+
+  RETURN QUERY SELECT v_tracking, v_app_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."current_profile_status"() RETURNS "public"."user_status_enum"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -135,10 +183,40 @@ $$;
 ALTER FUNCTION "public"."enforce_master_code_immutable"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."fn_enforce_application_update_invariants"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  -- 1. Tracking number is immutable once set
+  IF OLD.tracking_number IS NOT NULL AND OLD.tracking_number <> '' THEN
+    NEW.tracking_number := OLD.tracking_number;
+  END IF;
+
+  -- 2. Block transition to ADVOCATE_ASSIGNED or advocate assignment if details are incomplete
+  IF (NEW.status = 'ADVOCATE_ASSIGNED' OR (NEW.assigned_advocate_id IS NOT NULL AND OLD.assigned_advocate_id IS NULL)) THEN
+    IF NEW.category_id IS NULL OR
+       NEW.case_type_id IS NULL OR
+       NEW.applicant_full_name IS NULL OR TRIM(NEW.applicant_full_name) = '' OR
+       NEW.applicant_district_id IS NULL OR
+       NEW.current_district_id IS NULL THEN
+      RAISE EXCEPTION 'Cannot assign advocate until applicant details (full name, category, case type, and district) are completed.'
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."fn_enforce_application_update_invariants"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."fn_handle_application_status_change"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
-    AS $
+    AS $$
 DECLARE
   v_title text;
   v_body text;
@@ -150,7 +228,7 @@ BEGIN
   v_status_normalized := UPPER(COALESCE(NEW.status, ''));
   v_applicant_id := NEW.applicant_id;
 
-  -- 1. Always record transition in application_status_history
+  -- 1. Always record transition in application_status_history (even for guests where applicant_id IS NULL)
   BEGIN
     INSERT INTO public.application_status_history (
       application_id,
@@ -220,7 +298,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 
 ALTER FUNCTION "public"."fn_handle_application_status_change"() OWNER TO "postgres";
@@ -261,11 +339,11 @@ CREATE TABLE IF NOT EXISTS "public"."legal_aid_application" (
     "last_callback_at" timestamp with time zone,
     "details_completed_at" timestamp with time zone,
     "details_completed_by" "uuid",
+    CONSTRAINT "chk_application_mode_completeness" CHECK ((("application_mode" = 'QUICK_CALLBACK'::"text") OR (("category_id" IS NOT NULL) AND ("applicant_full_name" IS NOT NULL) AND ("applicant_dob" IS NOT NULL) AND ("applicant_gender" IS NOT NULL) AND ("applicant_district_id" IS NOT NULL) AND ("case_type_id" IS NOT NULL) AND ("current_district_id" IS NOT NULL) AND ("case_details" IS NOT NULL)))),
     CONSTRAINT "legal_aid_application_advocate_acceptance_status_check" CHECK (("advocate_acceptance_status" = ANY (ARRAY['NONE'::"text", 'PENDING'::"text", 'ACCEPTED'::"text", 'REJECTED'::"text"]))),
-    CONSTRAINT "legal_aid_application_status_check" CHECK (("status" = ANY (ARRAY['SUBMITTED'::"text", 'UNDER_REVIEW'::"text", 'ADVOCATE_ASSIGNED'::"text", 'RESOLVED'::"text", 'REJECTED'::"text", 'WITHDRAWN'::"text"]))),
     CONSTRAINT "legal_aid_application_application_mode_check" CHECK (("application_mode" = ANY (ARRAY['FULL'::"text", 'QUICK_CALLBACK'::"text"]))),
     CONSTRAINT "legal_aid_application_callback_status_check" CHECK (("callback_status" = ANY (ARRAY['NOT_REQUIRED'::"text", 'PENDING_CALL'::"text", 'CALL_ATTEMPTED'::"text", 'UNREACHABLE'::"text", 'DETAILS_COLLECTED'::"text"]))),
-    CONSTRAINT "chk_application_mode_completeness" CHECK ((("application_mode" = 'QUICK_CALLBACK'::"text") OR (("category_id" IS NOT NULL) AND ("applicant_full_name" IS NOT NULL) AND ("applicant_dob" IS NOT NULL) AND ("applicant_gender" IS NOT NULL) AND ("applicant_district_id" IS NOT NULL) AND ("case_type_id" IS NOT NULL) AND ("current_district_id" IS NOT NULL) AND ("case_details" IS NOT NULL))))
+    CONSTRAINT "legal_aid_application_status_check" CHECK (("status" = ANY (ARRAY['SUBMITTED'::"text", 'UNDER_REVIEW'::"text", 'ADVOCATE_ASSIGNED'::"text", 'RESOLVED'::"text", 'REJECTED'::"text", 'WITHDRAWN'::"text"])))
 );
 
 
@@ -327,13 +405,14 @@ ALTER FUNCTION "public"."forward_application"("p_application_id" "uuid", "p_targ
 CREATE OR REPLACE FUNCTION "public"."generate_tracking_number"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
-    AS $
+    AS $$
 DECLARE
-    dist_code TEXT;
-    year_str TEXT;
-    seq_val INT;
+    dist_code text;
+    year_str text;
+    seq_val int;
     target_district uuid;
 BEGIN
+    -- If tracking number is already populated and non-empty, keep it
     IF NEW.tracking_number IS NOT NULL AND NEW.tracking_number <> '' THEN
         RETURN NEW;
     END IF;
@@ -359,7 +438,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$;
+$$;
 
 
 ALTER FUNCTION "public"."generate_tracking_number"() OWNER TO "postgres";
@@ -605,26 +684,104 @@ ALTER FUNCTION "public"."is_state_admin"("p_state_id" "uuid") OWNER TO "postgres
 CREATE OR REPLACE FUNCTION "public"."link_guest_applications_on_profile"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
-    AS $
+    AS $$
 DECLARE
-    v_norm_phone text;
+  v_norm_phone text;
 BEGIN
-    IF NEW.phone_number IS NOT NULL THEN
-        v_norm_phone := RIGHT(REGEXP_REPLACE(NEW.phone_number, '\D', '', 'g'), 10);
-        IF LENGTH(v_norm_phone) = 10 THEN
-            UPDATE public.legal_aid_application
-            SET applicant_id = NEW.id
-            WHERE RIGHT(REGEXP_REPLACE(applicant_phone_number, '\D', '', 'g'), 10) = v_norm_phone
-              AND applicant_id IS NULL;
-        END IF;
+  IF NEW.phone_number IS NOT NULL THEN
+    v_norm_phone := RIGHT(REGEXP_REPLACE(NEW.phone_number, '\D', '', 'g'), 10);
+    IF LENGTH(v_norm_phone) = 10 THEN
+      UPDATE public.legal_aid_application
+      SET applicant_id = NEW.id
+      WHERE RIGHT(REGEXP_REPLACE(applicant_phone_number, '\D', '', 'g'), 10) = v_norm_phone
+        AND applicant_id IS NULL;
     END IF;
+  END IF;
 
-    RETURN NEW;
+  RETURN NEW;
 END;
-$;
+$$;
 
 
 ALTER FUNCTION "public"."link_guest_applications_on_profile"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."log_application_callback"("p_application_id" "uuid", "p_outcome" "text", "p_notes" "text" DEFAULT NULL::"text") RETURNS "void"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+    v_application public.legal_aid_application%ROWTYPE;
+    v_called_at timestamptz;
+    v_failed_attempts integer;
+    v_callback_status text;
+BEGIN
+    IF auth.uid() IS NULL OR NOT public.is_geo_admin() THEN
+        RAISE EXCEPTION 'Permission denied: only authorized administrators can log a callback';
+    END IF;
+
+    IF p_outcome NOT IN (
+        'NO_ANSWER',
+        'SWITCHED_OFF',
+        'WRONG_NUMBER',
+        'CALL_BACK_LATER',
+        'DETAILS_COLLECTED',
+        'REFUSED'
+    ) THEN
+        RAISE EXCEPTION 'Invalid callback outcome';
+    END IF;
+
+    SELECT *
+    INTO v_application
+    FROM public.legal_aid_application
+    WHERE id = p_application_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Application not found or permission denied';
+    END IF;
+
+    IF v_application.application_mode <> 'QUICK_CALLBACK' THEN
+        RAISE EXCEPTION 'Callbacks can only be logged for quick applications';
+    END IF;
+
+    INSERT INTO public.application_callback_log (
+        application_id,
+        called_by_id,
+        outcome,
+        notes
+    )
+    VALUES (
+        p_application_id,
+        auth.uid(),
+        p_outcome,
+        NULLIF(BTRIM(p_notes), '')
+    )
+    RETURNING called_at INTO v_called_at;
+
+    SELECT COUNT(*)::integer
+    INTO v_failed_attempts
+    FROM public.application_callback_log
+    WHERE application_id = p_application_id
+      AND outcome IN ('NO_ANSWER', 'SWITCHED_OFF', 'WRONG_NUMBER');
+
+    v_callback_status := CASE
+        WHEN p_outcome = 'CALL_BACK_LATER' THEN 'PENDING_CALL'
+        WHEN p_outcome = 'DETAILS_COLLECTED' THEN 'DETAILS_COLLECTED'
+        WHEN v_failed_attempts >= 3 THEN 'UNREACHABLE'
+        ELSE 'CALL_ATTEMPTED'
+    END;
+
+    UPDATE public.legal_aid_application
+    SET callback_attempts = callback_attempts + 1,
+        last_callback_at = v_called_at,
+        callback_status = v_callback_status
+    WHERE id = p_application_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."log_application_callback"("p_application_id" "uuid", "p_outcome" "text", "p_notes" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."log_application_district_transfer"() RETURNS "trigger"
@@ -632,13 +789,26 @@ CREATE OR REPLACE FUNCTION "public"."log_application_district_transfer"() RETURN
     SET "search_path" TO ''
     AS $$
 BEGIN
-  IF auth.uid() IS NOT NULL THEN
-    INSERT INTO public.application_forward_log
-      (application_id, from_district_id, to_district_id, forwarded_by_id, reason)
-    VALUES
-      (NEW.id, OLD.current_district_id, NEW.current_district_id, auth.uid(), 'District transfer');
-  END IF;
-  RETURN NEW;
+    IF OLD.current_district_id IS NOT NULL
+       AND NEW.current_district_id IS NOT NULL
+       AND auth.uid() IS NOT NULL THEN
+        INSERT INTO public.application_forward_log (
+            application_id,
+            from_district_id,
+            to_district_id,
+            forwarded_by_id,
+            reason
+        )
+        VALUES (
+            NEW.id,
+            OLD.current_district_id,
+            NEW.current_district_id,
+            auth.uid(),
+            'District transfer'
+        );
+    END IF;
+
+    RETURN NEW;
 END;
 $$;
 
@@ -725,12 +895,13 @@ ALTER FUNCTION "public"."sync_user_type_from_admin_scope"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."track_application"("p_tracking_number" "text", "p_phone_number" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
-    AS $
+    AS $$
 DECLARE
   v_clean_phone text;
   v_app record;
   v_timeline jsonb;
   v_is_owner boolean := false;
+  v_advocate jsonb := NULL;
 BEGIN
   v_clean_phone := RIGHT(REGEXP_REPLACE(COALESCE(p_phone_number, ''), '\D', '', 'g'), 10);
 
@@ -738,12 +909,21 @@ BEGIN
     a.*,
     c.category_name,
     ct.case_type_name,
-    d.district_name
+    d.district_name,
+    adv.id AS adv_id,
+    adv.full_name AS adv_full_name,
+    adv.enrollment_number AS adv_enrollment_number,
+    adv.primary_phone_number AS adv_phone,
+    adv.secondary_phone_number AS adv_sec_phone,
+    adv.primary_email AS adv_email,
+    adv.office_address AS adv_address,
+    adv.experience_years AS adv_experience
   INTO v_app
   FROM public.legal_aid_application a
   LEFT JOIN public.legal_aid_category c ON c.id = a.category_id
   LEFT JOIN public.case_type_master ct ON ct.id = a.case_type_id
   LEFT JOIN public.district_master d ON d.id = a.current_district_id
+  LEFT JOIN public.advocate_master adv ON adv.id = a.assigned_advocate_id
   WHERE a.tracking_number = TRIM(p_tracking_number)
     AND RIGHT(REGEXP_REPLACE(a.applicant_phone_number, '\D', '', 'g'), 10) = v_clean_phone
   LIMIT 1;
@@ -771,6 +951,19 @@ BEGIN
   FROM public.application_status_history h
   WHERE h.application_id = v_app.id;
 
+  IF v_app.adv_id IS NOT NULL THEN
+    v_advocate := jsonb_build_object(
+      'id', v_app.adv_id,
+      'full_name', v_app.adv_full_name,
+      'enrollment_number', COALESCE(v_app.adv_enrollment_number, ''),
+      'primary_phone_number', v_app.adv_phone,
+      'secondary_phone_number', v_app.adv_sec_phone,
+      'primary_email', v_app.adv_email,
+      'office_address', v_app.adv_address,
+      'experience_years', COALESCE(v_app.adv_experience, 0)
+    );
+  END IF;
+
   IF v_is_owner THEN
     RETURN jsonb_build_object(
       'id', v_app.id,
@@ -787,13 +980,17 @@ BEGIN
       'case_type_id', v_app.case_type_id,
       'current_district_id', v_app.current_district_id,
       'current_taluka_id', v_app.current_taluka_id,
-      'case_details', v_app.case_details,
+      'case_details', COALESCE(v_app.case_details, ''),
       'preferred_advocate_id', v_app.preferred_advocate_id,
       'assigned_advocate_id', v_app.assigned_advocate_id,
-      'advocate_acceptance_status', v_app.advocate_acceptance_status,
+      'assigned_advocate_name', v_app.adv_full_name,
+      'advocate_master', v_advocate,
+      'assigned_advocate', v_advocate,
+      'advocate_acceptance_status', COALESCE(v_app.advocate_acceptance_status, 'NONE'),
       'assigned_at', v_app.assigned_at,
       'status', v_app.status,
       'callback_status', v_app.callback_status,
+      'details_completed_at', v_app.details_completed_at,
       'is_withdrawn_by_citizen', v_app.is_withdrawn_by_citizen,
       'withdrawal_reason', v_app.withdrawal_reason,
       'withdrawn_at', v_app.withdrawn_at,
@@ -831,13 +1028,17 @@ BEGIN
       END,
       'applicant_phone_number', v_clean_phone,
       'applicant_dob', NULL,
-      'applicant_gender', NULL,
-      'village_or_town', NULL,
-      'case_details', '',
-      'preferred_advocate_id', NULL,
-      'assigned_advocate_id', NULL,
-      'advocate_acceptance_status', 'NONE',
-      'assigned_at', NULL,
+      'applicant_gender', v_app.applicant_gender,
+      'village_or_town', v_app.village_or_town,
+      'case_details', COALESCE(v_app.case_details, ''),
+      'details_completed_at', v_app.details_completed_at,
+      'preferred_advocate_id', v_app.preferred_advocate_id,
+      'assigned_advocate_id', v_app.assigned_advocate_id,
+      'assigned_advocate_name', v_app.adv_full_name,
+      'advocate_master', v_advocate,
+      'assigned_advocate', v_advocate,
+      'advocate_acceptance_status', COALESCE(v_app.advocate_acceptance_status, 'NONE'),
+      'assigned_at', v_app.assigned_at,
       'is_withdrawn_by_citizen', v_app.is_withdrawn_by_citizen,
       'withdrawal_reason', NULL,
       'withdrawn_at', v_app.withdrawn_at,
@@ -847,10 +1048,56 @@ BEGIN
     );
   END IF;
 END;
-$;
+$$;
 
 
 ALTER FUNCTION "public"."track_application"("p_tracking_number" "text", "p_phone_number" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."track_applications_by_phone"("p_phone" "text") RETURNS TABLE("tracking_number" "text", "application_mode" "text", "status" "text", "callback_status" "text", "category_name" "text", "case_type_name" "text", "created_at" timestamp with time zone, "updated_at" timestamp with time zone, "masked_name" "text")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_clean_phone text;
+BEGIN
+  v_clean_phone := RIGHT(REGEXP_REPLACE(COALESCE(p_phone, ''), '\D', '', 'g'), 10);
+  IF LENGTH(v_clean_phone) <> 10 THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    a.tracking_number,
+    a.application_mode,
+    a.status,
+    CASE a.callback_status
+      WHEN 'PENDING_CALL' THEN 'CALLBACK_PENDING'
+      WHEN 'CALL_ATTEMPTED' THEN 'CALLBACK_ATTEMPTED'
+      WHEN 'UNREACHABLE' THEN 'CALLBACK_UNREACHABLE'
+      WHEN 'DETAILS_COLLECTED' THEN 'CALLBACK_COMPLETED'
+      ELSE 'NOT_REQUIRED'
+    END AS callback_status,
+    c.category_name,
+    ct.case_type_name,
+    a.created_at,
+    a.updated_at,
+    CASE
+      WHEN a.applicant_full_name IS NULL OR TRIM(a.applicant_full_name) = '' THEN NULL
+      WHEN LENGTH(TRIM(a.applicant_full_name)) = 1 THEN LEFT(TRIM(a.applicant_full_name), 1) || '***'
+      ELSE LEFT(TRIM(a.applicant_full_name), 1) || REPEAT('*', GREATEST(LENGTH(TRIM(a.applicant_full_name)) - 1, 3))
+    END AS masked_name
+  FROM public.legal_aid_application a
+  LEFT JOIN public.legal_aid_category c ON c.id = a.category_id
+  LEFT JOIN public.case_type_master ct ON ct.id = a.case_type_id
+  WHERE RIGHT(REGEXP_REPLACE(a.applicant_phone_number, '\D', '', 'g'), 10) = v_clean_phone
+  ORDER BY a.created_at DESC
+  LIMIT 50;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."track_applications_by_phone"("p_phone" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."admin_scope" (
@@ -931,6 +1178,20 @@ CREATE TABLE IF NOT EXISTS "public"."advocate_master" (
 
 
 ALTER TABLE "public"."advocate_master" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."application_callback_log" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "application_id" "uuid" NOT NULL,
+    "called_by_id" "uuid",
+    "outcome" "text" NOT NULL,
+    "notes" "text",
+    "called_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "application_callback_log_outcome_check" CHECK (("outcome" = ANY (ARRAY['NO_ANSWER'::"text", 'SWITCHED_OFF'::"text", 'WRONG_NUMBER'::"text", 'CALL_BACK_LATER'::"text", 'DETAILS_COLLECTED'::"text", 'REFUSED'::"text"])))
+);
+
+
+ALTER TABLE "public"."application_callback_log" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."application_document" (
@@ -1133,6 +1394,21 @@ CREATE TABLE IF NOT EXISTS "public"."state_master" (
 ALTER TABLE "public"."state_master" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."submission_attempt_log" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "action" "text" NOT NULL,
+    "phone_hash" "text" NOT NULL,
+    "device_hash" "text" NOT NULL,
+    "ip_hash" "text" NOT NULL,
+    "outcome" "text" NOT NULL,
+    "reason" "text"
+);
+
+
+ALTER TABLE "public"."submission_attempt_log" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."taluka_master" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "taluka_name" "text" NOT NULL,
@@ -1188,6 +1464,11 @@ ALTER TABLE ONLY "public"."advocate_master"
 
 ALTER TABLE ONLY "public"."advocate_master"
     ADD CONSTRAINT "advocate_master_user_id_key" UNIQUE ("user_id");
+
+
+
+ALTER TABLE ONLY "public"."application_callback_log"
+    ADD CONSTRAINT "application_callback_log_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1316,6 +1597,11 @@ ALTER TABLE ONLY "public"."state_master"
 
 
 
+ALTER TABLE ONLY "public"."submission_attempt_log"
+    ADD CONSTRAINT "submission_attempt_log_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."taluka_master"
     ADD CONSTRAINT "taluka_master_pkey" PRIMARY KEY ("id");
 
@@ -1356,6 +1642,18 @@ CREATE INDEX "idx_role_permissions_code" ON "public"."role_permissions" USING "b
 
 
 CREATE INDEX "idx_status_history_application" ON "public"."application_status_history" USING "btree" ("application_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_sub_attempt_device_time" ON "public"."submission_attempt_log" USING "btree" ("device_hash", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_sub_attempt_ip_time" ON "public"."submission_attempt_log" USING "btree" ("ip_hash", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_sub_attempt_phone_time" ON "public"."submission_attempt_log" USING "btree" ("phone_hash", "created_at" DESC);
 
 
 
@@ -1424,6 +1722,10 @@ CREATE OR REPLACE TRIGGER "trg_application_status_notification_insert" AFTER INS
 
 
 CREATE OR REPLACE TRIGGER "trg_application_status_notification_update" AFTER UPDATE OF "status" ON "public"."legal_aid_application" FOR EACH ROW WHEN (("old"."status" IS DISTINCT FROM "new"."status")) EXECUTE FUNCTION "public"."fn_handle_application_status_change"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_enforce_application_update_invariants" BEFORE UPDATE ON "public"."legal_aid_application" FOR EACH ROW EXECUTE FUNCTION "public"."fn_enforce_application_update_invariants"();
 
 
 
@@ -1501,6 +1803,16 @@ ALTER TABLE ONLY "public"."advocate_district_mapping"
 
 ALTER TABLE ONLY "public"."advocate_master"
     ADD CONSTRAINT "advocate_master_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."application_callback_log"
+    ADD CONSTRAINT "application_callback_log_application_id_fkey" FOREIGN KEY ("application_id") REFERENCES "public"."legal_aid_application"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."application_callback_log"
+    ADD CONSTRAINT "application_callback_log_called_by_id_fkey" FOREIGN KEY ("called_by_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -1600,6 +1912,11 @@ ALTER TABLE ONLY "public"."legal_aid_application"
 
 
 ALTER TABLE ONLY "public"."legal_aid_application"
+    ADD CONSTRAINT "legal_aid_application_details_completed_by_fkey" FOREIGN KEY ("details_completed_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."legal_aid_application"
     ADD CONSTRAINT "legal_aid_application_preferred_advocate_id_fkey" FOREIGN KEY ("preferred_advocate_id") REFERENCES "public"."advocate_master"("id");
 
 
@@ -1686,6 +2003,12 @@ CREATE POLICY "admin_delete_profiles" ON "public"."profiles" FOR DELETE USING ("
 
 
 CREATE POLICY "admin_insert_advocates" ON "public"."advocate_master" FOR INSERT WITH CHECK ("public"."is_admin"());
+
+
+
+CREATE POLICY "admin_insert_callback_log" ON "public"."application_callback_log" FOR INSERT WITH CHECK (("public"."is_admin"() OR ("public"."is_geo_admin"() AND (EXISTS ( SELECT 1
+   FROM "public"."legal_aid_application" "a"
+  WHERE ("a"."id" = "application_callback_log"."application_id"))))));
 
 
 
@@ -1778,6 +2101,12 @@ CREATE POLICY "admin_read_status_history" ON "public"."application_status_histor
 ALTER TABLE "public"."admin_scope" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "admin_select_callback_log" ON "public"."application_callback_log" FOR SELECT USING (("public"."is_admin"() OR ("public"."is_geo_admin"() AND (EXISTS ( SELECT 1
+   FROM "public"."legal_aid_application" "a"
+  WHERE ("a"."id" = "application_callback_log"."application_id"))))));
+
+
+
 CREATE POLICY "admin_update_application_documents" ON "public"."application_document" FOR UPDATE USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
@@ -1818,6 +2147,9 @@ CREATE POLICY "advocates_view_assigned_cases" ON "public"."legal_aid_application
 
 CREATE POLICY "anyone_submit_applications" ON "public"."legal_aid_application" FOR INSERT TO "authenticated" WITH CHECK ((("applicant_id" IS NULL) OR ("applicant_id" = "auth"."uid"()) OR "public"."is_admin"()));
 
+
+
+ALTER TABLE "public"."application_callback_log" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."application_document" ENABLE ROW LEVEL SECURITY;
@@ -1865,7 +2197,7 @@ CREATE POLICY "district_admin_insert_district_applications" ON "public"."legal_a
 
 
 
-CREATE POLICY "district_admin_view_district_applications" ON "public"."legal_aid_application" FOR SELECT USING (("public"."is_district_admin"("current_district_id") OR "public"."is_district_admin"("applicant_district_id") OR "public"."is_district_forward_party"("id")));
+CREATE POLICY "district_admin_view_district_applications" ON "public"."legal_aid_application" FOR SELECT USING (("public"."is_district_admin"("current_district_id") OR "public"."is_district_forward_party"("id")));
 
 
 
@@ -1962,6 +2294,9 @@ CREATE POLICY "state_and_super_admin_manage_applications" ON "public"."legal_aid
 
 
 ALTER TABLE "public"."state_master" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."submission_attempt_log" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."taluka_master" ENABLE ROW LEVEL SECURITY;
@@ -2166,6 +2501,11 @@ GRANT ALL ON FUNCTION "public"."application_exists_for_link"("app_id" "uuid") TO
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."current_profile_status"() TO "anon";
 GRANT ALL ON FUNCTION "public"."current_profile_status"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."current_profile_status"() TO "service_role";
@@ -2181,6 +2521,12 @@ GRANT ALL ON FUNCTION "public"."current_profile_user_type"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."enforce_master_code_immutable"() TO "anon";
 GRANT ALL ON FUNCTION "public"."enforce_master_code_immutable"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."enforce_master_code_immutable"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."fn_enforce_application_update_invariants"() TO "anon";
+GRANT ALL ON FUNCTION "public"."fn_enforce_application_update_invariants"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fn_enforce_application_update_invariants"() TO "service_role";
 
 
 
@@ -2275,6 +2621,12 @@ GRANT ALL ON FUNCTION "public"."link_guest_applications_on_profile"() TO "servic
 
 
 
+REVOKE ALL ON FUNCTION "public"."log_application_callback"("p_application_id" "uuid", "p_outcome" "text", "p_notes" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."log_application_callback"("p_application_id" "uuid", "p_outcome" "text", "p_notes" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."log_application_callback"("p_application_id" "uuid", "p_outcome" "text", "p_notes" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."log_application_district_transfer"() TO "anon";
 GRANT ALL ON FUNCTION "public"."log_application_district_transfer"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."log_application_district_transfer"() TO "service_role";
@@ -2297,6 +2649,11 @@ GRANT ALL ON FUNCTION "public"."sync_user_type_from_admin_scope"() TO "service_r
 GRANT ALL ON FUNCTION "public"."track_application"("p_tracking_number" "text", "p_phone_number" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."track_application"("p_tracking_number" "text", "p_phone_number" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."track_application"("p_tracking_number" "text", "p_phone_number" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."track_applications_by_phone"("p_phone" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."track_applications_by_phone"("p_phone" "text") TO "service_role";
 
 
 
@@ -2342,6 +2699,11 @@ GRANT ALL ON TABLE "public"."advocate_district_mapping" TO "service_role";
 GRANT ALL ON TABLE "public"."advocate_master" TO "anon";
 GRANT ALL ON TABLE "public"."advocate_master" TO "authenticated";
 GRANT ALL ON TABLE "public"."advocate_master" TO "service_role";
+
+
+
+GRANT SELECT,INSERT,REFERENCES,TRIGGER,MAINTAIN ON TABLE "public"."application_callback_log" TO "authenticated";
+GRANT ALL ON TABLE "public"."application_callback_log" TO "service_role";
 
 
 
@@ -2435,6 +2797,12 @@ GRANT ALL ON TABLE "public"."state_master" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."submission_attempt_log" TO "anon";
+GRANT ALL ON TABLE "public"."submission_attempt_log" TO "authenticated";
+GRANT ALL ON TABLE "public"."submission_attempt_log" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."taluka_master" TO "anon";
 GRANT ALL ON TABLE "public"."taluka_master" TO "authenticated";
 GRANT ALL ON TABLE "public"."taluka_master" TO "service_role";
@@ -2508,188 +2876,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
-
--- ============================================================================
--- Quick Callback & Application Tracking Additions
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS "public"."application_callback_log" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "application_id" "uuid" NOT NULL,
-    "called_by_id" "uuid",
-    "outcome" "text" NOT NULL,
-    "notes" "text",
-    "called_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "application_callback_log_outcome_check" CHECK (("outcome" = ANY (ARRAY['NO_ANSWER'::"text", 'SWITCHED_OFF'::"text", 'WRONG_NUMBER'::"text", 'CALL_BACK_LATER'::"text", 'DETAILS_COLLECTED'::"text", 'REFUSED'::"text"])))
-);
-
-ALTER TABLE "public"."application_callback_log" OWNER TO "postgres";
-
-ALTER TABLE ONLY "public"."application_callback_log"
-    ADD CONSTRAINT "application_callback_log_pkey" PRIMARY KEY ("id");
-
-ALTER TABLE ONLY "public"."application_callback_log"
-    ADD CONSTRAINT "application_callback_log_application_id_fkey" FOREIGN KEY ("application_id") REFERENCES "public"."legal_aid_application"("id") ON DELETE CASCADE;
-
-ALTER TABLE ONLY "public"."application_callback_log"
-    ADD CONSTRAINT "application_callback_log_called_by_id_fkey" FOREIGN KEY ("called_by_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
-
-ALTER TABLE ONLY "public"."legal_aid_application"
-    ADD CONSTRAINT "legal_aid_application_details_completed_by_fkey" FOREIGN KEY ("details_completed_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
-
-ALTER TABLE "public"."application_callback_log" ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "admin_select_callback_log" ON "public"."application_callback_log" FOR SELECT USING (("public"."is_admin"() OR ("public"."is_geo_admin"() AND (EXISTS ( SELECT 1 FROM "public"."legal_aid_application" "a" WHERE ("a"."id" = "application_callback_log"."application_id"))))));
-CREATE POLICY "admin_insert_callback_log" ON "public"."application_callback_log" FOR INSERT WITH CHECK (("public"."is_admin"() OR ("public"."is_geo_admin"() AND (EXISTS ( SELECT 1 FROM "public"."legal_aid_application" "a" WHERE ("a"."id" = "application_callback_log"."application_id"))))));
-
-CREATE TABLE IF NOT EXISTS "public"."submission_attempt_log" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "action" "text" NOT NULL,
-    "phone_hash" "text" NOT NULL,
-    "device_hash" "text" NOT NULL,
-    "ip_hash" "text" NOT NULL,
-    "outcome" "text" NOT NULL,
-    "reason" "text"
-);
-
-ALTER TABLE "public"."submission_attempt_log" OWNER TO "postgres";
-
-ALTER TABLE ONLY "public"."submission_attempt_log"
-    ADD CONSTRAINT "submission_attempt_log_pkey" PRIMARY KEY ("id");
-
-CREATE INDEX IF NOT EXISTS "idx_sub_attempt_phone_time" ON "public"."submission_attempt_log" USING "btree" ("phone_hash", "created_at" DESC);
-CREATE INDEX IF NOT EXISTS "idx_sub_attempt_device_time" ON "public"."submission_attempt_log" USING "btree" ("device_hash", "created_at" DESC);
-CREATE INDEX IF NOT EXISTS "idx_sub_attempt_ip_time" ON "public"."submission_attempt_log" USING "btree" ("ip_hash", "created_at" DESC);
-
-ALTER TABLE "public"."submission_attempt_log" ENABLE ROW LEVEL SECURITY;
-
-CREATE OR REPLACE FUNCTION "public"."fn_enforce_application_update_invariants"() RETURNS "trigger"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'pg_temp'
-    AS $$
-BEGIN
-  IF OLD.tracking_number IS NOT NULL AND OLD.tracking_number <> '' THEN
-    NEW.tracking_number := OLD.tracking_number;
-  END IF;
-
-  IF (NEW.status = 'ADVOCATE_ASSIGNED' OR (NEW.assigned_advocate_id IS NOT NULL AND OLD.assigned_advocate_id IS NULL)) THEN
-    IF NEW.category_id IS NULL OR
-       NEW.case_type_id IS NULL OR
-       NEW.applicant_full_name IS NULL OR TRIM(NEW.applicant_full_name) = '' OR
-       NEW.applicant_district_id IS NULL OR
-       NEW.current_district_id IS NULL THEN
-      RAISE EXCEPTION 'Cannot assign advocate until applicant details (full name, category, case type, and district) are completed.'
-        USING ERRCODE = 'check_violation';
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-ALTER FUNCTION "public"."fn_enforce_application_update_invariants"() OWNER TO "postgres";
-
-CREATE OR REPLACE TRIGGER "trg_enforce_application_update_invariants" BEFORE UPDATE ON "public"."legal_aid_application" FOR EACH ROW EXECUTE FUNCTION "public"."fn_enforce_application_update_invariants"();
-
-CREATE OR REPLACE FUNCTION "public"."create_quick_application"(
-    "p_phone" "text",
-    "p_name" "text",
-    "p_district_id" "uuid",
-    "p_note" "text",
-    "p_applicant_id" "uuid"
-) RETURNS TABLE("tracking_number" "text", "application_id" "uuid")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'pg_temp'
-    AS $$
-DECLARE
-  v_clean_phone text;
-  v_app_id uuid;
-  v_tracking text;
-BEGIN
-  v_clean_phone := RIGHT(REGEXP_REPLACE(COALESCE(p_phone, ''), '\D', '', 'g'), 10);
-  IF LENGTH(v_clean_phone) <> 10 THEN
-    RAISE EXCEPTION 'Invalid phone number: exactly 10 digits required'
-      USING ERRCODE = 'invalid_parameter_value';
-  END IF;
-
-  INSERT INTO public.legal_aid_application (
-    application_mode,
-    status,
-    callback_status,
-    callback_attempts,
-    applicant_phone_number,
-    applicant_full_name,
-    applicant_district_id,
-    current_district_id,
-    case_details,
-    applicant_id
-  ) VALUES (
-    'QUICK_CALLBACK',
-    'SUBMITTED',
-    'PENDING_CALL',
-    0,
-    v_clean_phone,
-    NULLIF(TRIM(p_name), ''),
-    p_district_id,
-    p_district_id,
-    COALESCE(NULLIF(TRIM(p_note), ''), 'Quick callback request'),
-    p_applicant_id
-  )
-  RETURNING id, legal_aid_application.tracking_number INTO v_app_id, v_tracking;
-
-  RETURN QUERY SELECT v_tracking, v_app_id;
-END;
-$$;
-
-ALTER FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") OWNER TO "postgres";
-REVOKE EXECUTE ON FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") FROM PUBLIC, "anon", "authenticated";
-GRANT EXECUTE ON FUNCTION "public"."create_quick_application"("p_phone" "text", "p_name" "text", "p_district_id" "uuid", "p_note" "text", "p_applicant_id" "uuid") TO "service_role";
-
-CREATE OR REPLACE FUNCTION "public"."track_applications_by_phone"(
-    "p_phone" "text"
-) RETURNS TABLE("tracking_number" "text", "application_mode" "text", "status" "text", "callback_status" "text", "category_name" "text", "case_type_name" "text", "created_at" timestamp with time zone, "updated_at" timestamp with time zone, "masked_name" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'pg_temp'
-    AS $$
-DECLARE
-  v_clean_phone text;
-BEGIN
-  v_clean_phone := RIGHT(REGEXP_REPLACE(COALESCE(p_phone, ''), '\D', '', 'g'), 10);
-  IF LENGTH(v_clean_phone) <> 10 THEN
-    RETURN;
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    a.tracking_number,
-    a.application_mode,
-    a.status,
-    CASE a.callback_status
-      WHEN 'PENDING_CALL' THEN 'CALLBACK_PENDING'
-      WHEN 'CALL_ATTEMPTED' THEN 'CALLBACK_ATTEMPTED'
-      WHEN 'UNREACHABLE' THEN 'CALLBACK_UNREACHABLE'
-      WHEN 'DETAILS_COLLECTED' THEN 'CALLBACK_COMPLETED'
-      ELSE 'NOT_REQUIRED'
-    END AS callback_status,
-    c.category_name,
-    ct.case_type_name,
-    a.created_at,
-    a.updated_at,
-    CASE
-      WHEN a.applicant_full_name IS NULL OR TRIM(a.applicant_full_name) = '' THEN NULL
-      WHEN LENGTH(TRIM(a.applicant_full_name)) = 1 THEN LEFT(TRIM(a.applicant_full_name), 1) || '***'
-      ELSE LEFT(TRIM(a.applicant_full_name), 1) || REPEAT('*', GREATEST(LENGTH(TRIM(a.applicant_full_name)) - 1, 3))
-    END AS masked_name
-  FROM public.legal_aid_application a
-  LEFT JOIN public.legal_aid_category c ON c.id = a.category_id
-  LEFT JOIN public.case_type_master ct ON ct.id = a.case_type_id
-  WHERE RIGHT(REGEXP_REPLACE(a.applicant_phone_number, '\D', '', 'g'), 10) = v_clean_phone
-  ORDER BY a.created_at DESC
-  LIMIT 50;
-END;
-$$;
-
-ALTER FUNCTION "public"."track_applications_by_phone"("p_phone" "text") OWNER TO "postgres";
-REVOKE EXECUTE ON FUNCTION "public"."track_applications_by_phone"("p_phone" "text") FROM PUBLIC, "anon", "authenticated";
-GRANT EXECUTE ON FUNCTION "public"."track_applications_by_phone"("p_phone" "text") TO "service_role";
