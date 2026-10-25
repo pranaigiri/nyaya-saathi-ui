@@ -176,12 +176,34 @@ class DraftResumptionCard extends StatelessWidget {
 
                         if (confirmed != true) return;
 
-                        await draftProvider.startNewDraft();
+                        await draftProvider.clearDraft();
                         if (context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ApplyWizardScreen(),
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          final isNe = Localizations.localeOf(context).languageCode == 'ne';
+                          final fallbackMsg = isNe
+                              ? "ड्राफ्ट आवेदन सफलतापूर्वक हटाइयो।"
+                              : "Draft application deleted successfully.";
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      context.tr("draft_deleted", fallback: fallbackMsg),
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 3),
                             ),
                           );
                         }

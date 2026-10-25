@@ -122,6 +122,10 @@ void main() {
     }
 
     testWidgets('displays case type names without displaying case type codes or collapsed descriptions', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
@@ -142,6 +146,10 @@ void main() {
     });
 
     testWidgets('only shows description when clicking Tap to learn more, not when selecting cases', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
@@ -177,11 +185,15 @@ void main() {
     });
 
     testWidgets('searching by description term filters case types correctly', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
       // Enter a term that is present in the description of Domestic Violence: "abuse"
-      await tester.enterText(find.byType(TextFormField).first, 'abuse');
+      await tester.enterText(find.byKey(const Key('case_type_search_field')), 'abuse');
       await tester.pumpAndSettle();
 
       // Domestic Violence should match because description contains "abuse"
@@ -191,6 +203,10 @@ void main() {
     });
 
     testWidgets('case types are ordered strictly by display_order ascending', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
@@ -205,6 +221,101 @@ void main() {
         expect(currentY > lastY, isTrue, reason: '$title should appear below the previous item');
         lastY = currentY;
       }
+    });
+
+    testWidgets('Step 3 shows call confirmation notice, Summary on top, and allows submitting blank', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      bool nextCalled = false;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<ApplyDataProvider>.value(value: applyDataProvider),
+            ChangeNotifierProvider<DraftProvider>.value(value: draftProvider),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Step3CaseTypeScreen(
+                onNext: () => nextCalled = true,
+                onBack: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify officer call confirmation notice is displayed
+      expect(find.textContaining('An officer will collect the details via a confirmation call'), findsOneWidget);
+      expect(find.textContaining('You may skip these fields for now'), findsOneWidget);
+
+      // Verify Summary of Grievance is rendered
+      expect(find.text('Summary of Grievance (Optional)'), findsOneWidget);
+
+      // Verify Skip button exists
+      final skipBtn = find.widgetWithText(OutlinedButton, 'Skip');
+      expect(skipBtn, findsOneWidget);
+
+      // Verify Next button is enabled even without selecting case type or entering grievance
+      final nextBtn = find.widgetWithText(ElevatedButton, 'Next: Upload Docs →');
+      expect(nextBtn, findsOneWidget);
+
+      await tester.tap(nextBtn);
+      await tester.pumpAndSettle();
+
+      expect(nextCalled, isTrue);
+    });
+
+    testWidgets('Step 3 Skip button triggers onNext callback', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      bool nextCalled = false;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<ApplyDataProvider>.value(value: applyDataProvider),
+            ChangeNotifierProvider<DraftProvider>.value(value: draftProvider),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Step3CaseTypeScreen(
+                onNext: () => nextCalled = true,
+                onBack: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final skipBtn = find.widgetWithText(OutlinedButton, 'Skip');
+      await tester.tap(skipBtn);
+      await tester.pumpAndSettle();
+
+      expect(nextCalled, isTrue);
+    });
+
+    testWidgets('Step 3 allows deselecting a selected case type back to null', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(createTestWidget());
+      await tester.pumpAndSettle();
+
+      // Select Domestic Violence
+      await tester.tap(find.text('Domestic Violence'));
+      await tester.pumpAndSettle();
+      expect(draftProvider.draft?.caseTypeName, equals('Domestic Violence'));
+
+      // Tap Domestic Violence again to deselect
+      await tester.tap(find.text('Domestic Violence'));
+      await tester.pumpAndSettle();
+      expect(draftProvider.draft?.caseTypeName, isNull);
     });
   });
 }

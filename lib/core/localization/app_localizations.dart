@@ -51,7 +51,11 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 }
 
 extension TranslateExtension on BuildContext {
-  String tr(String key) {
-    return AppLocalizations.of(this)?.translate(key) ?? key;
+  String tr(String key, {String? fallback}) {
+    final translated = AppLocalizations.of(this)?.translate(key);
+    if (translated == null || translated == key) {
+      return fallback ?? key;
+    }
+    return translated;
   }
 }

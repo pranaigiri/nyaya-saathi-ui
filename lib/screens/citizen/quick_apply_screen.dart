@@ -10,6 +10,7 @@ import '../../data/repositories/application_repository.dart';
 import '../../providers/apply_data_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../apply_flow/application_success_screen.dart';
+import '../../widgets/rate_limit_dialog.dart';
 
 class QuickApplyScreen extends StatefulWidget {
   const QuickApplyScreen({super.key});
@@ -108,12 +109,12 @@ class _QuickApplyScreenState extends State<QuickApplyScreen> {
       return;
     }
 
+    final rawPhone = _phoneController.text.trim();
+    final cleanPhone = PhoneUtils.normalize(rawPhone);
+
     setState(() => _isSubmitting = true);
 
     try {
-      final rawPhone = _phoneController.text.trim();
-      final cleanPhone = PhoneUtils.normalize(rawPhone);
-
       // Server enforces MIN_ELAPSED_MS_QUICK (default 3000ms).
       // Ensure elapsed time meets the threshold to protect users who paste quickly.
       final elapsedSoFar = DateTime.now().difference(_screenOpenedAt).inMilliseconds;
@@ -148,13 +149,19 @@ class _QuickApplyScreenState extends State<QuickApplyScreen> {
       }
     } on ApplicationException catch (ae) {
       if (mounted) {
-        String msg = context.tr("error_try_again");
         if (ae.code == 'RATE_LIMITED') {
-          msg = context.tr("error_rate_limited");
-        } else if (ae.code == 'INVALID_INPUT') {
-          msg = context.tr("error_invalid_input");
+          showRateLimitDialog(
+            context: context,
+            retryAfterMinutes: ae.retryAfterMinutes,
+            phoneNumber: cleanPhone,
+          );
+        } else {
+          String msg = context.tr("error_try_again");
+          if (ae.code == 'INVALID_INPUT') {
+            msg = context.tr("error_invalid_input");
+          }
+          _showErrorSnackBar(msg);
         }
-        _showErrorSnackBar(msg);
       }
     } catch (_) {
       if (mounted) {

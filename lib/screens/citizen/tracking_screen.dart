@@ -135,7 +135,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   Future<void> _saveRecentSearch(
     String trackingNumber,
-    String phone, [
+    String? phone, [
     String? applicantName,
   ]) async {
     try {
@@ -146,7 +146,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       final updated = [
         {
           'trackingNumber': trackingNumber,
-          'phone': phone,
+          'phone': phone ?? '',
           'applicantName': (applicantName != null && applicantName.isNotEmpty)
               ? applicantName
               : 'Applicant',
@@ -332,12 +332,14 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
-  Future<void> _openTrackedApplication(String trackingNum, String phone) async {
+  Future<void> _openTrackedApplication(String trackingNum, [String? phone]) async {
     setState(() => _isLoading = true);
     try {
+      final deviceId = await DeviceIdService.getDeviceId();
       final result = await _appRepo.trackApplication(
         trackingNumber: trackingNum,
-        phoneNumber: phone,
+        phoneNumber: (phone != null && phone.isNotEmpty) ? phone : null,
+        deviceId: deviceId,
       );
 
       setState(() => _isLoading = false);
@@ -357,6 +359,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
           _showNotFoundDialog(trackingNum, phone);
         }
       }
+    } on ApplicationException catch (ae) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        String msg = context.tr("error_try_again");
+        if (ae.code == 'RATE_LIMITED') {
+          msg = ae.message.isNotEmpty ? ae.message : context.tr("error_rate_limited");
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.accentGold,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (_) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -368,10 +386,23 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Future<void> _performTrack() async {
+    if (_cooldownSeconds > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr("error_rate_limited")),
+          backgroundColor: AppColors.accentGold,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final trackingNum = _getEffectiveTrackingNumber();
-    final phone = _phoneController.text.trim();
+    final isDirectMode = _searchMode == TrackingSearchMode.direct;
+    final phone = isDirectMode ? '' : _phoneController.text.trim();
 
     if (trackingNum.isEmpty || trackingNum.endsWith('-')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -387,10 +418,14 @@ class _TrackingScreenState extends State<TrackingScreen> {
       _isLoading = true;
     });
 
+    _startCooldown();
+
     try {
+      final deviceId = await DeviceIdService.getDeviceId();
       final result = await _appRepo.trackApplication(
         trackingNumber: trackingNum,
-        phoneNumber: phone,
+        phoneNumber: isDirectMode ? null : (phone.isNotEmpty ? phone : null),
+        deviceId: deviceId,
       );
 
       setState(() {
@@ -398,7 +433,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       });
 
       if (result != null) {
-        _saveRecentSearch(trackingNum, phone, result.applicantFullName);
+        _saveRecentSearch(trackingNum, isDirectMode ? null : phone, result.applicantFullName);
 
         if (mounted) {
           Navigator.push(
@@ -410,8 +445,26 @@ class _TrackingScreenState extends State<TrackingScreen> {
         }
       } else {
         if (mounted) {
-          _showNotFoundDialog(trackingNum, phone);
+          _showNotFoundDialog(trackingNum, isDirectMode ? null : phone);
         }
+      }
+    } on ApplicationException catch (ae) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        String msg = context.tr("error_try_again");
+        if (ae.code == 'RATE_LIMITED') {
+          msg = ae.message.isNotEmpty ? ae.message : context.tr("error_rate_limited");
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.accentGold,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e) {
       setState(() {
@@ -425,7 +478,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
-  void _showNotFoundDialog(String trackingNum, String phone) {
+  void _showNotFoundDialog(String trackingNum, [String? phone]) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -472,18 +525,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     "Tracking ID: $trackingNum",
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Phone: $phone",
-                    style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12.5),
-                  ),
+                  if (phone != null && phone.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      "Phone: $phone",
+                      style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12.5),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              "• Please double-check your tracking ID or registered mobile number.\n• If you recently submitted, allow a few moments for indexing.\n• Dial Sikkim SLSA Helpline at 15100 for live support.",
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
+            Text(
+              (phone != null && phone.trim().isNotEmpty)
+                  ? "• Please double-check your tracking ID or registered mobile number.\n• If you recently submitted, allow a few moments for indexing.\n• Dial Sikkim SLSA Helpline at 15100 for live support."
+                  : "• Please double-check your tracking ID format (e.g. SK-GTK-26-00034).\n• If you recently submitted, allow a few moments for indexing.\n• You can also search using your registered mobile number in the 'By Phone' tab.\n• Dial Sikkim SLSA Helpline at 15100 for live support.",
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
             ),
           ],
         ),
@@ -589,9 +646,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   _buildMainSearchCard(isDark),
                   const SizedBox(height: 14),
 
-                  // Mobile Number Card
-                  _buildPhoneCard(isDark),
-                  const SizedBox(height: 20),
+                  // Mobile Number Card (only shown for By District mode; removed for Direct ID)
+                  if (_searchMode == TrackingSearchMode.byDistrict) ...[
+                    _buildPhoneCard(isDark),
+                    const SizedBox(height: 20),
+                  ] else ...[
+                    const SizedBox(height: 6),
+                  ],
 
                   // Track Action Button
                   _buildSubmitButton(),
@@ -1413,7 +1474,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
         TextFormField(
           controller: _directTrackingController,
           inputFormatters: [TrackingNumberFormatter()],
-          textInputAction: TextInputAction.next,
+          textInputAction: TextInputAction.search,
+          onFieldSubmitted: (_) => _performTrack(),
           style: TextStyle(
             fontSize: 14.5,
             fontWeight: FontWeight.w600,
@@ -1649,7 +1711,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
           ),
           subtitle: Text(
-            "$name • $phone",
+            phone.isNotEmpty ? "$name • $phone" : name,
             style: const TextStyle(
               fontSize: 11.5,
               color: AppColors.textSecondaryLight,

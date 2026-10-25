@@ -48,7 +48,7 @@ class DraftProvider extends ChangeNotifier {
       _draft = null;
     }
 
-    if (_draft != null && _draft!.categoryId != null && _draft!.caseTypeId != null) {
+    if (_draft != null && _draft!.categoryId != null) {
       await updateRequiredDocuments();
     }
 
@@ -138,7 +138,7 @@ class DraftProvider extends ChangeNotifier {
     await saveDraft();
   }
 
-  Future<void> updateCaseType(dynamic caseTypeId, String code, String name) async {
+  Future<void> updateCaseType(dynamic caseTypeId, String? code, String? name) async {
     _draft ??= await HiveDraftService.createOrGetDraft();
     _draft!.caseTypeId = caseTypeId?.toString();
     _draft!.caseTypeCode = code;
@@ -164,12 +164,12 @@ class DraftProvider extends ChangeNotifier {
   }
 
   Future<void> updateRequiredDocuments() async {
-    if (_draft != null && _draft!.categoryId != null && _draft!.caseTypeId != null) {
+    if (_draft != null && _draft!.categoryId != null) {
       final provider = _applyDataProvider;
       if (provider != null) {
         _requiredDocuments = await provider.getRequiredDocuments(
           categoryId: _draft!.categoryId!,
-          caseTypeId: _draft!.caseTypeId!,
+          caseTypeId: _draft!.caseTypeId ?? '',
         );
       }
       notifyListeners();

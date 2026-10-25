@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import 'application_success_screen.dart';
 import '../../widgets/bottom_padding.dart';
 import '../../core/utils/number_extensions.dart';
+import '../../data/repositories/application_repository.dart';
+import '../../widgets/rate_limit_dialog.dart';
 
 class Step5ReviewSubmitScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -43,9 +45,27 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
       // ignore: avoid_print
       print(stack);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Submission failed: $e"), backgroundColor: AppColors.dangerRed),
-        );
+        final draft = Provider.of<DraftProvider>(context, listen: false).draft;
+        final phone = draft?.phone ?? '';
+
+        if (e is ApplicationException && e.isRateLimited) {
+          showRateLimitDialog(
+            context: context,
+            retryAfterMinutes: e.retryAfterMinutes,
+            phoneNumber: phone,
+          );
+        } else if (e.toString().contains('RATE_LIMITED') || e.toString().contains('429')) {
+          showRateLimitDialog(
+            context: context,
+            retryAfterMinutes: 10,
+            phoneNumber: phone,
+          );
+        } else {
+          final errorMsg = e is ApplicationException ? e.message : e.toString().replaceAll('Exception: ', '');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Submission failed: $errorMsg"), backgroundColor: AppColors.dangerRed),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -115,9 +135,21 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
                 title: "Case & Grievance Details",
                 icon: Icons.gavel_outlined,
                 children: [
-                  _buildDetailRow("Case Type", draft.caseTypeName ?? 'N/A'),
-                  _buildDetailRow("Summary of Grievance", draft.summaryOfGrievance.isNotEmpty ? draft.summaryOfGrievance : "N/A", isFullWidth: true),
-                  _buildDetailRow("Relief Sought", draft.reliefSought.isNotEmpty ? draft.reliefSought : "N/A", isFullWidth: true),
+                  _buildDetailRow(
+                    "Case Type",
+                    (draft.caseTypeName != null && draft.caseTypeName!.isNotEmpty)
+                        ? draft.caseTypeName!
+                        : "Not Selected (Officer will confirm via call)",
+                  ),
+                  _buildDetailRow(
+                    "Summary of Grievance",
+                    draft.summaryOfGrievance.isNotEmpty
+                        ? draft.summaryOfGrievance
+                        : "Not Provided (Officer will record via call)",
+                    isFullWidth: true,
+                  ),
+                  if (draft.reliefSought.isNotEmpty)
+                    _buildDetailRow("Relief Sought", draft.reliefSought, isFullWidth: true),
                 ],
               ),
               const SizedBox(height: 16),
@@ -128,8 +160,14 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
                 title: "Uploaded Documents (${draft.documentStoragePaths.length.humanizedCount()} Attached)",
                 icon: Icons.folder_open_outlined,
                 children: [
-                  if (docs.isEmpty && draft.documentStoragePaths.isEmpty)
-                    const Text("No documents attached", style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight))
+                  if (draft.documentStoragePaths.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        "No documents attached (Officer will collect during call confirmation)",
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight, fontStyle: FontStyle.italic),
+                      ),
+                    )
                   else if (docs.isNotEmpty)
                     ...docs.map((doc) {
                       final isUploaded = draft.documentStoragePaths.containsKey(doc.documentCode);

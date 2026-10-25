@@ -83,11 +83,13 @@ class SupabaseApplyRepository implements ApplyRepository {
         .select('document_id, is_required, document_master(id, document_code, document_name, description, is_active)')
         .eq('category_id', categoryId);
 
-    // Fetch documents required by the selected case type
-    final ctDocs = await _client
-        .from('case_type_document_map')
-        .select('document_id, is_required, document_master(id, document_code, document_name, description, is_active)')
-        .eq('case_type_id', caseTypeId);
+    // Fetch documents required by the selected case type (if specified)
+    final ctDocs = caseTypeId.trim().isNotEmpty
+        ? await _client
+            .from('case_type_document_map')
+            .select('document_id, is_required, document_master(id, document_code, document_name, description, is_active)')
+            .eq('case_type_id', caseTypeId.trim())
+        : <Map<String, dynamic>>[];
 
     // Union of both sets, deduplicated by document id, tracking why each
     // document was asked (eligibility category and/or case type).

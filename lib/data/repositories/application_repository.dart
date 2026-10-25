@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/advocate.dart';
@@ -10,11 +11,15 @@ import '../../core/services/device_id_service.dart';
 class ApplicationException implements Exception {
   final String code; // 'RATE_LIMITED' | 'INVALID_INPUT' | 'TRY_AGAIN'
   final String message;
+  final int retryAfterMinutes;
 
   const ApplicationException({
     required this.code,
     required this.message,
+    this.retryAfterMinutes = 10,
   });
+
+  bool get isRateLimited => code == 'RATE_LIMITED';
 
   @override
   String toString() => message;
@@ -48,10 +53,10 @@ class ApplicationRepository {
       'applicant_gender': draft.gender.toUpperCase(),
       'village_or_town': draft.villageTown.isNotEmpty ? draft.villageTown : null,
       'applicant_district_id': draft.districtId,
-      'case_type_id': draft.caseTypeId,
+      'case_type_id': (draft.caseTypeId != null && draft.caseTypeId!.isNotEmpty) ? draft.caseTypeId : null,
       'current_district_id': draft.districtId,
       'current_taluka_id': draft.talukaId,
-      'case_details': draft.caseDetails,
+      'case_details': draft.caseDetails.trim().isNotEmpty ? draft.caseDetails.trim() : null,
       'preferred_advocate_id': (draft.preferredAdvocateId != null && draft.preferredAdvocateId!.isNotEmpty)
           ? draft.preferredAdvocateId
           : null,
@@ -161,9 +166,11 @@ class ApplicationRepository {
       return application;
     } on FunctionException catch (fe) {
       final code = _extractErrorCode(fe.details, fe.status);
+      final retryMinutes = _extractRetryMinutes(fe.details);
       throw ApplicationException(
         code: code,
-        message: _mapErrorCode(code),
+        message: _mapErrorCode(code, retryMinutes),
+        retryAfterMinutes: retryMinutes,
       );
     } catch (e, stack) {
       // ignore: avoid_print
@@ -230,9 +237,11 @@ class ApplicationRepository {
       );
     } on FunctionException catch (fe) {
       final code = _extractErrorCode(fe.details, fe.status);
+      final retryMinutes = _extractRetryMinutes(fe.details);
       throw ApplicationException(
         code: code,
-        message: _mapErrorCode(code),
+        message: _mapErrorCode(code, retryMinutes),
+        retryAfterMinutes: retryMinutes,
       );
     } catch (e) {
       if (e is ApplicationException) rethrow;
@@ -298,17 +307,50 @@ class ApplicationRepository {
     if (details is Map && details['error'] != null) {
       return details['error'].toString();
     }
+    if (details is String) {
+      try {
+        final decoded = jsonDecode(details);
+        if (decoded is Map && decoded['error'] != null) {
+          return decoded['error'].toString();
+        }
+      } catch (_) {}
+      if (details.contains('RATE_LIMITED')) return 'RATE_LIMITED';
+      if (details.contains('INVALID_INPUT')) return 'INVALID_INPUT';
+    }
     if (status == 429) return 'RATE_LIMITED';
     if (status == 400) return 'INVALID_INPUT';
     return 'TRY_AGAIN';
   }
 
-  static String _mapErrorCode(String code) {
+  static int _extractRetryMinutes(dynamic details) {
+    if (details is Map && details['retry_after_minutes'] != null) {
+      final val = details['retry_after_minutes'];
+      if (val is int) return val;
+      if (val is num) return val.toInt();
+      final parsed = int.tryParse(val.toString());
+      if (parsed != null) return parsed;
+    }
+    if (details is String) {
+      try {
+        final decoded = jsonDecode(details);
+        if (decoded is Map && decoded['retry_after_minutes'] != null) {
+          final parsed = int.tryParse(decoded['retry_after_minutes'].toString());
+          if (parsed != null) return parsed;
+        }
+      } catch (_) {}
+    }
+    return 10;
+  }
+
+  static String _mapErrorCode(String code, [int retryMinutes = 10, String action = 'submission']) {
     switch (code) {
       case 'RATE_LIMITED':
-        return 'Too many requests. Please wait a few moments and try again.';
+        if (action == 'track') {
+          return 'Tracking query limit reached. Please wait a few minutes before searching again.';
+        }
+        return 'Submission limit reached for this phone number. Please wait $retryMinutes minutes before submitting again.';
       case 'INVALID_INPUT':
-        return 'Please enter a valid 10-digit mobile number.';
+        return 'Please enter a valid 10-digit mobile number or tracking number.';
       default:
         return 'Something went wrong. Please check your connection and try again.';
     }
@@ -387,20 +429,78 @@ class ApplicationRepository {
     return null;
   }
 
-  /// Track application using the RPC function with automatic district alias fallback
+  /// Track application using Edge Function (with IP/device rate limiting spam check)
+  /// or RPC function with automatic district alias fallback. Phone number is optional for Direct ID tracking.
   Future<LegalAidApplication?> trackApplication({
     required String trackingNumber,
-    required String phoneNumber,
+    String? phoneNumber,
+    String? deviceId,
   }) async {
     final cleanTracking = trackingNumber.trim();
-    final cleanPhone = phoneNumber.trim();
+    final cleanPhone = phoneNumber?.trim();
+    final effectivePhone = (cleanPhone != null && cleanPhone.isNotEmpty) ? cleanPhone : null;
     final candidateNumbers = TrackingNumberHelper.getAlternativeTrackingNumbers(cleanTracking);
 
+    // Try track-by-id edge function for background rate-limiting & anti-spam checks
+    try {
+      final effectiveDeviceId = deviceId ?? await DeviceIdService.getDeviceId();
+      final res = await _client.functions.invoke(
+        'track-by-id',
+        body: {
+          'tracking_number': cleanTracking,
+          if (effectivePhone != null) 'phone': effectivePhone,
+          'device_id': effectiveDeviceId,
+        },
+      );
+
+      final data = res.data;
+      if (data is Map && data['application'] != null) {
+        final rawApp = LegalAidApplication.fromJson(Map<String, dynamic>.from(data['application'] as Map));
+        if (rawApp.id.isNotEmpty) {
+          final fullApp = await getApplicationDetail(rawApp.id);
+          if (fullApp != null) return fullApp;
+        }
+
+        var app = rawApp;
+        if (app.assignedAdvocateId != null && app.assignedAdvocate == null) {
+          final adv = await getAdvocateById(app.assignedAdvocateId!);
+          if (adv != null) {
+            app = app.copyWith(
+              assignedAdvocate: adv,
+              assignedAdvocateName: adv.fullName,
+            );
+          }
+        }
+        return app;
+      }
+
+      if (data is Map && data['error'] != null) {
+        final errCode = data['error'].toString();
+        if (errCode == 'RATE_LIMITED') {
+          throw ApplicationException(
+            code: 'RATE_LIMITED',
+            message: _mapErrorCode(errCode, 10, 'track'),
+          );
+        }
+      }
+    } on FunctionException catch (fe) {
+      final code = _extractErrorCode(fe.details, fe.status);
+      if (code == 'RATE_LIMITED') {
+        throw ApplicationException(
+          code: 'RATE_LIMITED',
+          message: _mapErrorCode(code, 10, 'track'),
+        );
+      }
+    } catch (e) {
+      if (e is ApplicationException) rethrow;
+    }
+
+    // Direct fallback to track_application RPC
     for (final num in candidateNumbers) {
       try {
         final res = await _client.rpc('track_application', params: {
           'p_tracking_number': num,
-          'p_phone_number': cleanPhone,
+          'p_phone_number': effectivePhone,
         });
 
         if (res != null && (res is! List || res.isNotEmpty)) {

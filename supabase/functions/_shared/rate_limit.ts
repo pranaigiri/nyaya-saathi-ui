@@ -96,23 +96,23 @@ export async function checkRateLimit(
 
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
-    // 1. Phone check 1h
+    // 1. Phone / Target check 1h
     const { count: phoneCount } = await supabase
       .from("submission_attempt_log")
       .select("*", { count: "exact", head: true })
-      .eq("action", "TRACK_BY_PHONE")
+      .like("action", "TRACK_%")
       .eq("phone_hash", phoneHash)
       .gte("created_at", oneHourAgo);
 
     if ((phoneCount ?? 0) >= limitPhone1h) {
-      return { allowed: false, reason: "Phone tracking rate limit exceeded (1h window)" };
+      return { allowed: false, reason: "Tracking query rate limit exceeded for this identifier (1h window)" };
     }
 
     // 2. Device check 1h
     const { count: deviceCount } = await supabase
       .from("submission_attempt_log")
       .select("*", { count: "exact", head: true })
-      .eq("action", "TRACK_BY_PHONE")
+      .like("action", "TRACK_%")
       .eq("device_hash", deviceHash)
       .gte("created_at", oneHourAgo);
 
@@ -124,7 +124,7 @@ export async function checkRateLimit(
     const { count: ipCount } = await supabase
       .from("submission_attempt_log")
       .select("*", { count: "exact", head: true })
-      .eq("action", "TRACK_BY_PHONE")
+      .like("action", "TRACK_%")
       .eq("ip_hash", ipHash)
       .gte("created_at", oneHourAgo);
 
