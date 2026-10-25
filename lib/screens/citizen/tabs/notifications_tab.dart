@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../models/notification_model.dart';
 
@@ -338,15 +339,15 @@ class _NotificationsTabState extends State<NotificationsTab> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  "No Notifications",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  context.tr("no_notifications_title"),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  "Updates regarding your legal aid applications and advocate assignments will appear here.",
+                Text(
+                  context.tr("no_notifications_subtitle"),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondaryLight,
                     height: 1.4,
@@ -377,9 +378,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
                 children: [
                   Row(
                     children: [
-                      const Text(
-                        "Notifications",
-                        style: TextStyle(
+                      Text(
+                        context.tr("notifications"),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -393,7 +394,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            "$unreadCount New",
+                            context.tr("new_notifications_badge", args: {"count": "$unreadCount"}),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -408,7 +409,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                     TextButton.icon(
                       onPressed: _markAllAsRead,
                       icon: const Icon(Icons.done_all, size: 16),
-                      label: const Text('Mark all read', style: TextStyle(fontSize: 12)),
+                      label: Text(context.tr("mark_all_read"), style: const TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

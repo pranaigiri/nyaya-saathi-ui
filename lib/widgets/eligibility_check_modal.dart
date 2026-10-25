@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants/app_colors.dart';
+import '../core/localization/app_localizations.dart';
 import '../providers/apply_data_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/draft_provider.dart';
@@ -374,7 +375,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'One Tap Eligibility Check',
+                context.tr('one_tap_eligibility_check', fallback: 'One Tap Eligibility Check'),
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -383,7 +384,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               ),
               const SizedBox(height: 1),
               Text(
-                'Answer a few quick questions to check your eligibility',
+                context.tr('eligibility_check_sub', fallback: 'Answer a few quick questions to check your eligibility'),
                 style: TextStyle(fontSize: 12, color: textSecondary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -395,7 +396,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.close_rounded, size: 20),
           color: textSecondary,
-          tooltip: 'Close',
+          tooltip: context.tr('close', fallback: 'Close'),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
@@ -446,7 +447,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             ),
             const SizedBox(width: 12),
             Text(
-              '${_currentIndex + 1} of ${_questions.length}',
+              '${_currentIndex + 1} ${context.tr('of', fallback: 'of')} ${_questions.length}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -479,7 +480,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           children: [
             Expanded(
               child: _buildAnswerButton(
-                label: 'Yes',
+                label: context.tr('yes', fallback: 'Yes'),
                 icon: Icons.check_rounded,
                 backgroundColor: const Color(0xFF0D9488),
                 foregroundColor: Colors.white,
@@ -489,7 +490,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildAnswerButton(
-                label: 'No',
+                label: context.tr('no', fallback: 'No'),
                 icon: Icons.close_rounded,
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
@@ -508,7 +509,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
                   child: TextButton.icon(
                     onPressed: _previousQuestion,
                     icon: const Icon(Icons.arrow_back_rounded, size: 15),
-                    label: const Text('Previous Question'),
+                    label: Text(context.tr('previous_question', fallback: 'Previous Question')),
                     style: TextButton.styleFrom(
                       foregroundColor: textSecondary,
                       padding: const EdgeInsets.symmetric(
@@ -593,17 +594,17 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.verified_rounded,
                     color: AppColors.successGreen,
                     size: 24,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Text(
-                    "You're Eligible",
-                    style: TextStyle(
+                    context.tr('you_are_eligible', fallback: "You're Eligible"),
+                    style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                       color: AppColors.successGreen,
@@ -613,7 +614,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Based on your answers, you qualify for free legal aid under:',
+                context.tr('you_are_eligible_sub', fallback: 'Based on your answers, you qualify for free legal aid under:'),
                 style: TextStyle(
                   fontSize: 12,
                   color: textSecondary,
@@ -655,9 +656,9 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           child: ElevatedButton.icon(
             onPressed: _proceedToApply,
             icon: const Icon(Icons.post_add_rounded, size: 19),
-            label: const Text(
-              'Apply for Legal Aid',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            label: Text(
+              context.tr('apply_for_legal_aid', fallback: 'Apply for Legal Aid'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBlue,
@@ -677,7 +678,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             child: TextButton.icon(
               onPressed: _restart,
               icon: const Icon(Icons.refresh_rounded, size: 15),
-              label: const Text('Start Check Again'),
+              label: Text(context.tr('start_check_again', fallback: 'Start Check Again')),
               style: TextButton.styleFrom(
                 foregroundColor: textSecondary,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -722,18 +723,18 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.info_outline_rounded,
                     color: Color(0xFFF97316),
                     size: 24,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'You may not be eligible',
-                      style: TextStyle(
+                      context.tr('not_eligible_yet', fallback: 'You may not be eligible'),
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFF97316),
@@ -744,7 +745,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Based on this quick screening, you did not match the standard statutory criteria. Legal aid authorities like Sikkim SLSA can review exceptional circumstances.',
+                context.tr('not_eligible_yet_sub', fallback: 'Based on this quick screening, you did not match the standard statutory criteria. Legal aid authorities like Sikkim SLSA can review exceptional circumstances.'),
                 style: TextStyle(
                   fontSize: 12,
                   color: textSecondary,
@@ -761,9 +762,9 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
           child: ElevatedButton.icon(
             onPressed: _restart,
             icon: const Icon(Icons.refresh_rounded, size: 19),
-            label: const Text(
-              'Start Check Again',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            label: Text(
+              context.tr('start_check_again', fallback: 'Start Check Again'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
@@ -783,7 +784,7 @@ class _EligibilityCheckModalState extends State<EligibilityCheckModal> {
             child: TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Close',
+                context.tr('close', fallback: 'Close'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

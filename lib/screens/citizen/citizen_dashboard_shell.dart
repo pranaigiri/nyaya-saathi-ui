@@ -8,6 +8,7 @@ import 'tabs/notifications_tab.dart';
 import 'tabs/chat_tab.dart';
 import 'profile_screen.dart';
 import '../../widgets/in_app_changelog_dialog.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class CitizenDashboardShell extends StatefulWidget {
   const CitizenDashboardShell({super.key});
@@ -112,9 +113,9 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const Text(
-                    "by Sikkim State Legal Services Authority",
-                    style: TextStyle(
+                  Text(
+                    context.tr("by_slsa", fallback: "by Sikkim State Legal Services Authority"),
+                    style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.textSecondaryLight,
                       fontWeight: FontWeight.w500,
@@ -127,6 +128,7 @@ class _CitizenDashboardShellState extends State<CitizenDashboardShell> {
           ],
         ),
         actions: [
+          const LanguageSwitcherButton(),
           IconButton(
             icon: const Icon(Icons.person_outline_rounded),
             onPressed: () {

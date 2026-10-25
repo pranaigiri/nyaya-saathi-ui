@@ -11,6 +11,7 @@ import '../../providers/apply_data_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../apply_flow/application_success_screen.dart';
 import '../../widgets/rate_limit_dialog.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class QuickApplyScreen extends StatefulWidget {
   const QuickApplyScreen({super.key});
@@ -200,6 +201,10 @@ class _QuickApplyScreenState extends State<QuickApplyScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: const [
+          LanguageSwitcherButton(),
+          SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + bottomInset),

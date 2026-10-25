@@ -50,7 +50,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => appProvider.fetchApplications(),
-                child: const Text("Retry"),
+                child: Text(context.tr("retry")),
               ),
             ],
           ),
@@ -64,24 +64,24 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
         onRefresh: () => appProvider.refresh(),
         child: ListView(
           padding: const EdgeInsets.all(32),
-          children: const [
-            SizedBox(height: 80),
-            Center(
+          children: [
+            const SizedBox(height: 80),
+            const Center(
               child: Icon(Icons.folder_open_outlined, size: 64, color: AppColors.textSecondaryLight),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Center(
               child: Text(
-                "No applications filed yet.",
-                style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 16),
+                context.tr("no_applications_yet"),
+                style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 16),
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Center(
               child: Text(
-                "When you submit a legal aid application, it will appear here.",
+                context.tr("no_applications_sub"),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12),
+                style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12),
               ),
             ),
           ],
@@ -129,7 +129,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                       children: [
                         Expanded(
                           child: Text(
-                            app.trackingNumber.isNotEmpty ? app.trackingNumber : 'Pending No.',
+                            app.trackingNumber.isNotEmpty ? app.trackingNumber : context.tr("pending_no"),
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -161,8 +161,8 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                     const SizedBox(height: 6),
                     Text(
                       (app.applicantFullName != null && app.applicantFullName!.trim().isNotEmpty)
-                          ? "Applicant: ${app.applicantFullName}"
-                          : "Applicant: Details pending",
+                          ? "${context.tr('applicant_label')}: ${app.applicantFullName}"
+                          : "${context.tr('applicant_label')}: ${context.tr('details_pending')}",
                       style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                     ),
                     if (app.isQuickMode && app.callbackStatus != 'NOT_REQUIRED') ...[
@@ -198,12 +198,12 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.phone, size: 10, color: AppColors.successGreen),
-                                SizedBox(width: 3),
+                              children: [
+                                const Icon(Icons.phone, size: 10, color: AppColors.successGreen),
+                                const SizedBox(width: 3),
                                 Text(
-                                  "Contact Available",
-                                  style: TextStyle(fontSize: 10, color: AppColors.successGreen, fontWeight: FontWeight.w600),
+                                  context.tr("contact_available"),
+                                  style: const TextStyle(fontSize: 10, color: AppColors.successGreen, fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
@@ -217,7 +217,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                           Icon(Icons.hourglass_top_rounded, size: 14, color: Colors.amber.shade700),
                           const SizedBox(width: 4),
                           Text(
-                            "Advocate Assignment in Progress",
+                            context.tr("advocate_assignment_in_progress"),
                             style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -228,17 +228,17 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Filed on: ${DateTime.tryParse(app.createdAt).formattedDate()}",
+                          context.tr("filed_on", args: {"date": DateTime.tryParse(app.createdAt).formattedDate()}),
                           style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
                         ),
                         Row(
-                          children: const [
+                          children: [
                             Text(
-                              "View Details",
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                              context.tr("view_details"),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.chevron_right, size: 16, color: AppColors.primaryBlue),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right, size: 16, color: AppColors.primaryBlue),
                           ],
                         )
                       ],

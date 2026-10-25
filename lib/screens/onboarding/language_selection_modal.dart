@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/language_provider.dart';
 
 class LanguageSelectionModal extends StatefulWidget {
@@ -47,19 +48,20 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.language_rounded,
                 color: AppColors.primaryBlue,
                 size: 28,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  "Choose Language / भाषा छान्नुहोस्",
-                  style: TextStyle(
-                    fontSize: 18,
+                  context.tr("choose_language_title",
+                      fallback: "Choose Language / भाषा छान्नुहोस् / भाषा चुनें"),
+                  style: const TextStyle(
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -68,7 +70,9 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Select your preferred language for using Nyaya Saathi. You can change this anytime later in settings.",
+            context.tr("choose_language_sub",
+                fallback:
+                    "Select your preferred language for using Nyaya Saathi. You can change this anytime later in settings."),
             style: TextStyle(
               fontSize: 13,
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -76,22 +80,29 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
             ),
           ),
           const SizedBox(height: 20),
-          _buildLangTile(
-            code: 'en',
-            title: "English",
-            subtitle: "Default language",
-            flag: "🇮🇳",
-            isDark: isDark,
-          ),
-          const SizedBox(height: 10),
-          _buildLangTile(
-            code: 'ne',
-            title: "नेपाली (Nepali)",
-            subtitle: "सिक्किम राज्य कानूनी सहायता",
-            flag: "🇮🇳",
-            isDark: isDark,
-          ),
-          const SizedBox(height: 24),
+          ...AppLocalizations.supportedLanguages.map((lang) {
+            String subtitle = "Default language";
+            if (lang.code == 'ne') {
+              subtitle = "सिक्किम राज्य कानूनी सहायता";
+            } else if (lang.code == 'hi') {
+              subtitle = "सिक्किम राज्य विधिक सहायता";
+            }
+            final title = lang.code == 'en'
+                ? lang.nativeName
+                : "${lang.nativeName} (${lang.englishName})";
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildLangTile(
+                code: lang.code,
+                title: title,
+                subtitle: subtitle,
+                flag: lang.flag,
+                isDark: isDark,
+              ),
+            );
+          }),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -109,9 +120,9 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                "Continue / अगाडि बढ्नुहोस्",
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+              child: Text(
+                context.tr("continue_btn", fallback: "Continue / अगाडि बढ्नुहोस् / आगे बढ़ें"),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
               ),
             ),
           ),
@@ -189,8 +200,6 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
   // STEP 2: SLSA WELCOME OVERVIEW
   // --------------------------------------------------------------------------
   Widget _buildSlsaInfoStep(bool isDark) {
-    final isNepali = _selectedLang == 'ne';
-
     return Padding(
       key: const ValueKey('slsa_step'),
       padding: const EdgeInsets.all(24),
@@ -225,9 +234,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
           ),
           const SizedBox(height: 12),
           Text(
-            isNepali
-                ? "सिक्किम राज्य कानूनी सेवा प्राधिकरण"
-                : "Sikkim State Legal Services Authority",
+            context.tr("slsa_welcome_title"),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 16,
@@ -242,9 +249,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              isNepali
-                  ? "सिक्किम राज्य कानूनी सेवा प्राधिकरण (SLSA) ले हरेक योग्य नागरिकलाई निःशुल्क र निष्पक्ष कानूनी सहायता प्रदान गर्दछ।"
-                  : "Sikkim State Legal Services Authority (SLSA) provides free and competent legal services to eligible citizens across all 6 districts.",
+              context.tr("slsa_welcome_desc"),
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.primaryBlue,
@@ -255,25 +260,19 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
           const SizedBox(height: 16),
           _buildFeatureBullet(
             icon: Icons.check_circle_outline,
-            text: isNepali
-                ? "निःशुल्क अधिवक्ता तथा कानूनी सल्लाह"
-                : "100% Free advocate representation & consultation",
+            text: context.tr("slsa_feat_1"),
             isDark: isDark,
           ),
           const SizedBox(height: 8),
           _buildFeatureBullet(
             icon: Icons.fact_check_outlined,
-            text: isNepali
-                ? "आवेदन ट्र्याकिङ बिना लगइन"
-                : "Instant application tracking without forced account creation",
+            text: context.tr("slsa_feat_2"),
             isDark: isDark,
           ),
           const SizedBox(height: 8),
           _buildFeatureBullet(
             icon: Icons.edit_note_rounded,
-            text: isNepali
-                ? "तपाईंको उपकरणमा ड्राफ्ट स्वतः बचत हुन्छ"
-                : "Resume incomplete applications anytime on your device",
+            text: context.tr("slsa_feat_3"),
             isDark: isDark,
           ),
           const SizedBox(height: 24),
@@ -289,7 +288,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                 ),
               ),
               child: Text(
-                isNepali ? "सुरु गर्नुहोस्" : "Get Started",
+                context.tr("get_started"),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,

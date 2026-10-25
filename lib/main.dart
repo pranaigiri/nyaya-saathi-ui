@@ -111,7 +111,7 @@ class NyayaSaathiApp extends StatelessWidget {
       theme: AppTheme.lightTheme(themeProvider.fontScale),
       darkTheme: AppTheme.darkTheme(themeProvider.fontScale),
       locale: langProvider.locale,
-      supportedLocales: const [Locale('en', ''), Locale('ne', '')],
+      supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

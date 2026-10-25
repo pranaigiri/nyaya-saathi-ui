@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ChatTab extends StatefulWidget {
   const ChatTab({super.key});
@@ -9,48 +10,7 @@ class ChatTab extends StatefulWidget {
 }
 
 class _ChatTabState extends State<ChatTab> {
-  final List<Map<String, String>> _faqs = [
-    {
-      'q': 'Who is eligible for free Legal Aid in Sikkim?',
-      'a':
-          'Under Section 12 of the Legal Services Authorities Act, 1987, eligible persons include women, children, SC/ST members, industrial workmen, persons in custody/juvenile homes, victims of mass disasters/violence, mentally ill or disabled persons, trafficking victims, and citizens with annual income < ₹3,00,000.',
-    },
-    {
-      'q': 'Are all legal aid services 100% free through Nyaya Saathi?',
-      'a':
-          'Yes! All services provided under SLSA—including advocate representation, court fees, drafting legal documents, typing/copying fees, process fees, and witness expenses—are completely free of cost.',
-    },
-    {
-      'q': 'How long does application processing take?',
-      'a':
-          'Initial scrutiny by the respective DLSA or SLSA is completed within 3-5 working days. Upon approval, a panel advocate is assigned immediately.',
-    },
-    {
-      'q': 'Can I apply on behalf of someone else using the app?',
-      'a':
-          'Yes! You can apply on behalf of another person. Select "Other" under "Applying For" during Step 2 of the application wizard and specify your relationship to the applicant.',
-    },
-    {
-      'q': 'Are there any types of cases where free legal aid is NOT provided?',
-      'a':
-          'Yes. Free legal aid is not provided in proceedings relating to defamation, malicious prosecution, elections, economic offenses, and offenses against social laws (such as Protection of Civil Rights Act).',
-    },
-    {
-      'q': 'Can I get free legal aid for criminal cases or bail applications?',
-      'a':
-          'Yes! Legal aid applies to both civil and criminal cases, including bail applications. Remand Advocates appointed by Sikkim SLSA are available in criminal courts to assist persons in custody who do not have a private lawyer.',
-    },
-    {
-      'q': 'What if the applicant is illiterate or unable to fill out forms?',
-      'a':
-          'Applicants can seek assistance from the Secretary of DLSA/TLSC, panel advocates, or Para Legal Volunteers (PLVs) stationed in local villages who can fill out the details on their behalf.',
-    },
-    {
-      'q': 'What is a Lok Adalat and how does it help?',
-      'a':
-          'Lok Adalat is an alternative dispute resolution forum where civil disputes and compoundable criminal cases are settled amicably without court fees. Awards passed by Lok Adalats have the same status as a Civil Court decree and are final.',
-    },
-  ];
+  static const int _faqCount = 8;
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +22,9 @@ class _ChatTabState extends State<ChatTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Authority Contact & Helpline Section
-          const Text(
-            "Authority Support & Helplines",
-            style: TextStyle(
+          Text(
+            context.tr("authority_support_helplines"),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.primaryBlue,
@@ -117,10 +77,10 @@ class _ChatTabState extends State<ChatTab> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        "Sikkim State Legal Services Authority (SLSA)",
-                        style: TextStyle(
+                        context.tr("slsa_full_title"),
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -133,8 +93,8 @@ class _ChatTabState extends State<ChatTab> {
                 // Toll-free / Helpline
                 _buildContactRow(
                   icon: Icons.phone_in_talk_rounded,
-                  title: "Toll-Free Legal Helpline",
-                  value: "15100 / 03592-205377",
+                  title: context.tr("toll_free_helpline"),
+                  value: context.tr("toll_free_value", fallback: "15100 / 03592-205377"),
                   isDark: isDark,
                 ),
                 const SizedBox(height: 12),
@@ -142,8 +102,8 @@ class _ChatTabState extends State<ChatTab> {
                 // Email
                 _buildContactRow(
                   icon: Icons.email_rounded,
-                  title: "Email Support",
-                  value: "sikkim_slsa@live.com",
+                  title: context.tr("email_support"),
+                  value: context.tr("email_support_value", fallback: "sikkim_slsa@live.com"),
                   isDark: isDark,
                 ),
                 const SizedBox(height: 12),
@@ -151,8 +111,8 @@ class _ChatTabState extends State<ChatTab> {
                 // Working Hours
                 _buildContactRow(
                   icon: Icons.access_time_filled_rounded,
-                  title: "Office Hours",
-                  value: "Mon - Sat: 10AM - 5PM (2nd & 4th Sat Closed)",
+                  title: context.tr("office_hours"),
+                  value: context.tr("office_hours_value", fallback: "Mon - Sat: 10AM - 5PM (2nd & 4th Sat Closed)"),
                   isDark: isDark,
                 ),
                 const SizedBox(height: 12),
@@ -160,8 +120,8 @@ class _ChatTabState extends State<ChatTab> {
                 // Office Address
                 _buildContactRow(
                   icon: Icons.location_on_rounded,
-                  title: "Office Address",
-                  value: "Development Area, Gangtok, Sikkim - 737101",
+                  title: context.tr("office_address"),
+                  value: context.tr("office_address_value", fallback: "Development Area, Gangtok, Sikkim - 737101"),
                   isDark: isDark,
                 ),
               ],
@@ -170,9 +130,9 @@ class _ChatTabState extends State<ChatTab> {
           const SizedBox(height: 24),
 
           // Section Title: FAQ
-          const Text(
-            "Frequently Asked Questions",
-            style: TextStyle(
+          Text(
+            context.tr("faq"),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.primaryBlue,
@@ -181,7 +141,11 @@ class _ChatTabState extends State<ChatTab> {
           const SizedBox(height: 12),
 
           // FAQ Accordion Cards
-          ..._faqs.map((item) {
+          ...List.generate(_faqCount, (index) {
+            final idx = index + 1;
+            final question = context.tr("faq_q$idx");
+            final answer = context.tr("faq_a$idx");
+
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               child: Material(
@@ -201,7 +165,7 @@ class _ChatTabState extends State<ChatTab> {
                     color: AppColors.primaryBlue,
                   ),
                   title: Text(
-                    item['q']!,
+                    question,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -211,7 +175,7 @@ class _ChatTabState extends State<ChatTab> {
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Text(
-                        item['a']!,
+                        answer,
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark
@@ -242,14 +206,7 @@ class _ChatTabState extends State<ChatTab> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primaryBlue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: AppColors.primaryBlue),
-        ),
+        Icon(icon, size: 20, color: AppColors.primaryBlue),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -262,7 +219,6 @@ class _ChatTabState extends State<ChatTab> {
                   color: isDark
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 2),
@@ -270,7 +226,7 @@ class _ChatTabState extends State<ChatTab> {
                 value,
                 style: const TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],

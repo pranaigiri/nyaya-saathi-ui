@@ -48,8 +48,8 @@ class _HomeTabState extends State<HomeTab> {
             children: [
               Expanded(
                 child: StatCard(
-                  title: "Active",
-                  value: "$activeCount ${activeCount == 1 ? 'Case' : 'Cases'}",
+                  title: context.tr("active"),
+                  value: "$activeCount ${activeCount == 1 ? context.tr('case_singular') : context.tr('case_plural')}",
                   icon: Icons.pending_actions,
                   color: AppColors.infoCyan,
                 ),
@@ -57,8 +57,8 @@ class _HomeTabState extends State<HomeTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: StatCard(
-                  title: "Resolved",
-                  value: "$resolvedCount Resolved",
+                  title: context.tr("resolved"),
+                  value: "$resolvedCount ${context.tr('resolved')}",
                   icon: Icons.check_circle_outline,
                   color: AppColors.successGreen,
                 ),
@@ -77,7 +77,7 @@ class _HomeTabState extends State<HomeTab> {
           _buildActionCard(
             context,
             title: context.tr("one_tap_eligibility_check"),
-            subtitle: "Quick 1-minute check to see if you qualify for free legal aid",
+            subtitle: context.tr("one_tap_check_subtitle"),
             icon: Icons.fact_check_rounded,
             gradientColors: [const Color(0xFF0F9D78), const Color(0xFF34D399)],
             outlinedColor: const Color(0xFF0F9D78),
@@ -103,7 +103,7 @@ class _HomeTabState extends State<HomeTab> {
           _buildActionCard(
             context,
             title: context.tr("apply_for_legal_aid"),
-            subtitle: "File a fresh application for free legal representation",
+            subtitle: context.tr("apply_fresh_subtitle"),
             icon: Icons.post_add_rounded,
             gradientColors: [AppColors.primaryBlue, const Color(0xFF1E40AF)],
             onTap: () {
@@ -114,7 +114,7 @@ class _HomeTabState extends State<HomeTab> {
           _buildActionCard(
             context,
             title: context.tr("track_application"),
-            subtitle: "Instant status check using Application Number & Phone",
+            subtitle: context.tr("track_status_subtitle"),
             icon: Icons.location_searching_rounded,
             gradientColors: [const Color(0xFF6750C8), const Color(0xFF8B7CE0)],
             onTap: () {

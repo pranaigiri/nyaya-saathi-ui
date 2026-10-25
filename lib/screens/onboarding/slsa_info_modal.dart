@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/language_provider.dart';
 
 class SlsaInfoModal extends StatelessWidget {
@@ -10,8 +11,6 @@ class SlsaInfoModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isNepali = selectedLanguage == 'ne';
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Colors.white,
@@ -45,9 +44,7 @@ class SlsaInfoModal extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      isNepali
-                          ? "सिक्किम राज्य कानूनी सहायता"
-                          : "Sikkim State Legal Services Authority",
+                      context.tr("slsa_welcome_title"),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 16,
@@ -67,9 +64,7 @@ class SlsaInfoModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                isNepali
-                    ? "सिक्किम राज्य कानूनी सेवा प्राधिकरण (SLSA) ले हरेक योग्य नागरिकलाई निःशुल्क र निष्पक्ष कानूनी सहायता प्रदान गर्दछ।"
-                    : "Sikkim State Legal Services Authority (SLSA) provides free and competent legal services to eligible citizens across all 6 districts.",
+                context.tr("slsa_welcome_desc"),
                 style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.primaryBlue,
@@ -80,23 +75,17 @@ class SlsaInfoModal extends StatelessWidget {
             const SizedBox(height: 16),
             _buildFeatureBullet(
               icon: Icons.check_circle_outline,
-              text: isNepali
-                  ? "निःशुल्क अधिवक्ता तथा कानूनी सल्लाह"
-                  : "100% Free advocate representation & consultation",
+              text: context.tr("slsa_feat_1"),
             ),
             const SizedBox(height: 8),
             _buildFeatureBullet(
               icon: Icons.fact_check_outlined,
-              text: isNepali
-                  ? "आवेदन ट्र्याकिङ बिना लगइन"
-                  : "Instant application tracking without forced account creation",
+              text: context.tr("slsa_feat_2"),
             ),
             const SizedBox(height: 8),
             _buildFeatureBullet(
               icon: Icons.edit_note_rounded,
-              text: isNepali
-                  ? "तपाईंको उपकरणमा ड्राफ्ट स्वतः बचत हुन्छ"
-                  : "Resume incomplete applications anytime on your device",
+              text: context.tr("slsa_feat_3"),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -111,10 +100,11 @@ class SlsaInfoModal extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  isNepali ? "सुरु गर्नुहोस्" : "Get Started",
+                  context.tr("get_started"),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),

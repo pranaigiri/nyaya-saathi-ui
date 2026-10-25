@@ -59,7 +59,9 @@ class ApplicationSuccessScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 Text(
-                  isQuickMode ? "Callback Request Received!" : "Application Submitted!",
+                  isQuickMode
+                      ? context.tr("callback_request_received")
+                      : context.tr("application_submitted"),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
@@ -67,8 +69,8 @@ class ApplicationSuccessScreen extends StatelessWidget {
 
                 Text(
                   isQuickMode
-                      ? "Your request has been registered with Sikkim State Legal Services Authority (SLSA)."
-                      : "Your application has been received by Sikkim State Legal Services Authority (SLSA).",
+                      ? context.tr("callback_request_desc")
+                      : context.tr("application_submitted_desc"),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -141,9 +143,9 @@ class ApplicationSuccessScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      const Text(
-                        "YOUR TRACKING ID",
-                        style: TextStyle(
+                      Text(
+                        context.tr("your_tracking_id"),
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryBlue,
@@ -171,16 +173,16 @@ class ApplicationSuccessScreen extends StatelessWidget {
                                 await Clipboard.setData(ClipboardData(text: applicationNumber));
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Tracking ID copied to clipboard"),
+                                    SnackBar(
+                                      content: Text(context.tr("tracking_id_copied")),
                                       behavior: SnackBarBehavior.floating,
-                                      duration: Duration(seconds: 2),
+                                      duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 }
                               },
                               icon: const Icon(Icons.copy_rounded, size: 20, color: AppColors.primaryBlue),
-                              tooltip: "Copy Tracking ID",
+                              tooltip: context.tr("copy_tracking_id"),
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -190,7 +192,7 @@ class ApplicationSuccessScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        "Save this tracking ID to check your application status anytime.",
+                        context.tr("save_tracking_id_notice"),
                         style: TextStyle(
                           fontSize: 11.5,
                           color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -240,7 +242,10 @@ class ApplicationSuccessScreen extends StatelessWidget {
                           Share.share("My Nyaya Saathi Legal Aid Tracking ID is $applicationNumber");
                         },
                         icon: const Icon(Icons.share_rounded, size: 18),
-                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text("Share ID")),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(context.tr("share_id")),
+                        ),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -264,7 +269,7 @@ class ApplicationSuccessScreen extends StatelessWidget {
                         icon: Icon(isAuth ? Icons.dashboard_rounded : Icons.home_rounded, size: 18),
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(isAuth ? "Dashboard" : "Home"),
+                          child: Text(isAuth ? context.tr("dashboard") : context.tr("nav_home")),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,

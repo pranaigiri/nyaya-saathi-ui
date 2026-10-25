@@ -6,6 +6,8 @@ import '../citizen/citizen_dashboard_shell.dart';
 import 'register_screen.dart';
 import '../../widgets/bottom_padding.dart';
 import '../../core/utils/haptics.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password.')),
+        SnackBar(content: Text(context.tr("enter_both_email_password"))),
       );
       return;
     }
@@ -69,11 +71,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Citizen Sign In"),
+        title: Text(context.tr("citizen_sign_in")),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: const [
+          LanguageSwitcherButton(),
+          SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -111,17 +117,17 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Center(
+            Center(
               child: Text(
-                "Welcome to Nyaya Saathi",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                context.tr("welcome_to_nyaya_saathi"),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 4),
-            const Center(
+            Center(
               child: Text(
-                "Sign in with your registered email and password",
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                context.tr("sign_in_sub"),
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
               ),
             ),
             const SizedBox(height: 28),
@@ -130,10 +136,10 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: "Email Address *",
-                hintText: "e.g. citizen@example.com",
-                prefixIcon: Icon(Icons.email_outlined),
+              decoration: InputDecoration(
+                labelText: context.tr("email_address_required"),
+                hintText: context.tr("email_hint"),
+                prefixIcon: const Icon(Icons.email_outlined),
               ),
             ),
             const SizedBox(height: 16),
@@ -144,8 +150,8 @@ class _LoginScreenState extends State<LoginScreen> {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleLogin(),
               decoration: InputDecoration(
-                labelText: "Password *",
-                hintText: "Enter your password",
+                labelText: context.tr("password_required"),
+                hintText: context.tr("password_hint"),
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
@@ -173,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: _isLoading
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text("Sign In", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    : Text(context.tr("sign_in"), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
 
@@ -186,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    "Don't have an account? ",
+                    context.tr("dont_have_account"),
                     style: TextStyle(
                       fontSize: 14,
                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -199,9 +205,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         MaterialPageRoute(builder: (_) => const RegisterScreen()),
                       );
                     },
-                    child: const Text(
-                      "Register as Citizen",
-                      style: TextStyle(
+                    child: Text(
+                      context.tr("register_as_citizen"),
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primaryBlue,
@@ -213,11 +219,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
 
             const SizedBox(height: 16),
-            const Center(
+            Center(
               child: Text(
-                "Sikkim State Legal Services Authority (SLSA)",
+                context.tr("slsa_full_title"),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondaryLight,
                 ),

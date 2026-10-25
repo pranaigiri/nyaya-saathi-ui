@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/draft_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'application_success_screen.dart';
@@ -89,15 +90,18 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
           child: ListView(
             padding: EdgeInsets.fromLTRB(20, 20, 20, BottomPadding.of(context, minimum: 24)),
             children: [
-              const FittedBox(
+              FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text("Step 5: Review Application Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                child: Text(
+                  context.tr("step5_header"),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                "Please review all information filled in your legal aid application before final submission.",
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+              Text(
+                context.tr("step_review_sub", fallback: "Please review all information filled in your legal aid application before final submission."),
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
               ),
               const SizedBox(height: 20),
 
@@ -195,9 +199,9 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
                     onChanged: (val) => setState(() => _declarationAccepted = val ?? false),
                     activeColor: AppColors.primaryBlue,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    title: const Text(
-                      "I hereby declare that all information provided is accurate to the best of my knowledge and I agree to the terms of Legal Aid Services.",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                    title: Text(
+                      context.tr("step5_declaration"),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ),
@@ -233,9 +237,12 @@ class _Step5ReviewSubmitScreenState extends State<Step5ReviewSubmitScreen> {
                   ),
                   child: _isSubmitting
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const FittedBox(
+                      : FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text("Submit Application ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                          child: Text(
+                            "${context.tr("submit_application")} ✓",
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
                         ),
                 ),
               ),

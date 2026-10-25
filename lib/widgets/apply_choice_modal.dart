@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants/app_colors.dart';
+import '../core/localization/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/draft_provider.dart';
 import '../providers/apply_data_provider.dart';
@@ -150,7 +151,7 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Apply for Legal Aid',
+                      context.tr('apply_for_legal_aid'),
                       style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
@@ -161,7 +162,7 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Select who this application is for',
+                      context.tr('select_who_application_for'),
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark
@@ -183,9 +184,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
             icon: Icons.person_rounded,
             iconBgColor: AppColors.primaryBlue.withValues(alpha: 0.15),
             iconColor: AppColors.primaryBlue,
-            title: 'Self',
-            subtitle: 'Auto-fill form using your profile ($userName)',
-            badgeText: '1-Click Auto-Fill',
+            title: context.tr('apply_for_myself'),
+            subtitle: '${context.tr('auto_fill_using_profile')} ($userName)',
+            badgeText: context.tr('one_click_autofill'),
             badgeColor: AppColors.primaryBlue,
             loading: _loadingOption == 1,
             onTap: () => prepareAndOpen(1, () async {
@@ -216,9 +217,9 @@ class _ApplyChoiceModalState extends State<ApplyChoiceModal> {
             icon: Icons.group_add_rounded,
             iconBgColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
             iconColor: const Color(0xFF0D9488),
-            title: 'Others',
-            subtitle: 'Form will be empty to enter another person\'s details',
-            badgeText: 'Blank Form',
+            title: context.tr('apply_for_someone_else'),
+            subtitle: context.tr('apply_for_someone_else_sub'),
+            badgeText: context.tr('blank_form'),
             badgeColor: const Color(0xFF0D9488),
             loading: _loadingOption == 2,
             onTap: () => prepareAndOpen(2, () async {

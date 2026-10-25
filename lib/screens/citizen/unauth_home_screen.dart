@@ -13,6 +13,7 @@ import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import 'citizen_dashboard_shell.dart';
 import '../../widgets/progressive_fade.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class UnauthHomeScreen extends StatelessWidget {
   const UnauthHomeScreen({super.key});
@@ -32,11 +33,15 @@ class UnauthHomeScreen extends StatelessWidget {
       body: ProgressiveFade(
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(24, 20, 24, 48 + MediaQuery.of(context).padding.bottom),
+            padding: EdgeInsets.fromLTRB(24, 12, 24, 48 + MediaQuery.of(context).padding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.topRight,
+                child: const LanguageSwitcherButton(),
+              ),
+              const SizedBox(height: 8),
               // Top Header Emblem
               Container(
                 decoration: BoxDecoration(
@@ -95,7 +100,7 @@ class UnauthHomeScreen extends StatelessWidget {
               _buildBigActionButton(
                 context,
                 title: context.tr("one_tap_eligibility_check"),
-                subtitle: "Quick 1-minute check • See if you qualify instantly",
+                subtitle: context.tr("one_tap_eligibility_subtitle"),
                 icon: Icons.fact_check_rounded,
                 gradientColors: [const Color(0xFF0F9D78), const Color(0xFF34D399)],
                 outlinedColor: const Color(0xFF0F9D78),
@@ -121,7 +126,7 @@ class UnauthHomeScreen extends StatelessWidget {
               _buildBigActionButton(
                 context,
                 title: context.tr("apply_for_legal_aid"),
-                subtitle: "Fast 5-step form • No initial account required",
+                subtitle: context.tr("apply_for_legal_aid_subtitle"),
                 icon: Icons.assignment_add,
                 gradientColors: [AppColors.primaryBlue, const Color(0xFF1E40AF)],
                 onTap: () {
@@ -138,7 +143,7 @@ class UnauthHomeScreen extends StatelessWidget {
               _buildBigActionButton(
                 context,
                 title: context.tr("track_application"),
-                subtitle: "Check status using Application Number & DOB",
+                subtitle: context.tr("track_application_subtitle"),
                 icon: Icons.track_changes_rounded,
                 gradientColors: [const Color(0xFF6750C8), const Color(0xFF8B7CE0)],
                 onTap: () {
@@ -168,7 +173,7 @@ class UnauthHomeScreen extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                            label: const Text("Register", style: TextStyle(fontWeight: FontWeight.bold)),
+                            label: Text(context.tr("register"), style: const TextStyle(fontWeight: FontWeight.bold)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primaryBlue,
                               side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
@@ -187,7 +192,7 @@ class UnauthHomeScreen extends StatelessWidget {
                         Expanded(
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.login_rounded, size: 18),
-                            label: const Text("Sign In", style: TextStyle(fontWeight: FontWeight.bold)),
+                            label: Text(context.tr("sign_in"), style: const TextStyle(fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryBlue,
                               foregroundColor: Colors.white,
@@ -206,7 +211,7 @@ class UnauthHomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Register to track cases, receive real-time updates & manage legal aid",
+                      context.tr("register_login_banner_text"),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11.5,

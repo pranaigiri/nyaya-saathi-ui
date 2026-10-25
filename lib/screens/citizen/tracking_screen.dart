@@ -16,6 +16,7 @@ import '../../models/legal_aid_application.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/status_badge.dart';
 import 'application_detail_screen.dart';
+import '../../widgets/language_switcher_button.dart';
 
 enum TrackingSearchMode { byPhone, byDistrict, direct }
 
@@ -602,6 +603,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: const [
+          LanguageSwitcherButton(iconColor: Colors.white),
+          SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {

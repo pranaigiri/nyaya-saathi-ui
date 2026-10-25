@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/apply_data_provider.dart';
 import '../../models/case_type_master.dart';
 import '../../providers/draft_provider.dart';
@@ -542,11 +543,11 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            child: const FittedBox(
+                            child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "Skip",
-                                style: TextStyle(
+                                context.tr("skip", fallback: "Skip"),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -566,11 +567,11 @@ class _Step3CaseTypeScreenState extends State<Step3CaseTypeScreen> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            child: const FittedBox(
+                            child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "Next: Upload Docs →",
-                                style: TextStyle(
+                                context.tr('next_upload_docs', fallback: "Next: Upload Docs →"),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,

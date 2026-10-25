@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../core/services/hive_draft_service.dart';
+import '../core/localization/app_localizations.dart';
 
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('en');
@@ -28,22 +29,27 @@ class LanguageProvider extends ChangeNotifier {
 
   Future<void> _doInit() async {
     _isFirstLaunch = await HiveDraftService.isFirstLaunch();
-    final langStr = await HiveDraftService.getLanguage();
+    var langStr = await HiveDraftService.getLanguage();
+    if (!AppLocalizations.isLanguageSupported(langStr)) {
+      langStr = 'en';
+    }
     _locale = Locale(langStr);
     notifyListeners();
   }
 
   Future<void> setLanguage(String langCode) async {
-    _locale = Locale(langCode);
+    final code = AppLocalizations.isLanguageSupported(langCode) ? langCode : 'en';
+    _locale = Locale(code);
     _isFirstLaunch = false;
-    await HiveDraftService.setLanguage(langCode);
+    await HiveDraftService.setLanguage(code);
     notifyListeners();
   }
 
   Future<void> completeFirstLaunch(String langCode) async {
-    _locale = Locale(langCode);
+    final code = AppLocalizations.isLanguageSupported(langCode) ? langCode : 'en';
+    _locale = Locale(code);
     _isFirstLaunch = false;
-    await HiveDraftService.markFirstLaunchCompleted(langCode);
+    await HiveDraftService.markFirstLaunchCompleted(code);
     notifyListeners();
   }
 }

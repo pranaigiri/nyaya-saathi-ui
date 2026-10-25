@@ -11,6 +11,7 @@ import '../../widgets/status_badge.dart';
 import '../../core/utils/string_extensions.dart';
 import '../../core/utils/number_extensions.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class ApplicationDetailScreen extends StatefulWidget {
   final LegalAidApplication? application;
@@ -321,7 +322,7 @@ For helpline support, dial 15100 (Toll-Free).
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            'Case #$trackingDisplay',
+            context.tr('case_number', fallback: 'Case #$trackingDisplay', args: {'number': trackingDisplay}),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           leading: IconButton(
@@ -329,10 +330,11 @@ For helpline support, dial 15100 (Toll-Free).
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
+            const LanguageSwitcherButton(),
             if (_application != null)
               IconButton(
                 icon: const Icon(Icons.share_rounded, size: 20),
-                tooltip: 'Share Application',
+                tooltip: context.tr('share_application'),
                 onPressed: () => _shareApplication(_application!),
               ),
             const SizedBox(width: 4),

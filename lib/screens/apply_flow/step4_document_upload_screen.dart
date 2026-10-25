@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/apply_data_provider.dart';
 import '../../providers/draft_provider.dart';
 import '../../widgets/document_picker_tile.dart';
@@ -231,11 +232,11 @@ class Step4DocumentUploadScreen extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const FittedBox(
+                      child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          "Skip",
-                          style: TextStyle(
+                          context.tr("skip", fallback: "Skip"),
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -255,11 +256,11 @@ class Step4DocumentUploadScreen extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const FittedBox(
+                      child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          "Next: Review & Submit →",
-                          style: TextStyle(
+                          context.tr('next_review_submit', fallback: "Next: Review & Submit →"),
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,

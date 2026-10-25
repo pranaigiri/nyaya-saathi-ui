@@ -7,6 +7,8 @@ import 'step2_applicant_details_screen.dart';
 import 'step3_casetype_screen.dart';
 import 'step4_document_upload_screen.dart';
 import 'step5_review_submit_screen.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class ApplyWizardScreen extends StatefulWidget {
   /// 0-based starting step. 1 skips Step 1 when the eligibility category was
@@ -47,12 +49,12 @@ class _ApplyWizardScreenState extends State<ApplyWizardScreen> {
     }
   }
 
-  static const List<String> _stepTitles = [
-    "Eligibility Criteria",
-    "Applicant Details",
-    "Case & Grievance",
-    "Document Upload",
-    "Review & Submit",
+  static const List<String> _stepTitleKeys = [
+    "step_category",
+    "step_applicant",
+    "step_casetype",
+    "step_documents",
+    "step_review",
   ];
 
   @override
@@ -66,11 +68,14 @@ class _ApplyWizardScreenState extends State<ApplyWizardScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _stepTitles[_currentStep],
+              context.tr(_stepTitleKeys[_currentStep]),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             Text(
-              "Step ${_currentStep + 1} of 5",
+              context.tr("step_progress", args: {
+                "current": "${_currentStep + 1}",
+                "total": "5",
+              }),
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -79,6 +84,10 @@ class _ApplyWizardScreenState extends State<ApplyWizardScreen> {
             ),
           ],
         ),
+        actions: const [
+          LanguageSwitcherButton(),
+          SizedBox(width: 8),
+        ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {

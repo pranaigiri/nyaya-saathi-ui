@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/apply_data_provider.dart';
 import '../../models/legal_aid_category.dart';
 import '../../providers/draft_provider.dart';
@@ -43,18 +44,18 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                 children: [
-                  const FittedBox(
+                  FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      "Step 1: Choose Eligibility Category",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      "${context.tr('step_progress', args: {'current': '1', 'total': '5'})}: ${context.tr('step_category')}",
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    "Select the category under which you or the applicant qualify for free legal services.",
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                  Text(
+                    context.tr('step_1_sub', fallback: "Select the category under which you or the applicant qualify for free legal services."),
+                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
                   ),
                   const SizedBox(height: 20),
 
@@ -161,11 +162,11 @@ class _Step1CategoryScreenState extends State<Step1CategoryScreen> {
                       backgroundColor: AppColors.primaryBlue,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const FittedBox(
+                    child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        "Next: Applicant Details →",
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        context.tr('next_applicant_details', fallback: "Next: Applicant Details →"),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   ),

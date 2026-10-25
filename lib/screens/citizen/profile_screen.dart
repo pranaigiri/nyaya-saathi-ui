@@ -13,6 +13,8 @@ import '../../data/models/gender_option.dart';
 import '../splash/splash_screen.dart';
 import '../../widgets/spring_bottom_sheet.dart';
 import '../../widgets/version_indicator.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../widgets/language_switcher_button.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -447,7 +449,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("My Profile & Settings"),
+        title: Text(context.tr("profile_settings_title")),
+        actions: const [
+          LanguageSwitcherButton(),
+          SizedBox(width: 8),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -465,9 +471,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "PERSONAL INFORMATION",
-                    style: TextStyle(
+                  Text(
+                    context.tr("personal_information"),
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
@@ -761,7 +767,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        "Note: Updating your profile only affects future applications. Your previously submitted and ongoing applications retain their original submitted details.",
+                        context.tr("profile_update_note"),
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.4,
@@ -775,9 +781,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 28),
 
               // ── Section Title: App Preferences ───────────────────
-              const Text(
-                "APP PREFERENCES",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentGold),
+              Text(
+                context.tr("app_preferences"),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentGold),
               ),
               const SizedBox(height: 10),
 
@@ -785,14 +791,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildPreferenceTile(
                 context,
                 icon: Icons.language,
-                title: "App Language",
+                title: context.tr("app_language"),
                 trailing: DropdownButton<String>(
                   value: langProvider.locale.languageCode,
                   underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: 'en', child: Text("English")),
-                    DropdownMenuItem(value: 'ne', child: Text("नेपाली")),
-                  ],
+                  items: AppLocalizations.supportedLanguages.map((lang) {
+                    return DropdownMenuItem(
+                      value: lang.code,
+                      child: Text(lang.nativeName),
+                    );
+                  }).toList(),
                   onChanged: (val) {
                     if (val != null) langProvider.setLanguage(val);
                   },
@@ -804,14 +812,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildPreferenceTile(
                 context,
                 icon: Icons.brightness_6,
-                title: "App Theme",
+                title: context.tr("app_theme"),
                 trailing: DropdownButton<ThemeMode>(
                   value: themeProvider.themeMode,
                   underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: ThemeMode.light, child: Text("Light")),
-                    DropdownMenuItem(value: ThemeMode.dark, child: Text("Dark")),
-                    DropdownMenuItem(value: ThemeMode.system, child: Text("System")),
+                  items: [
+                    DropdownMenuItem(value: ThemeMode.light, child: Text(context.tr("theme_light"))),
+                    DropdownMenuItem(value: ThemeMode.dark, child: Text(context.tr("theme_dark"))),
+                    DropdownMenuItem(value: ThemeMode.system, child: Text(context.tr("theme_system"))),
                   ],
                   onChanged: (mode) {
                     if (mode != null) themeProvider.setThemeMode(mode);
@@ -824,14 +832,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildPreferenceTile(
                 context,
                 icon: Icons.format_size,
-                title: "Text Font Size",
+                title: context.tr("text_font_size"),
                 trailing: DropdownButton<AppFontScale>(
                   value: themeProvider.fontScale,
                   underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: AppFontScale.small, child: Text("Small")),
-                    DropdownMenuItem(value: AppFontScale.medium, child: Text("Medium")),
-                    DropdownMenuItem(value: AppFontScale.large, child: Text("Large")),
+                  items: [
+                    DropdownMenuItem(value: AppFontScale.small, child: Text(context.tr("font_small"))),
+                    DropdownMenuItem(value: AppFontScale.medium, child: Text(context.tr("font_medium"))),
+                    DropdownMenuItem(value: AppFontScale.large, child: Text(context.tr("font_large"))),
                   ],
                   onChanged: (scale) {
                     if (scale != null) themeProvider.setFontScale(scale);
@@ -856,7 +864,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     }
                   },
                   icon: const Icon(Icons.logout, color: AppColors.dangerRed),
-                  label: const Text("Logout", style: TextStyle(color: AppColors.dangerRed, fontWeight: FontWeight.bold)),
+                  label: Text(context.tr("logout"), style: const TextStyle(color: AppColors.dangerRed, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.dangerRed),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
