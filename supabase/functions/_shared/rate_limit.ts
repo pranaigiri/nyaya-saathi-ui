@@ -8,6 +8,13 @@ export interface RateLimitCheckParams {
   deviceHash: string;
   ipHash: string;
   actionPrefix: "SUBMIT" | "TRACK";
+  mode?: "QUICK_CALLBACK" | "FULL";
+}
+
+export interface RateLimitResult {
+  allowed: boolean;
+  requireCaptcha?: boolean;
+  reason?: string;
 }
 
 export function extractClientIp(req: Request): string {
@@ -25,60 +32,18 @@ export function extractClientIp(req: Request): string {
 
 /**
  * Checks rate limits against submission_attempt_log.
- * Returns { allowed: true } or { allowed: false, reason: string }.
+ * Returns { allowed: true } or { allowed: false, requireCaptcha?: boolean, reason?: string }.
  */
 export async function checkRateLimit(
   params: RateLimitCheckParams
-): Promise<{ allowed: boolean; reason?: string }> {
-  const { supabase, phoneHash, deviceHash, ipHash, actionPrefix } = params;
+): Promise<RateLimitResult> {
+  const { supabase, phoneHash, deviceHash, ipHash, actionPrefix, mode } = params;
   const now = new Date();
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
   if (actionPrefix === "SUBMIT") {
-    const limitPhone10m = parseInt(Deno.env.get("RATE_LIMIT_PHONE_10M") ?? "1", 10);
-    const limitPhone24h = parseInt(Deno.env.get("RATE_LIMIT_PHONE_24H") ?? "3", 10);
-    const limitDevice24h = parseInt(Deno.env.get("RATE_LIMIT_DEVICE_24H") ?? "5", 10);
-    const limitIp24h = parseInt(Deno.env.get("RATE_LIMIT_IP_24H") ?? "10", 10);
-
-    const tenMinAgo = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-
-    // 1. Phone check 10 min
-    const { count: phone10mCount } = await supabase
-      .from("submission_attempt_log")
-      .select("*", { count: "exact", head: true })
-      .like("action", "SUBMIT_%")
-      .eq("phone_hash", phoneHash)
-      .gte("created_at", tenMinAgo);
-
-    if ((phone10mCount ?? 0) >= limitPhone10m) {
-      return { allowed: false, reason: "Phone submission rate limit exceeded (10m window)" };
-    }
-
-    // 2. Phone check 24h
-    const { count: phone24hCount } = await supabase
-      .from("submission_attempt_log")
-      .select("*", { count: "exact", head: true })
-      .like("action", "SUBMIT_%")
-      .eq("phone_hash", phoneHash)
-      .gte("created_at", twentyFourHoursAgo);
-
-    if ((phone24hCount ?? 0) >= limitPhone24h) {
-      return { allowed: false, reason: "Phone submission rate limit exceeded (24h window)" };
-    }
-
-    // 3. Device check 24h
-    const { count: device24hCount } = await supabase
-      .from("submission_attempt_log")
-      .select("*", { count: "exact", head: true })
-      .like("action", "SUBMIT_%")
-      .eq("device_hash", deviceHash)
-      .gte("created_at", twentyFourHoursAgo);
-
-    if ((device24hCount ?? 0) >= limitDevice24h) {
-      return { allowed: false, reason: "Device submission rate limit exceeded (24h window)" };
-    }
-
-    // 4. IP check 24h
+    // 1. IP check 24h (protects backend against massive distributed flooding)
+    const limitIp24h = parseInt(Deno.env.get("RATE_LIMIT_IP_24H") ?? "50", 10);
     const { count: ip24hCount } = await supabase
       .from("submission_attempt_log")
       .select("*", { count: "exact", head: true })
@@ -88,6 +53,47 @@ export async function checkRateLimit(
 
     if ((ip24hCount ?? 0) >= limitIp24h) {
       return { allowed: false, reason: "IP submission rate limit exceeded (24h window)" };
+    }
+
+    if (mode === "QUICK_CALLBACK") {
+      // 2. QUICK_CALLBACK Mode:
+      // Allow up to 3 unique phone numbers from a single device identity per 24h.
+      // If a user spams random numbers from the same device, require captcha / human verification.
+      const { data: previousAttempts } = await supabase
+        .from("submission_attempt_log")
+        .select("phone_hash")
+        .like("action", "SUBMIT_%")
+        .eq("device_hash", deviceHash)
+        .gte("created_at", twentyFourHoursAgo);
+
+      const uniquePhones = new Set((previousAttempts ?? []).map((r) => r.phone_hash));
+
+      // If submitting a new unique number and device has already submitted 3 or more distinct numbers:
+      if (!uniquePhones.has(phoneHash) && uniquePhones.size >= 3) {
+        return {
+          allowed: false,
+          requireCaptcha: true,
+          reason: "Device limit of 3 unique numbers reached. Human verification required.",
+        };
+      }
+    } else if (mode === "FULL") {
+      // 3. FULL Mode (5-step comprehensive form):
+      // No phone rate limits (form already requires detailed legal case information).
+      // Backend checks device identity entries to prevent bot endpoint flooding.
+      const limitFullDevice24h = parseInt(Deno.env.get("RATE_LIMIT_FULL_DEVICE_24H") ?? "20", 10);
+      const { count: fullDeviceCount } = await supabase
+        .from("submission_attempt_log")
+        .select("*", { count: "exact", head: true })
+        .eq("action", "SUBMIT_FULL")
+        .eq("device_hash", deviceHash)
+        .gte("created_at", twentyFourHoursAgo);
+
+      if ((fullDeviceCount ?? 0) >= limitFullDevice24h) {
+        return {
+          allowed: false,
+          reason: "Device submission limit reached for 5-step applications (24h window).",
+        };
+      }
     }
   } else if (actionPrefix === "TRACK") {
     const limitIp1h = parseInt(Deno.env.get("RATE_LIMIT_TRACK_IP_1H") ?? "30", 10);
@@ -105,7 +111,7 @@ export async function checkRateLimit(
       .gte("created_at", oneHourAgo);
 
     if ((phoneCount ?? 0) >= limitPhone1h) {
-      return { allowed: false, reason: "Tracking query rate limit exceeded for this identifier (1h window)" };
+      return { allowed: false, reason: "Phone tracking rate limit exceeded (1h window)" };
     }
 
     // 2. Device check 1h
@@ -146,7 +152,7 @@ export async function logAttempt(
     phoneHash: string;
     deviceHash: string;
     ipHash: string;
-    outcome: "SUCCESS" | "REJECTED" | "DUPLICATE_SUPPRESSED";
+    outcome: "SUCCESS" | "REJECTED" | "DUPLICATE_SUPPRESSED" | "DUPLICATE_ACTIVE_CALLBACK";
     reason?: string;
   }
 ): Promise<void> {

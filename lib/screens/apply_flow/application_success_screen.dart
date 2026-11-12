@@ -14,12 +14,14 @@ class ApplicationSuccessScreen extends StatelessWidget {
   final String applicationNumber;
   final bool isQuickMode;
   final String? phoneNumber;
+  final String? estimatedWaitTime;
 
   const ApplicationSuccessScreen({
     super.key,
     required this.applicationNumber,
     this.isQuickMode = false,
     this.phoneNumber,
+    this.estimatedWaitTime,
   });
 
   @override
@@ -123,6 +125,33 @@ class ApplicationSuccessScreen extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
+                              if (estimatedWaitTime != null && estimatedWaitTime!.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F9D78).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.schedule_rounded, size: 14, color: Color(0xFF0F9D78)),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          "${context.tr('estimated_callback_label')} $estimatedWaitTime",
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0F9D78),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

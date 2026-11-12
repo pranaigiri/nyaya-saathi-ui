@@ -1,3 +1,5 @@
+import 'package:url_launcher/url_launcher.dart';
+
 /// Utility class for Indian phone number normalization and validation.
 ///
 /// Matches the backend Edge Function validation in `supabase/functions/_shared/validation.ts`.
@@ -83,6 +85,32 @@ class PhoneUtils {
     if (clean.length < 4) return '******';
     final last4 = clean.substring(clean.length - 4);
     return '******$last4';
+  }
+
+  /// Formats a 10-digit number for display: "+91 98765 43210".
+  static String formatForDisplay(String? phone) {
+    final clean = normalize(phone);
+    if (clean.length == 10) {
+      return '+91 ${clean.substring(0, 5)} ${clean.substring(5)}';
+    }
+    return phone ?? '';
+  }
+
+  /// NALSA (National Legal Services Authority) 24x7 toll-free legal aid helpline number.
+  static const String nalsaHelplineNumber = '15100';
+
+  /// Dials the NALSA toll-free legal aid helpline (15100) using the device's native dialer.
+  /// Works across both Android and iOS via the registered SIM / mobile number.
+  static Future<bool> dialNalsaHelpline() async {
+    final uri = Uri.parse('tel:$nalsaHelplineNumber');
+    try {
+      if (await canLaunchUrl(uri)) {
+        return await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
   }
 }
 

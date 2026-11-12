@@ -9,20 +9,41 @@ import '../../core/utils/phone_utils.dart';
 import '../../core/services/device_id_service.dart';
 
 class ApplicationException implements Exception {
-  final String code; // 'RATE_LIMITED' | 'INVALID_INPUT' | 'TRY_AGAIN'
+  final String code; // 'RATE_LIMITED' | 'INVALID_INPUT' | 'TRY_AGAIN' | 'CAPTCHA_REQUIRED'
   final String message;
   final int retryAfterMinutes;
+  final Map<String, dynamic>? captchaData;
 
   const ApplicationException({
     required this.code,
     required this.message,
     this.retryAfterMinutes = 10,
+    this.captchaData,
   });
 
   bool get isRateLimited => code == 'RATE_LIMITED';
+  bool get isCaptchaRequired => code == 'CAPTCHA_REQUIRED';
 
   @override
   String toString() => message;
+}
+
+class QuickApplyResult {
+  final String trackingNumber;
+  final bool isDuplicate;
+  final int? queuePosition;
+  final int? totalPending;
+  final String? estimatedWaitText;
+  final bool isReliableEstimate;
+
+  const QuickApplyResult({
+    required this.trackingNumber,
+    this.isDuplicate = false,
+    this.queuePosition,
+    this.totalPending,
+    this.estimatedWaitText,
+    this.isReliableEstimate = false,
+  });
 }
 
 class ApplicationRepository {
@@ -51,13 +72,21 @@ class ApplicationRepository {
       'applicant_phone_number': draft.phone,
       'applicant_dob': draft.dob,
       'applicant_gender': draft.gender.toUpperCase(),
-      'village_or_town': draft.villageTown.isNotEmpty ? draft.villageTown : null,
+      'village_or_town': draft.villageTown.isNotEmpty
+          ? draft.villageTown
+          : null,
       'applicant_district_id': draft.districtId,
-      'case_type_id': (draft.caseTypeId != null && draft.caseTypeId!.isNotEmpty) ? draft.caseTypeId : null,
+      'case_type_id': (draft.caseTypeId != null && draft.caseTypeId!.isNotEmpty)
+          ? draft.caseTypeId
+          : null,
       'current_district_id': draft.districtId,
       'current_taluka_id': draft.talukaId,
-      'case_details': draft.caseDetails.trim().isNotEmpty ? draft.caseDetails.trim() : null,
-      'preferred_advocate_id': (draft.preferredAdvocateId != null && draft.preferredAdvocateId!.isNotEmpty)
+      'case_details': draft.caseDetails.trim().isNotEmpty
+          ? draft.caseDetails.trim()
+          : null,
+      'preferred_advocate_id':
+          (draft.preferredAdvocateId != null &&
+              draft.preferredAdvocateId!.isNotEmpty)
           ? draft.preferredAdvocateId
           : null,
       'tracking_number': '', // Trigger will generate
@@ -65,14 +94,17 @@ class ApplicationRepository {
     };
 
     // ignore: avoid_print
-    print('[ApplicationRepository] Submitting application (applicant: $effectiveApplicantId)');
+    print(
+      '[ApplicationRepository] Submitting application (applicant: $effectiveApplicantId)',
+    );
 
     try {
       final LegalAidApplication application;
 
       if (effectiveApplicantId == null) {
         // Anonymous (not logged in) submission through Edge Function
-        final persistentDeviceId = deviceId ?? await DeviceIdService.getDeviceId();
+        final persistentDeviceId =
+            deviceId ?? await DeviceIdService.getDeviceId();
         final elapsed = clientElapsedMs ?? 20000;
 
         final res = await _client.functions.invoke(
@@ -95,7 +127,8 @@ class ApplicationRepository {
             trackingNumber: trackingNo,
             phoneNumber: draft.phone,
           );
-          application = tracked ??
+          application =
+              tracked ??
               LegalAidApplication(
                 id: trackingNo,
                 trackingNumber: trackingNo,
@@ -140,7 +173,8 @@ class ApplicationRepository {
               .inFilter('document_code', docCodes);
 
           final idByCode = <String, dynamic>{
-            for (final row in docRows) row['document_code'] as String: row['id'],
+            for (final row in docRows)
+              row['document_code'] as String: row['id'],
           };
 
           final links = <Map<String, dynamic>>[
@@ -184,7 +218,8 @@ class ApplicationRepository {
       if (e is ApplicationException) rethrow;
       throw const ApplicationException(
         code: 'TRY_AGAIN',
-        message: 'Something went wrong. Please check your connection and try again.',
+        message:
+            'Something went wrong. Please check your connection and try again.',
       );
     }
   }
@@ -192,7 +227,8 @@ class ApplicationRepository {
   /// Submit a quick application requesting a call back from SLSA.
   ///
   /// Calls the `submit-application` Edge Function with mode `QUICK_CALLBACK`.
-  Future<String> submitQuickApplication({
+  /// Returns a [QuickApplyResult] containing tracking number, duplicate status, and queue estimation.
+  Future<QuickApplyResult> submitQuickApplication({
     required String phone,
     String? name,
     String? districtId,
@@ -200,6 +236,8 @@ class ApplicationRepository {
     required String deviceId,
     required String honeypot,
     required int clientElapsedMs,
+    String? captchaToken,
+    String? captchaSolution,
   }) async {
     final cleanPhone = PhoneUtils.normalize(phone);
 
@@ -210,45 +248,82 @@ class ApplicationRepository {
           'mode': 'QUICK_CALLBACK',
           'phone': cleanPhone,
           if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-          if (districtId != null && districtId.trim().isNotEmpty) 'district_id': districtId.trim(),
+          if (districtId != null && districtId.trim().isNotEmpty)
+            'district_id': districtId.trim(),
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
           'device_id': deviceId,
           'honeypot': honeypot,
           'client_elapsed_ms': clientElapsedMs,
+          'captcha_token': ?captchaToken,
+          'captcha_solution': ?captchaSolution,
         },
       );
 
       final data = res.data;
       if (data is Map && data['tracking_number'] != null) {
-        return data['tracking_number'].toString();
+        return QuickApplyResult(
+          trackingNumber: data['tracking_number'].toString(),
+          isDuplicate: data['is_duplicate'] == true,
+          queuePosition: (data['queue_position'] as num?)?.toInt(),
+          totalPending: (data['total_pending'] as num?)?.toInt(),
+          estimatedWaitText: data['estimated_wait_text'] as String?,
+          isReliableEstimate: data['is_reliable_estimate'] == true,
+        );
       }
 
       if (data is Map && data['error'] != null) {
         final errCode = data['error'].toString();
+        final captchaMap = _extractCaptchaData(data);
         throw ApplicationException(
           code: errCode,
-          message: _mapErrorCode(errCode),
+          message: errCode == 'CAPTCHA_REQUIRED'
+              ? 'Security verification required to continue.'
+              : _mapErrorCode(errCode),
+          captchaData: captchaMap,
         );
       }
 
       throw const ApplicationException(
         code: 'TRY_AGAIN',
-        message: 'Something went wrong. Please check your connection and try again.',
+        message:
+            'Something went wrong. Please check your connection and try again.',
       );
     } on FunctionException catch (fe) {
       final code = _extractErrorCode(fe.details, fe.status);
       final retryMinutes = _extractRetryMinutes(fe.details);
+      final captchaMap = _extractCaptchaData(fe.details);
       throw ApplicationException(
         code: code,
-        message: _mapErrorCode(code, retryMinutes),
+        message: code == 'CAPTCHA_REQUIRED'
+            ? 'Security verification required to continue.'
+            : _mapErrorCode(code, retryMinutes),
         retryAfterMinutes: retryMinutes,
+        captchaData: captchaMap,
       );
     } catch (e) {
       if (e is ApplicationException) rethrow;
       throw const ApplicationException(
         code: 'TRY_AGAIN',
-        message: 'Something went wrong. Please check your connection and try again.',
+        message:
+            'Something went wrong. Please check your connection and try again.',
       );
+    }
+  }
+
+  /// Fetches real-time queue estimate for a phone number or general queue.
+  Future<Map<String, dynamic>?> getCallbackQueueEstimate([String? phone]) async {
+    try {
+      final cleanPhone = phone != null ? PhoneUtils.normalize(phone) : null;
+      final res = await _client.rpc(
+        'get_callback_queue_estimate',
+        params: {'p_phone': cleanPhone},
+      );
+      if (res is Map) {
+        return Map<String, dynamic>.from(res);
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -264,10 +339,7 @@ class ApplicationRepository {
     try {
       final res = await _client.functions.invoke(
         'track-by-phone',
-        body: {
-          'phone': cleanPhone,
-          'device_id': deviceId,
-        },
+        body: {'phone': cleanPhone, 'device_id': deviceId},
       );
 
       final data = res.data;
@@ -290,15 +362,13 @@ class ApplicationRepository {
       return [];
     } on FunctionException catch (fe) {
       final code = _extractErrorCode(fe.details, fe.status);
-      throw ApplicationException(
-        code: code,
-        message: _mapErrorCode(code),
-      );
+      throw ApplicationException(code: code, message: _mapErrorCode(code));
     } catch (e) {
       if (e is ApplicationException) rethrow;
       throw const ApplicationException(
         code: 'TRY_AGAIN',
-        message: 'Something went wrong. Please check your connection and try again.',
+        message:
+            'Something went wrong. Please check your connection and try again.',
       );
     }
   }
@@ -334,7 +404,9 @@ class ApplicationRepository {
       try {
         final decoded = jsonDecode(details);
         if (decoded is Map && decoded['retry_after_minutes'] != null) {
-          final parsed = int.tryParse(decoded['retry_after_minutes'].toString());
+          final parsed = int.tryParse(
+            decoded['retry_after_minutes'].toString(),
+          );
           if (parsed != null) return parsed;
         }
       } catch (_) {}
@@ -342,7 +414,26 @@ class ApplicationRepository {
     return 10;
   }
 
-  static String _mapErrorCode(String code, [int retryMinutes = 10, String action = 'submission']) {
+  static Map<String, dynamic>? _extractCaptchaData(dynamic details) {
+    if (details is Map && details['captcha'] is Map) {
+      return Map<String, dynamic>.from(details['captcha'] as Map);
+    }
+    if (details is String) {
+      try {
+        final decoded = jsonDecode(details);
+        if (decoded is Map && decoded['captcha'] is Map) {
+          return Map<String, dynamic>.from(decoded['captcha'] as Map);
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  static String _mapErrorCode(
+    String code, [
+    int retryMinutes = 10,
+    String action = 'submission',
+  ]) {
     switch (code) {
       case 'RATE_LIMITED':
         if (action == 'track') {
@@ -384,7 +475,9 @@ class ApplicationRepository {
   }
 
   /// Fetch a single application with details
-  Future<LegalAidApplication?> getApplicationDetail(String applicationId) async {
+  Future<LegalAidApplication?> getApplicationDetail(
+    String applicationId,
+  ) async {
     final cleanId = applicationId.trim();
     if (cleanId.isEmpty) return null;
 
@@ -400,7 +493,10 @@ class ApplicationRepository {
         if (app.assignedAdvocateId != null && app.assignedAdvocate == null) {
           final adv = await getAdvocateById(app.assignedAdvocateId!);
           if (adv != null) {
-            app = app.copyWith(assignedAdvocate: adv, assignedAdvocateName: adv.fullName);
+            app = app.copyWith(
+              assignedAdvocate: adv,
+              assignedAdvocateName: adv.fullName,
+            );
           }
         }
         return app;
@@ -419,7 +515,10 @@ class ApplicationRepository {
         if (app.assignedAdvocateId != null && app.assignedAdvocate == null) {
           final adv = await getAdvocateById(app.assignedAdvocateId!);
           if (adv != null) {
-            app = app.copyWith(assignedAdvocate: adv, assignedAdvocateName: adv.fullName);
+            app = app.copyWith(
+              assignedAdvocate: adv,
+              assignedAdvocateName: adv.fullName,
+            );
           }
         }
         return app;
@@ -438,8 +537,12 @@ class ApplicationRepository {
   }) async {
     final cleanTracking = trackingNumber.trim();
     final cleanPhone = phoneNumber?.trim();
-    final effectivePhone = (cleanPhone != null && cleanPhone.isNotEmpty) ? cleanPhone : null;
-    final candidateNumbers = TrackingNumberHelper.getAlternativeTrackingNumbers(cleanTracking);
+    final effectivePhone = (cleanPhone != null && cleanPhone.isNotEmpty)
+        ? cleanPhone
+        : null;
+    final candidateNumbers = TrackingNumberHelper.getAlternativeTrackingNumbers(
+      cleanTracking,
+    );
 
     // Try track-by-id edge function for background rate-limiting & anti-spam checks
     try {
@@ -448,14 +551,16 @@ class ApplicationRepository {
         'track-by-id',
         body: {
           'tracking_number': cleanTracking,
-          if (effectivePhone != null) 'phone': effectivePhone,
+          'phone': ?effectivePhone,
           'device_id': effectiveDeviceId,
         },
       );
 
       final data = res.data;
       if (data is Map && data['application'] != null) {
-        final rawApp = LegalAidApplication.fromJson(Map<String, dynamic>.from(data['application'] as Map));
+        final rawApp = LegalAidApplication.fromJson(
+          Map<String, dynamic>.from(data['application'] as Map),
+        );
         if (rawApp.id.isNotEmpty) {
           final fullApp = await getApplicationDetail(rawApp.id);
           if (fullApp != null) return fullApp;
@@ -498,15 +603,17 @@ class ApplicationRepository {
     // Direct fallback to track_application RPC
     for (final num in candidateNumbers) {
       try {
-        final res = await _client.rpc('track_application', params: {
-          'p_tracking_number': num,
-          'p_phone_number': effectivePhone,
-        });
+        final res = await _client.rpc(
+          'track_application',
+          params: {'p_tracking_number': num, 'p_phone_number': effectivePhone},
+        );
 
         if (res != null && (res is! List || res.isNotEmpty)) {
           final data = res is List ? res.first : res;
           if (data != null && data is Map) {
-            final rawApp = LegalAidApplication.fromJson(Map<String, dynamic>.from(data));
+            final rawApp = LegalAidApplication.fromJson(
+              Map<String, dynamic>.from(data),
+            );
 
             // Attempt to load fully-joined application (with category, case type, district names)
             if (rawApp.id.isNotEmpty) {
@@ -518,7 +625,8 @@ class ApplicationRepository {
 
             var app = rawApp;
             // If advocate is assigned by ID but advocate details were not joined in the flat RPC return
-            if (app.assignedAdvocateId != null && app.assignedAdvocate == null) {
+            if (app.assignedAdvocateId != null &&
+                app.assignedAdvocate == null) {
               final adv = await getAdvocateById(app.assignedAdvocateId!);
               if (adv != null) {
                 app = app.copyWith(
@@ -556,7 +664,9 @@ class ApplicationRepository {
   }
 
   /// Fetch status history for an application
-  Future<List<Map<String, dynamic>>> getStatusHistory(String applicationId) async {
+  Future<List<Map<String, dynamic>>> getStatusHistory(
+    String applicationId,
+  ) async {
     final res = await _client
         .from('application_status_history')
         .select('id, previous_status, new_status, remarks, created_at')
@@ -573,11 +683,13 @@ class ApplicationRepository {
     required List<int> bytes,
   }) async {
     final path = 'draft-uploads/$draftUuid/$docCode.jpg';
-    await _client.storage.from('legal-documents').uploadBinary(
-      path,
-      Uint8List.fromList(bytes),
-      fileOptions: const FileOptions(upsert: true),
-    );
+    await _client.storage
+        .from('legal-documents')
+        .uploadBinary(
+          path,
+          Uint8List.fromList(bytes),
+          fileOptions: const FileOptions(upsert: true),
+        );
     return path;
   }
 
@@ -592,7 +704,9 @@ class ApplicationRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null || userId.isEmpty) {
         // ignore: avoid_print
-        print('[ApplicationRepository] Cannot request advocate change: user is not authenticated');
+        print(
+          '[ApplicationRepository] Cannot request advocate change: user is not authenticated',
+        );
         return false;
       }
       await _client.from('advocate_change_request').insert({
@@ -615,22 +729,25 @@ class ApplicationRepository {
   RealtimeChannel subscribeToApplications({
     required void Function(PostgresChangePayload payload) onData,
   }) {
-    final channelName = 'public:legal_aid_application_${DateTime.now().millisecondsSinceEpoch}';
+    final channelName =
+        'public:legal_aid_application_${DateTime.now().millisecondsSinceEpoch}';
     final userId = _client.auth.currentUser?.id;
 
-    final channel = _client.channel(channelName).onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'legal_aid_application',
-      filter: (userId != null && userId.isNotEmpty)
-          ? PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'applicant_id',
-              value: userId,
-            )
-          : null,
-      callback: onData,
-    );
+    final channel = _client
+        .channel(channelName)
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'legal_aid_application',
+          filter: (userId != null && userId.isNotEmpty)
+              ? PostgresChangeFilter(
+                  type: PostgresChangeFilterType.eq,
+                  column: 'applicant_id',
+                  value: userId,
+                )
+              : null,
+          callback: onData,
+        );
     channel.subscribe();
     return channel;
   }
@@ -641,18 +758,21 @@ class ApplicationRepository {
     required void Function(PostgresChangePayload payload) onData,
   }) {
     final cleanId = applicationId.trim();
-    final channelName = 'app_detail_${cleanId}_${DateTime.now().millisecondsSinceEpoch}';
-    final channel = _client.channel(channelName).onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'legal_aid_application',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'id',
-        value: cleanId,
-      ),
-      callback: onData,
-    );
+    final channelName =
+        'app_detail_${cleanId}_${DateTime.now().millisecondsSinceEpoch}';
+    final channel = _client
+        .channel(channelName)
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'legal_aid_application',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: cleanId,
+          ),
+          callback: onData,
+        );
     channel.subscribe();
     return channel;
   }
@@ -663,18 +783,21 @@ class ApplicationRepository {
     required void Function(PostgresChangePayload payload) onData,
   }) {
     final cleanId = applicationId.trim();
-    final channelName = 'app_history_${cleanId}_${DateTime.now().millisecondsSinceEpoch}';
-    final channel = _client.channel(channelName).onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'application_status_history',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'application_id',
-        value: cleanId,
-      ),
-      callback: onData,
-    );
+    final channelName =
+        'app_history_${cleanId}_${DateTime.now().millisecondsSinceEpoch}';
+    final channel = _client
+        .channel(channelName)
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'application_status_history',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'application_id',
+            value: cleanId,
+          ),
+          callback: onData,
+        );
     channel.subscribe();
     return channel;
   }

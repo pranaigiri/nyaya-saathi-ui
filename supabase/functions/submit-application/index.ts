@@ -6,6 +6,7 @@ import { validatePhone, sanitizeText } from "../_shared/validation.ts";
 import { getServiceRoleClient } from "../_shared/supabase_client.ts";
 import { checkRateLimit, logAttempt, extractClientIp } from "../_shared/rate_limit.ts";
 import { verifyAppCheckToken } from "../_shared/app_check.ts";
+import { generateCaptchaChallenge, verifyCaptchaSolution } from "../_shared/captcha.ts";
 
 interface SubmitRequestBody {
   mode?: "QUICK_CALLBACK" | "FULL";
@@ -18,17 +19,34 @@ interface SubmitRequestBody {
   honeypot?: unknown;
   client_elapsed_ms?: unknown;
   app_check_token?: unknown;
+  captcha_token?: unknown;
+  captcha_solution?: unknown;
 }
 
-function errorResponse(code: "INVALID_INPUT" | "RATE_LIMITED" | "TRY_AGAIN", status = 400) {
+function errorResponse(code: "INVALID_INPUT" | "RATE_LIMITED" | "TRY_AGAIN" | "CAPTCHA_REQUIRED", status = 400) {
   return new Response(JSON.stringify({ error: code }), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
-function successResponse(trackingNumber: string) {
-  return new Response(JSON.stringify({ tracking_number: trackingNumber }), {
+function captchaResponse(challenge: { question: string; token: string }) {
+  return new Response(
+    JSON.stringify({
+      error: "CAPTCHA_REQUIRED",
+      message: "Human verification required to proceed",
+      captcha: challenge,
+    }),
+    {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
+}
+
+function successResponse(payload: Record<string, unknown> | string) {
+  const body = typeof payload === "string" ? { tracking_number: payload } : payload;
+  return new Response(JSON.stringify(body), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
@@ -83,7 +101,7 @@ Deno.serve(async (req: Request) => {
   // --------------------------------------------------------------------------
   const elapsedMs = typeof body.client_elapsed_ms === "number" ? body.client_elapsed_ms : 0;
   const minElapsedQuick = parseInt(Deno.env.get("MIN_ELAPSED_MS_QUICK") ?? "3000", 10);
-  const minElapsedFull = parseInt(Deno.env.get("MIN_ELAPSED_MS_FULL") ?? "20000", 10);
+  const minElapsedFull = parseInt(Deno.env.get("MIN_ELAPSED_MS_FULL") ?? "15000", 10);
   const requiredElapsed = mode === "FULL" ? minElapsedFull : minElapsedQuick;
 
   if (elapsedMs < requiredElapsed) {
@@ -147,7 +165,51 @@ Deno.serve(async (req: Request) => {
   }
 
   // --------------------------------------------------------------------------
-  // Check e: Rate limits
+  // Check e: Duplicate prevention for active callbacks (Run before rate limit!)
+  // Exactly 1 active callback request allowed per phone number.
+  // Returning the existing request status avoids false rate limit rejections.
+  // --------------------------------------------------------------------------
+  if (mode === "QUICK_CALLBACK") {
+    const { data: openApp } = await supabase
+      .from("legal_aid_application")
+      .select("tracking_number")
+      .eq("application_mode", "QUICK_CALLBACK")
+      .eq("applicant_phone_number", cleanPhone)
+      .in("callback_status", ["PENDING_CALL", "CALL_ATTEMPTED"])
+      .not("status", "in", '("REJECTED","WITHDRAWN","RESOLVED")')
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (openApp?.tracking_number) {
+      const { data: estimate } = await supabase.rpc("get_callback_queue_estimate", {
+        p_phone: cleanPhone,
+      });
+
+      await logAttempt(supabase, {
+        action: actionName,
+        phoneHash,
+        deviceHash,
+        ipHash,
+        outcome: "DUPLICATE_ACTIVE_CALLBACK",
+        reason: "Active callback request already exists in queue",
+      });
+
+      return successResponse({
+        tracking_number: openApp.tracking_number,
+        is_duplicate: true,
+        queue_position: estimate?.queue_position ?? 1,
+        total_pending: estimate?.total_pending ?? 1,
+        estimated_wait_text: estimate?.estimated_wait_text ?? null,
+        is_reliable_estimate: estimate?.is_reliable_estimate ?? false,
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Check f: Rate limits & abuse prevention
+  // - QUICK_CALLBACK: Max 3 unique numbers from a device identity per 24h before Captcha
+  // - FULL: Device-level limit to prevent bot endpoint flooding (no phone limit)
   // --------------------------------------------------------------------------
   const rateLimitResult = await checkRateLimit({
     supabase,
@@ -155,46 +217,53 @@ Deno.serve(async (req: Request) => {
     deviceHash,
     ipHash,
     actionPrefix: "SUBMIT",
+    mode,
   });
 
   if (!rateLimitResult.allowed) {
-    await logAttempt(supabase, {
-      action: actionName,
-      phoneHash,
-      deviceHash,
-      ipHash,
-      outcome: "REJECTED",
-      reason: rateLimitResult.reason,
-    });
-    return errorResponse("RATE_LIMITED", 429);
-  }
+    if (rateLimitResult.requireCaptcha) {
+      // Check if captcha solution was provided in the request
+      if (body.captcha_token && body.captcha_solution) {
+        const captchaCheck = await verifyCaptchaSolution(
+          body.captcha_token,
+          body.captcha_solution
+        );
 
-  // --------------------------------------------------------------------------
-  // Check f: Duplicate suppression (QUICK_CALLBACK within 24h)
-  // --------------------------------------------------------------------------
-  if (mode === "QUICK_CALLBACK") {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: openApp } = await supabase
-      .from("legal_aid_application")
-      .select("tracking_number")
-      .eq("application_mode", "QUICK_CALLBACK")
-      .eq("applicant_phone_number", cleanPhone)
-      .not("status", "in", '("REJECTED","WITHDRAWN","RESOLVED")')
-      .gte("created_at", twentyFourHoursAgo)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (openApp?.tracking_number) {
+        if (!captchaCheck.valid) {
+          await logAttempt(supabase, {
+            action: actionName,
+            phoneHash,
+            deviceHash,
+            ipHash,
+            outcome: "REJECTED",
+            reason: captchaCheck.reason ?? "Invalid captcha solution",
+          });
+          const newChallenge = await generateCaptchaChallenge();
+          return captchaResponse(newChallenge);
+        }
+        // Captcha was valid: allowed to proceed past the unique-number gate
+      } else {
+        await logAttempt(supabase, {
+          action: actionName,
+          phoneHash,
+          deviceHash,
+          ipHash,
+          outcome: "REJECTED",
+          reason: "Captcha required: device exceeded 3 unique numbers",
+        });
+        const challenge = await generateCaptchaChallenge();
+        return captchaResponse(challenge);
+      }
+    } else {
       await logAttempt(supabase, {
         action: actionName,
         phoneHash,
         deviceHash,
         ipHash,
-        outcome: "DUPLICATE_SUPPRESSED",
-        reason: "Existing open quick application returned idempotently",
+        outcome: "REJECTED",
+        reason: rateLimitResult.reason,
       });
-      return successResponse(openApp.tracking_number);
+      return errorResponse("RATE_LIMITED", 429);
     }
   }
 
@@ -259,7 +328,26 @@ Deno.serve(async (req: Request) => {
         return errorResponse("TRY_AGAIN", 500);
       }
 
-      trackingNumber = data[0].tracking_number;
+      const row = data[0];
+      trackingNumber = row.tracking_number;
+      const isDuplicate = !!row.is_duplicate;
+
+      await logAttempt(supabase, {
+        action: actionName,
+        phoneHash,
+        deviceHash,
+        ipHash,
+        outcome: isDuplicate ? "DUPLICATE_ACTIVE_CALLBACK" : "SUCCESS",
+      });
+
+      return successResponse({
+        tracking_number: trackingNumber,
+        is_duplicate: isDuplicate,
+        queue_position: row.queue_position,
+        total_pending: row.total_pending,
+        estimated_wait_text: row.estimated_wait_text,
+        is_reliable_estimate: row.is_reliable_estimate,
+      });
     } else {
       // FULL mode
       const fullPayload = body.full_payload ?? {};
