@@ -24,7 +24,7 @@ import 'tracking_screen.dart';
 /// Redesigned citizen home screen for Nyaya Saathi.
 ///
 /// Combines the clear, elder-friendly 4-section information architecture
-/// (Section A: Talk to someone, Section B: Fill form, Section C: Eligibility, Section D: Tracking)
+/// (Section 1: Fill form, Section 2: Quick apply / Talk to someone, Section 3: Eligibility, Section 4: Tracking)
 /// with the authentic visual design language of Nyaya Saathi:
 /// - Previous circular emblem with ambient glow shadow and language switcher
 /// - Subtle ambient background shapes for visual depth and warmth
@@ -62,7 +62,7 @@ class _UnauthHomeScreenState extends State<UnauthHomeScreen> {
     final announcement = context.tr(
       'home_audio_screen_announcement',
       fallback:
-          'Welcome to Nyaya Saathi, free legal aid. For fastest help, tap the green button to call 15100. Or tap Ask us to call you. Or tap Apply online yourself to fill the form in 10 minutes.',
+          'Welcome to Nyaya Saathi, free legal aid. Tap Apply online yourself to fill the form in 10 minutes. Or tap the green button to call 15100. Or tap Ask us to call you.',
     );
 
     // Announce to accessibility engine (TalkBack / VoiceOver)
@@ -267,15 +267,15 @@ class _UnauthHomeScreenState extends State<UnauthHomeScreen> {
                       ],
 
                       // ---------------------------------------------------------
-                      // SECTION A: TALK TO SOMEONE (Fastest, an official helps you)
+                      // 1. FILL THE FORM YOURSELF (5-step form fill section)
                       // ---------------------------------------------------------
-                      _buildSectionA(context, isDark),
+                      _buildFillFormSection(context, isDark, draftProvider),
                       const SizedBox(height: 30),
 
                       // ---------------------------------------------------------
-                      // SECTION B: FILL THE FORM YOURSELF (Self-service path)
+                      // 2. QUICK APPLY / TALK TO AN OFFICER
                       // ---------------------------------------------------------
-                      _buildSectionB(context, isDark, draftProvider),
+                      _buildQuickApplySection(context, isDark),
                       const SizedBox(height: 28),
 
                       // ---------------------------------------------------------
@@ -438,9 +438,165 @@ class _UnauthHomeScreenState extends State<UnauthHomeScreen> {
   }
 
   // ===========================================================================
-  // SECTION A: TALK TO SOMEONE (Fastest, an official helps you)
+  // 1. FILL THE FORM YOURSELF (5-step form fill section)
   // ===========================================================================
-  Widget _buildSectionA(BuildContext context, bool isDark) {
+  Widget _buildFillFormSection(
+    BuildContext context,
+    bool isDark,
+    DraftProvider draftProvider,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header Row
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.edit_note_rounded,
+                color: AppColors.primaryBlue,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr(
+                      'home_fill_form_title',
+                      fallback: 'Fill the form yourself',
+                    ),
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppColors.primaryDark,
+                    ),
+                  ),
+                  Text(
+                    context.tr(
+                      'home_fill_form_subtitle',
+                      fallback:
+                          'Takes about 10 minutes. You can save and continue later.',
+                    ),
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // Action: Apply Online Yourself (Sapphire Blue Gradient Button)
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [AppColors.primaryBlue, Color(0xFF1E40AF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryBlue.withValues(alpha: 0.30),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                if (draftProvider.draft == null) {
+                  draftProvider.startNewDraft();
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.assignment_add,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.tr(
+                              'home_apply_online_title',
+                              fallback: 'Apply online yourself',
+                            ),
+                            style: GoogleFonts.outfit(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            context.tr(
+                              'home_apply_online_badge',
+                              fallback: '5 short steps • No account needed',
+                            ),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.90),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white70,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================================
+  // 2. QUICK APPLY / TALK TO AN OFFICER (Helpline & Callback)
+  // ===========================================================================
+  Widget _buildQuickApplySection(BuildContext context, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -754,161 +910,6 @@ class _UnauthHomeScreenState extends State<UnauthHomeScreen> {
     );
   }
 
-  // ===========================================================================
-  // SECTION B: FILL THE FORM YOURSELF (Self-service path)
-  // ===========================================================================
-  Widget _buildSectionB(
-    BuildContext context,
-    bool isDark,
-    DraftProvider draftProvider,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section Header Row
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.edit_note_rounded,
-                color: AppColors.primaryBlue,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.tr(
-                      'home_fill_form_title',
-                      fallback: 'Fill the form yourself',
-                    ),
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppColors.primaryDark,
-                    ),
-                  ),
-                  Text(
-                    context.tr(
-                      'home_fill_form_subtitle',
-                      fallback:
-                          'Takes about 10 minutes. You can save and continue later.',
-                    ),
-                    style: GoogleFonts.inter(
-                      fontSize: 12.5,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // Action: Apply Online Yourself (Sapphire Blue Gradient Button)
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(
-              colors: [AppColors.primaryBlue, Color(0xFF1E40AF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryBlue.withValues(alpha: 0.30),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                if (draftProvider.draft == null) {
-                  draftProvider.startNewDraft();
-                }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ApplyWizardScreen()),
-                );
-              },
-              borderRadius: BorderRadius.circular(18),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 16,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.22),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.assignment_add,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.tr(
-                              'home_apply_online_title',
-                              fallback: 'Apply online yourself',
-                            ),
-                            style: GoogleFonts.outfit(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            context.tr(
-                              'home_apply_online_badge',
-                              fallback: '5 short steps • No account needed',
-                            ),
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.90),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white70,
-                      size: 16,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   // ===========================================================================
   // SECTION C: NOT SURE? (Quiet full-width strip)

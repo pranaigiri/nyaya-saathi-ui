@@ -17,7 +17,9 @@ import '../../core/localization/app_localizations.dart';
 import '../../widgets/language_switcher_button.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onLoggedOut;
+
+  const ProfileScreen({super.key, this.onLoggedOut});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -436,9 +438,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ─────────────────────────────────────────────────────────
+  //  Logout Confirmation Dialog
+  // ─────────────────────────────────────────────────────────
+  Future<void> _confirmAndLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.logout, color: AppColors.dangerRed, size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                dialogCtx.tr("logout_confirm_title"),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          dialogCtx.tr("logout_confirm_body"),
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('logout_cancel_button'),
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text(dialogCtx.tr("cancel")),
+          ),
+          ElevatedButton(
+            key: const Key('logout_confirm_button'),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.dangerRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(dialogCtx.tr("logout")),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signOut();
+      if (mounted) {
+        if (widget.onLoggedOut != null) {
+          widget.onLoggedOut!();
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const SplashScreen()),
+            (route) => false,
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final langProvider = Provider.of<LanguageProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -853,16 +915,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 height: 48,
                 child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await authProvider.signOut();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SplashScreen()),
-                        (route) => false,
-                      );
-                    }
-                  },
+                  key: const Key('profile_logout_button'),
+                  onPressed: _confirmAndLogout,
                   icon: const Icon(Icons.logout, color: AppColors.dangerRed),
                   label: Text(context.tr("logout"), style: const TextStyle(color: AppColors.dangerRed, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(

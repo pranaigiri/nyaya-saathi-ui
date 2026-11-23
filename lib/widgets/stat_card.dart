@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/app_colors.dart';
 
 class StatCard extends StatelessWidget {
@@ -6,6 +7,7 @@ class StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const StatCard({
     super.key,
@@ -13,26 +15,27 @@ class StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    final cardContent = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1.5,
+          color: color.withValues(alpha: 0.28),
+          width: 1.4,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
+            color: color.withValues(alpha: isDark ? 0.12 : 0.06),
             blurRadius: 8,
             offset: const Offset(0, 3),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -40,10 +43,10 @@ class StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -55,27 +58,45 @@ class StatCard extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: color,
+                    letterSpacing: 0.1,
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
+
+    if (onTap != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: cardContent,
+        ),
+      );
+    }
+
+    return cardContent;
   }
 }
 

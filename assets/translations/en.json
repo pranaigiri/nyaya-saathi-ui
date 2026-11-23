@@ -347,5 +347,7 @@
   "home_account_benefit": "Create an account to see all your cases",
   "home_trust_line": "Free legal aid",
   "home_listen_button": "Listen",
-  "home_audio_screen_announcement": "Welcome to Nyaya Saathi, free legal aid. For fastest help, tap the green button to call 15100. Or tap Ask us to call you. Or tap Apply online yourself to fill the form in 10 minutes."
+  "home_audio_screen_announcement": "Welcome to Nyaya Saathi, free legal aid. For fastest help, tap the green button to call 15100. Or tap Ask us to call you. Or tap Apply online yourself to fill the form in 10 minutes.",
+  "citizen_user": "Citizen",
+  "home_footer_legal_act": "Free Legal Services under Legal Services Authorities Act, 1987"
 }

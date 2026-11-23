@@ -43,6 +43,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   String _selectedDistrictCode = 'GTK';
   bool _useDropdownForDistricts = false;
   bool _isLoading = false;
+  String? _openingTrackingNumber;
   List<Map<String, String>> _recentSearches = [];
 
   // Phone search state
@@ -333,55 +334,44 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
-  Future<void> _openTrackedApplication(String trackingNum, [String? phone]) async {
-    setState(() => _isLoading = true);
+  Future<void> _openTrackedApplication(
+    String trackingNum, [
+    String? phone,
+    LegalAidApplication? initialApp,
+  ]) async {
+    // Prevent multiple clicks from opening multiple detail pages
+    if (_openingTrackingNumber != null) return;
+
+    final effectivePhone = (phone != null && phone.isNotEmpty)
+        ? phone
+        : PhoneUtils.normalize(_phoneController.text);
+
+    setState(() {
+      _openingTrackingNumber = trackingNum;
+    });
+
+    _saveRecentSearch(
+      trackingNum,
+      effectivePhone.isNotEmpty ? effectivePhone : null,
+      initialApp?.applicantFullName,
+    );
+
     try {
-      final deviceId = await DeviceIdService.getDeviceId();
-      final result = await _appRepo.trackApplication(
-        trackingNumber: trackingNum,
-        phoneNumber: (phone != null && phone.isNotEmpty) ? phone : null,
-        deviceId: deviceId,
-      );
-
-      setState(() => _isLoading = false);
-
-      if (result != null) {
-        _saveRecentSearch(trackingNum, phone, result.applicantFullName);
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ApplicationDetailScreen(application: result),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          _showNotFoundDialog(trackingNum, phone);
-        }
-      }
-    } on ApplicationException catch (ae) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        String msg = context.tr("error_try_again");
-        if (ae.code == 'RATE_LIMITED') {
-          msg = ae.message.isNotEmpty ? ae.message : context.tr("error_rate_limited");
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: AppColors.accentGold,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ApplicationDetailScreen(
+            trackingNumber: trackingNum,
+            phoneNumber: effectivePhone.isNotEmpty ? effectivePhone : null,
+            application: (initialApp != null && initialApp.id.isNotEmpty) ? initialApp : null,
           ),
-        );
-      }
-    } catch (_) {
-      setState(() => _isLoading = false);
+        ),
+      );
+    } finally {
       if (mounted) {
-        _showErrorDialog(
-          "Unable to load application details. Please check your connection and try again.",
-        );
+        setState(() {
+          _openingTrackingNumber = null;
+        });
       }
     }
   }
@@ -398,6 +388,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
       );
       return;
     }
+
+    if (_isLoading || _openingTrackingNumber != null) return;
 
     if (!_formKey.currentState!.validate()) return;
 
@@ -870,7 +862,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Widget _buildPhoneSubmitButton() {
-    final isBlocked = _isLoadingPhone || _cooldownSeconds > 0;
+    final isBlocked = _isLoadingPhone || _cooldownSeconds > 0 || _openingTrackingNumber != null;
     return SizedBox(
       width: double.infinity,
       height: 52,
@@ -974,13 +966,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   Widget _buildPhoneApplicationCard(LegalAidApplication app, bool isDark) {
     final cleanPhone = PhoneUtils.normalize(_phoneController.text);
+    final isOpeningThis = _openingTrackingNumber == app.trackingNumber;
+    final isBlocked = _openingTrackingNumber != null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          color: isOpeningThis
+              ? AppColors.primaryBlue
+              : (isDark ? AppColors.borderDark : AppColors.borderLight),
+          width: isOpeningThis ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
@@ -991,7 +989,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
         ],
       ),
       child: InkWell(
-        onTap: () => _openTrackedApplication(app.trackingNumber, cleanPhone),
+        onTap: isBlocked ? null : () => _openTrackedApplication(app.trackingNumber, cleanPhone, app),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -1010,6 +1008,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   ),
                   const SizedBox(width: 8),
                   StatusBadge(status: app.status),
+                  const SizedBox(width: 8),
+                  if (isOpeningThis)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primaryBlue,
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1630,7 +1644,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _performTrack,
+        onPressed: (_isLoading || _openingTrackingNumber != null) ? null : _performTrack,
         style: ElevatedButton.styleFrom(
           backgroundColor: _violet,
           foregroundColor: Colors.white,
@@ -1694,6 +1708,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
     final tracking = item['trackingNumber'] ?? '';
     final phone = item['phone'] ?? '';
     final name = item['applicantName'] ?? 'Applicant';
+    final isOpeningThis = _openingTrackingNumber == tracking;
+    final isBlocked = _openingTrackingNumber != null || _isLoading;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1702,7 +1718,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            color: isOpeningThis
+                ? AppColors.primaryBlue
+                : (isDark ? AppColors.borderDark : AppColors.borderLight),
+            width: isOpeningThis ? 1.5 : 1.0,
           ),
         ),
         child: ListTile(
@@ -1722,15 +1741,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
               color: AppColors.textSecondaryLight,
             ),
           ),
-          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-          onTap: () {
-            setState(() {
-              _searchMode = TrackingSearchMode.direct;
-              _directTrackingController.text = tracking;
-              _phoneController.text = phone;
-            });
-            _performTrack();
-          },
+          trailing: isOpeningThis
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: _violet),
+                )
+              : const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+          onTap: isBlocked
+              ? null
+              : () => _openTrackedApplication(tracking, phone.isNotEmpty ? phone : null),
         ),
       ),
     );

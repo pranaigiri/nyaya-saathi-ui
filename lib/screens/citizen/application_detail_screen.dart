@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/device_id_service.dart';
 import '../../core/utils/district_helper.dart';
 import '../../data/repositories/application_repository.dart';
 import '../../models/legal_aid_application.dart';
@@ -16,14 +17,18 @@ import '../../widgets/language_switcher_button.dart';
 class ApplicationDetailScreen extends StatefulWidget {
   final LegalAidApplication? application;
   final String? applicationId;
+  final String? trackingNumber;
+  final String? phoneNumber;
 
   const ApplicationDetailScreen({
     super.key,
     this.application,
     this.applicationId,
+    this.trackingNumber,
+    this.phoneNumber,
   }) : assert(
-         application != null || applicationId != null,
-         'Either application or applicationId must be provided',
+         application != null || applicationId != null || trackingNumber != null,
+         'Either application, applicationId or trackingNumber must be provided',
        );
 
   @override
@@ -52,7 +57,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    if (widget.application != null) {
+    if (widget.application != null && widget.application!.id.isNotEmpty) {
       _application = widget.application;
       _isLoading = false;
       _fetchStatusHistory(_application!.id);
@@ -60,8 +65,21 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
       if (_application!.assignedAdvocate == null) {
         _refreshApplicationSilently(_application!.id);
       }
+    } else if (widget.trackingNumber != null && widget.trackingNumber!.trim().isNotEmpty) {
+      _application = widget.application;
+      _fetchByTrackingNumber(widget.trackingNumber!.trim(), widget.phoneNumber);
     } else if (widget.applicationId != null) {
       _fetchApplicationDetails(widget.applicationId!);
+    } else if (widget.application != null) {
+      _application = widget.application;
+      if (_application!.trackingNumber.isNotEmpty) {
+        _fetchByTrackingNumber(
+          _application!.trackingNumber,
+          widget.phoneNumber ?? _application!.applicantPhoneNumber,
+        );
+      } else {
+        _isLoading = false;
+      }
     }
   }
 
@@ -202,6 +220,62 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
     }
   }
 
+  Future<void> _fetchByTrackingNumber(String trackingNumber, String? phone) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final cleanTracking = trackingNumber.trim();
+      final cleanPhone = (phone != null && phone.trim().isNotEmpty) ? phone.trim() : null;
+      final deviceId = await DeviceIdService.getDeviceId();
+      final result = await _repository.trackApplication(
+        trackingNumber: cleanTracking,
+        phoneNumber: cleanPhone,
+        deviceId: deviceId,
+      );
+
+      if (result != null) {
+        if (mounted) {
+          setState(() {
+            _application = result;
+            _isLoading = false;
+          });
+          if (result.id.isNotEmpty) {
+            _fetchStatusHistory(result.id);
+            _setupRealtimeSubscription(result.id);
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                'Application details could not be found. Please check your tracking number or mobile number.';
+          });
+        }
+      }
+    } on ApplicationException catch (ae) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ae.code == 'RATE_LIMITED'
+              ? (ae.message.isNotEmpty ? ae.message : 'Too many requests. Please try again later.')
+              : (ae.message.isNotEmpty ? ae.message : 'Something went wrong. Please try again.');
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Failed to load application details. Please check your network connection.';
+        });
+      }
+    }
+  }
+
   Future<void> _handleRefresh() async {
     final currentApp = _application;
     if (currentApp != null &&
@@ -216,10 +290,20 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen>
           setState(() {
             _application = refreshed;
           });
-          _fetchStatusHistory(refreshed.id);
+          if (refreshed.id.isNotEmpty) {
+            _fetchStatusHistory(refreshed.id);
+          }
           return;
         }
       } catch (_) {}
+    }
+    final targetTracking = widget.trackingNumber ?? _application?.trackingNumber;
+    if (targetTracking != null && targetTracking.isNotEmpty) {
+      await _fetchByTrackingNumber(
+        targetTracking,
+        widget.phoneNumber ?? _application?.applicantPhoneNumber,
+      );
+      return;
     }
     final targetId = _application?.id ?? widget.applicationId;
     if (targetId != null) {
@@ -311,10 +395,17 @@ For helpline support, dial 15100 (Toll-Free).
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
+    final effectiveTracking =
+        (_application != null && _application!.trackingNumber.isNotEmpty)
+            ? _application!.trackingNumber
+            : widget.trackingNumber;
+
     final trackingDisplay =
-        _application != null && _application!.trackingNumber.isNotEmpty
-        ? _application!.trackingNumber
-        : (_application?.id.substring(0, 8) ?? 'Details');
+        (effectiveTracking != null && effectiveTracking.isNotEmpty)
+            ? effectiveTracking
+            : ((_application?.id != null && _application!.id.isNotEmpty)
+                ? _application!.id.substring(0, 8)
+                : (widget.applicationId ?? 'Details'));
 
     return Title(
       title: 'Application Details — Nyaya Saathi',
@@ -331,7 +422,7 @@ For helpline support, dial 15100 (Toll-Free).
           ),
           actions: [
             const LanguageSwitcherButton(),
-            if (_application != null)
+            if (_application != null && _application!.id.isNotEmpty)
               IconButton(
                 icon: const Icon(Icons.share_rounded, size: 20),
                 tooltip: context.tr('share_application'),
@@ -398,9 +489,18 @@ For helpline support, dial 15100 (Toll-Free).
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () {
-                      final targetId = widget.applicationId ?? _application?.id;
-                      if (targetId != null) {
-                        _fetchApplicationDetails(targetId);
+                      final targetTracking =
+                          widget.trackingNumber ?? _application?.trackingNumber;
+                      if (targetTracking != null && targetTracking.isNotEmpty) {
+                        _fetchByTrackingNumber(
+                          targetTracking,
+                          widget.phoneNumber ?? _application?.applicantPhoneNumber,
+                        );
+                      } else {
+                        final targetId = widget.applicationId ?? _application?.id;
+                        if (targetId != null) {
+                          _fetchApplicationDetails(targetId);
+                        }
                       }
                     },
                     icon: const Icon(Icons.refresh, size: 16),

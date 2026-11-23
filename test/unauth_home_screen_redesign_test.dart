@@ -78,6 +78,37 @@ void main() {
     });
 
     testWidgets(
+      'verifies section order: 5-step form fill 1st, quick apply 2nd, followed by others',
+      (tester) async {
+        await tester.pumpWidget(createTestHomeScreen());
+        await tester.pumpAndSettle();
+
+        final fillFormY =
+            tester.getTopLeft(find.text('Apply online yourself')).dy;
+        final callHelpY =
+            tester.getTopLeft(find.text('Call for free legal help')).dy;
+        final askCallbackY =
+            tester.getTopLeft(find.text('Ask us to call you')).dy;
+        final doIQualifyY = tester.getTopLeft(find.text('Do I qualify?')).dy;
+        final checkAppY =
+            tester.getTopLeft(find.text('Check my application')).dy;
+        final registerY = tester.getTopLeft(find.text('Register')).dy;
+
+        // 1st: 5-step form fill section
+        expect(fillFormY, lessThan(callHelpY));
+        expect(fillFormY, lessThan(askCallbackY));
+
+        // 2nd: Quick apply section (Helpline & Callback)
+        expect(callHelpY, lessThan(doIQualifyY));
+        expect(askCallbackY, lessThan(doIQualifyY));
+
+        // Followed by others as it is (Eligibility, Tracking, Footer)
+        expect(doIQualifyY, lessThan(checkAppY));
+        expect(checkAppY, lessThan(registerY));
+      },
+    );
+
+    testWidgets(
       'renders earlier LanguageSwitcherButton and opens language picker with English, नेपाली, हिन्दी',
       (tester) async {
         await tester.pumpWidget(createTestHomeScreen());
