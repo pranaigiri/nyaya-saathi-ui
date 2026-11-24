@@ -8,7 +8,7 @@
 
 ## Why
 
-Asset images like `app_logo.png` and `sikkim_emblem.png` must be decoded into GPU memory when first rendered. Without precaching during splash, they flash or pop in a few frames after the UI appears.
+Asset images like `app_logo.png` and `sikkim_slsa_logo.png` must be decoded into GPU memory when first rendered. Without precaching during splash, they flash or pop in a few frames after the UI appears.
 
 ## Where
 
@@ -25,19 +25,20 @@ Asset images like `app_logo.png` and `sikkim_emblem.png` must be decoded into GP
 ## The fix
 
 Precache primary assets in `didChangeDependencies` or during `_initApp` in `SplashScreen`:
+
 ```dart
 // target
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     precacheImage(const AssetImage('assets/images/app_logo.png'), context);
-    precacheImage(const AssetImage('assets/images/sikkim_emblem.png'), context);
+    precacheImage(const AssetImage('assets/images/sikkim_slsa_logo.png'), context);
   }
 ```
 
 ## Steps
 
-1. In `lib/screens/splash/splash_screen.dart`, implement `didChangeDependencies` to call `precacheImage` for `assets/images/app_logo.png` and `assets/images/sikkim_emblem.png`.
+1. In `lib/screens/splash/splash_screen.dart`, implement `didChangeDependencies` to call `precacheImage` for `assets/images/app_logo.png` and `assets/images/sikkim_slsa_logo.png`.
 
 ## Check it
 

@@ -77,7 +77,10 @@ class _SplashScreenState extends State<SplashScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     precacheImage(const AssetImage('assets/images/app_logo.png'), context);
-    precacheImage(const AssetImage('assets/images/sikkim_emblem.png'), context);
+    precacheImage(
+      const AssetImage('assets/images/sikkim_slsa_logo.png'),
+      context,
+    );
   }
 
   Future<void> _navigateToNext() async {
